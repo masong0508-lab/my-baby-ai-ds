@@ -8,6 +8,7 @@
 #include "save.h"
 #include "world.h"
 #include "ui.h"
+#include "touch_input.h"
 #if defined(__BLOCKSDS__)
 /* BlocksDS main loop convention: traditional foreground VBlank loop. */
 #define GAME_LOOP_ACTIVE() 1
@@ -20,6 +21,7 @@ static Game baby;
 static Arcade arc;
 static int storage_ok,view=5,selected,reset_step,last_ending,pose;
 static int three_d_ready;
+static TouchGate gesture;
 static const char *message="WELCOME TO DAYCARE 2.0";
 static void persist(void){if(storage_ok)(void)save_write(SAVE_BASE,&baby);}
 static void care(Care action){
@@ -50,6 +52,7 @@ int main(void){
  uint32_t frame=0;
  int dirty=1;
  game_init(&baby);
+ touch_gate_init(&gesture);
  lcdMainOnTop();
  /* Title must appear before 3D or filesystem work; this isolates crashes. */
  videoSetMode(MODE_0_2D);
@@ -66,21 +69,25 @@ int main(void){
  /* Stay in RAM-only mode until the player explicitly requests save access.
   * New and old .nds game saves remain compatible when FAT is available. */
  while(GAME_LOOP_ACTIVE()){
-  int down,held,previous=view;
-  touchPosition touch;
-  swiWaitForVBlank();scanKeys();touchRead(&touch);
+  int down,held,tap,previous=view;
+  touchPosition touch={0};
+  swiWaitForVBlank();
+  scanKeys();
   down=keysDown();held=keysHeld();
+  if(held&KEY_TOUCH)touchRead(&touch);
+  tap=touch_gate_step(&gesture,(held&KEY_TOUCH)!=0,touch.px,touch.py);
+  ui_touch_observe((held&KEY_TOUCH)!=0,touch.px,touch.py,gesture.total_presses);
   if(view==0){
    int action=-1;
    if(down&KEY_A)action=FEED;
    else if(down&KEY_B)action=CHAT;
    else if(down&KEY_X)action=PLAY;
    else if(down&KEY_Y)action=NAP;
-   else if(down&KEY_TOUCH)action=ui_nursery_touch(touch.px,touch.py);
+   else if(tap)action=ui_nursery_touch(touch.px,touch.py);
    if(action>=0){care((Care)action);dirty=1;}
    else if(down&KEY_START){view=1;message="WELCOME TO THE ARCADE.";dirty=1;}
    else if(down&KEY_SELECT){end_day();dirty=1;}
-   else if(down&KEY_TOUCH){
+   else if(tap){
     int nav=ui_home_navigation(touch.px,touch.py);
     if(nav==1){view=1;message="WELCOME TO THE ARCADE.";dirty=1;}
     else if(nav==2){end_day();dirty=1;}
@@ -103,7 +110,7 @@ int main(void){
     else message="EARN MORE WINS OR CURRENCY.";
     dirty=1;
    }else if(down&KEY_A){begin_game();dirty=1;}
-   else if(down&KEY_TOUCH){
+   else if(tap){
     int nav=ui_arcade_navigation(touch.px,touch.py);
     if(nav==1){begin_game();dirty=1;}
     else if(nav==2){
@@ -126,7 +133,7 @@ int main(void){
      else if(held&KEY_RIGHT)steer=1;
      else if((held&KEY_TOUCH)&&touch.py>=90&&touch.py<173)
       steer=touch.px<128?-1:1;
-     if((down&KEY_TOUCH)&&touch.py>=176){leave_game();dirty=1;}
+     if((tap)&&touch.py>=176){leave_game();dirty=1;}
      else{
       game_arcade_steer(&arc,steer);
       game_arcade_tick(&baby,&arc);
@@ -136,9 +143,10 @@ int main(void){
      else if(down&KEY_RIGHT)direction=1;
      else if(down&KEY_DOWN)direction=2;
      else if(down&KEY_LEFT)direction=3;
-     else if(down&KEY_TOUCH){
+     else if(tap){
       if(touch.py>=176){leave_game();dirty=1;}
-      else direction=ui_arcade_touch(touch.px,touch.py);
+      else direction=arc.id==1?ui_diaper_touch(touch.px,touch.py)
+                              :ui_arcade_touch(touch.px,touch.py);
      }
      if(direction>=0){game_arcade_input(&baby,&arc,direction);dirty=1;}
      if(arc.active)game_arcade_tick(&baby,&arc);
@@ -154,11 +162,12 @@ int main(void){
     view=0;reset_step=0;dirty=1;
    }
   }else if(view==4){
-   if((down&(KEY_A|KEY_B|KEY_START))||(down&KEY_TOUCH)){
+   if((down&(KEY_A|KEY_B|KEY_START))||tap){
     view=0;message="BACK TO DAYCARE. SAME SAVE!";dirty=1;
    }
   }else if(view==5){
-   if(down&KEY_X){
+   if(down&KEY_SELECT){view=7;dirty=1;}
+   else if(down&KEY_X){
     message="CHECKING SAVE STORAGE...";
     ui_draw(&baby,&arc,view,selected,last_ending,reset_step,0,message);
     storage_ok=fatInitDefault();
@@ -167,7 +176,7 @@ int main(void){
      else message="SAVING ENABLED!";
     }else message="NO SAVE DEVICE - RAM ONLY.";
     dirty=1;
-   }else if(down&(KEY_A|KEY_START|KEY_TOUCH)){
+   }else if((down&(KEY_A|KEY_START))||tap){
     /* Successfully displaying the 2D title means ARM9 game code ran. */
     videoSetMode(MODE_0_3D);
     world_init();
@@ -177,13 +186,16 @@ int main(void){
     dirty=1;
    }
   }else if(view==6){
-   if(down&(KEY_B|KEY_START|KEY_A|KEY_TOUCH)){
+   if((down&(KEY_B|KEY_START|KEY_A))||tap){
     view=0;message="COLLECTION CLOSED.";dirty=1;
    }
+  }else if(view==7){
+   if(down&(KEY_B|KEY_SELECT|KEY_START)){view=5;dirty=1;}
   }
   if(three_d_ready)world_draw(&baby,frame,pose);
   /* Keep bitmap VRAM writes off the hot path unless UI state changed. */
-  if(dirty||previous!=view||(view==2&&frame%(arc.id==0?3u:9u)==0u)){
+  if(dirty||previous!=view||(view==2&&frame%(arc.id==0?3u:9u)==0u)||
+     (view==7&&((held&KEY_TOUCH)||(frame%12u==0u)))){
    ui_draw(&baby,&arc,view,selected,last_ending,reset_step,storage_ok,message);
    dirty=0;
   }

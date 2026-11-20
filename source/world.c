@@ -33,6 +33,43 @@ static void block(float x,float y,float z,float width,float height,float depth,
  frame_vertices+=24;
  frame_polygons+=6;
 }
+/* Surface-only decal: ideal for painted floor grain, wallpaper and fabric.
+ * Replaces six-faced boxes with one flat quad in dedicated DS hardware.
+ */
+static void flat_floor(float x,float y,float z,float sx,float sz,
+                       int r,int g,int b){
+ glBegin(GL_QUADS);
+ color(r,g,b,0);
+ face(x-sx*.5f,y,z-sz*.5f,
+      x+sx*.5f,y,z-sz*.5f,
+      x+sx*.5f,y,z+sz*.5f,
+      x-sx*.5f,y,z+sz*.5f);
+ glEnd();
+ frame_vertices+=4;frame_polygons++;
+}
+static void wall_sticker(float x,float y,float z,float sx,float sy,
+                         int r,int g,int b){
+ glBegin(GL_QUADS);
+ color(r,g,b,0);
+ face(x-sx*.5f,y-sy*.5f,z,
+      x+sx*.5f,y-sy*.5f,z,
+      x+sx*.5f,y+sy*.5f,z,
+      x-sx*.5f,y+sy*.5f,z);
+ glEnd();
+ frame_vertices+=4;frame_polygons++;
+}
+/* A rail has three visible faces rather than all six box faces. */
+static void crib_rail(float x,float y,float z,float width,float height,
+                      float depth,int r,int g,int b){
+ float lx=x-width*.5f,rx=x+width*.5f,lo=y-height*.5f,hi=y+height*.5f;
+ float fr=z+depth*.5f,bk=z-depth*.5f;
+ glBegin(GL_QUADS);
+ color(r,g,b,2);face(lx,lo,fr,rx,lo,fr,rx,hi,fr,lx,hi,fr);
+ color(r,g,b,-4);face(rx,lo,fr,rx,lo,bk,rx,hi,bk,rx,hi,fr);
+ color(r,g,b,4);face(lx,hi,fr,rx,hi,fr,rx,hi,bk,lx,hi,bk);
+ glEnd();
+ frame_vertices+=12;frame_polygons+=3;
+}
 /* GL_QUAD_STRIP shares ring vertices between adjacent polygons. This
  * reduces ellipsoid submissions from 96 to 54 vertices at the SAME 8
  * angular sides / 24 polygons. Critical for the DS's 6144 vertex cap.
@@ -64,16 +101,16 @@ static void room(void){
  block(0,-1.15,-3.12,6.9,.16,.12,31,18,24);
  block(-3.32,-1.15,0,.12,.16,6.9,31,18,24);
  /* Floor boards, big soft nursery rug and stitched edging. */
- for(i=0;i<8;i++)block(-3.1f+i*.84f,-1.227f,0,.025,.014,6.7,16,10,7);
- for(i=0;i<5;i++)block(0,-1.227f,-3.05f+i*1.40f,6.8,.014,.025,18,12,8);
+ for(i=0;i<8;i++)flat_floor(-3.1f+i*.84f,-1.227f,0,.025,6.7,16,10,7);
+ for(i=0;i<5;i++)flat_floor(0,-1.227f,-3.05f+i*1.40f,6.8,.025,18,12,8);
  block(.04,-1.20,.78,2.86,.09,2.43,10,16,22);
  block(.04,-1.145,.78,2.62,.045,2.18,22,26,30);
- for(i=0;i<5;i++)block(-.88f+i*.45f,-1.112f,1.78,.15,.015,.04,30,22,14);
+ for(i=0;i<5;i++)flat_floor(-.88f+i*.45f,-1.112f,1.78,.15,.04,30,22,14);
  /* Glazed nursery window, mullions, curtains and cornice. */
  block(-1.76,1.15,-3.06,1.95,1.76,.07,31,28,20);
  block(-1.76,1.15,-3.01,1.65,1.51,.04,12,23,29);
- block(-1.76,1.15,-2.97,.10,1.57,.05,31,28,18);
- block(-1.76,1.15,-2.97,1.71,.10,.05,31,28,18);
+ wall_sticker(-1.76,1.15,-2.97,.10,1.57,31,28,18);
+ wall_sticker(-1.76,1.15,-2.965,1.71,.10,31,28,18);
  block(-2.63,1.12,-2.81,.27,1.84,.15,26,10,17);
  block(-.89,1.12,-2.81,.27,1.84,.15,26,10,17);
  block(-1.76,2.11,-2.79,2.09,.13,.15,29,16,20);
@@ -97,8 +134,8 @@ static void room(void){
  block(2.28,-.64,-1.49,1.49,.20,1.61,28,17,15);
  block(2.28,-.48,-1.49,1.23,.10,1.35,30,24,20);
  for(i=0;i<5;i++){
-  block(1.76f+i*.26f,-.16,-.64,.075,1.19,.085,31,27,20);
-  block(1.76f+i*.26f,-.16,-2.34,.075,1.19,.085,31,27,20);
+  crib_rail(1.76f+i*.26f,-.16,-.64,.075,1.19,.085,31,27,20);
+  crib_rail(1.76f+i*.26f,-.16,-2.34,.075,1.19,.085,31,27,20);
  }
  block(2.28,.45,-.64,1.52,.14,.13,30,25,18);
  block(2.28,.45,-2.34,1.52,.14,.13,30,25,18);
@@ -107,6 +144,17 @@ static void room(void){
  /* Shelf and a row of toy blocks, no giant texture atlas needed. */
  block(2.59,1.06,-3.00,1.09,.13,.38,29,19,15);
  for(i=0;i<4;i++)block(2.16f+i*.26f,1.28,-2.91,.20,.30,.24,17+i*3,18-i,22+i);
+ /* A crib mobile, star decals and frame accents make the room feel lived in. */
+ block(2.28,.93,-1.49,.065,.75,.065,28,20,10);
+ block(2.28,1.29,-1.49,.91,.07,.10,28,20,10);
+ wall_sticker(2.01,.88,-1.02,.19,.23,31,24,8);
+ wall_sticker(2.55,.79,-1.02,.19,.23,16,26,29);
+ wall_sticker(2.24,.68,-1.02,.15,.17,30,15,23);
+ for(i=0;i<6;i++)wall_sticker(-.27f+i*.42f,2.34f+(i&1)*.08f,
+                                -3.015f,.11,.11,31,25,13);
+ /* Individual decorative labels on the shelf's toy blocks. */
+ for(i=0;i<4;i++)wall_sticker(2.16f+i*.26f,1.28f,-2.774f,
+                               .09f,.13f,31,29,19);
  /* Blocks and balls visible in foreground. */
  block(2.56,-1.04,1.54,.39,.36,.40,26,13,23);
  block(2.56,-.70,1.54,.30,.32,.31,16,23,30);
@@ -131,7 +179,7 @@ static void teddy(void){
 static void baby_model(const Game *s,uint32_t frame,int action){
  float bob=(float)((int)(frame%80u)-40)*.0009f;
  float waving=(float)((int)(frame%110u)-55)*.002f;
- int blink=(frame%143u)<5u;
+ int blink=(frame%143u)<5u || (action==4 && (frame%110u)<55u);
  int glitched=game_glitch_tier(s)>=2&&!s->safe_visuals&&(frame%121u<13u);
  int happy=s->mood>42;
  glPushMatrix();
@@ -151,6 +199,10 @@ static void baby_model(const Game *s,uint32_t frame,int action){
  ellipse(.72,-.43-waving*(action==2?2:1),.20,.19,.29,.18,27,17,12);
  ellipse(-.77,-.68+waving,.27,.19,.15,.19,28,18,13);
  ellipse(.77,-.68-waving,.27,.19,.15,.19,28,18,13);
+ /* Quilted shirt stripes and color-blocked sleeves. */
+ wall_sticker(-.32f,-.44f,.344f,.10f,.36f,24,9,18);
+ wall_sticker(.32f,-.44f,.344f,.10f,.36f,24,9,18);
+ wall_sticker(0,-.65f,.392f,.65f,.055f,29,20,12);
  /* Sweater bunny embroidery, raised above the clothing. */
  ellipse(0,-.37,.36,.21,.16,.025,30,25,24);
  ellipse(-.12,-.27,.36,.09,.14,.022,30,25,24);
@@ -170,14 +222,25 @@ static void baby_model(const Game *s,uint32_t frame,int action){
  /* Pink hair clip and shiny, intentionally overlarge DS-era eyes. */
  ellipse(-.56,.98,.37,.12,.18,.075,30,9,18);
  ellipse(-.55,.96,.435,.060,.10,.017,31,19,25);
- ellipse(-.29,.57,.613,.20,blink?.022f:.20f,.071,31,29,29);
- ellipse(.29,.57,.613,.20,blink?.022f:.20f,.071,31,29,29);
+ ellipse(-.29,.57,.607,.225,blink?.025f:.228f,.071,13,8,10);
+ ellipse(.29,.57,.607,.225,blink?.025f:.228f,.071,13,8,10);
+ ellipse(-.29,.57,.631,.20,blink?.022f:.20f,.071,31,29,29);
+ ellipse(.29,.57,.631,.20,blink?.022f:.20f,.071,31,29,29);
  if(!blink){
-  ellipse(-.27,.57,.685,.106,.14,.043,3,2,3);
-  ellipse(.29+(glitched?.16f:0),.57,.685,.112,.14,.043,3,2,3);
-  ellipse(-.30,.64,.724,.037,.040,.020,31,31,31);
-  ellipse(.25+(glitched?.16f:0),.64,.724,.037,.040,.020,31,31,31);
+  ellipse(-.27,.57,.707,.12,.15,.044,10,19,12);
+  ellipse(.29+(glitched?.16f:0),.57,.707,.12,.15,.044,10,19,12);
+  ellipse(-.27,.565,.743,.064,.096,.028,3,2,3);
+  ellipse(.29+(glitched?.16f:0),.565,.743,.064,.096,.028,3,2,3);
+  ellipse(-.32,.65,.765,.039,.040,.018,31,31,31);
+  ellipse(.25+(glitched?.16f:0),.65,.765,.039,.040,.018,31,31,31);
  }
+ /* Eyebrows, tiny freckles and a shaped nose are inexpensive decals. */
+ wall_sticker(-.29,.83,.633,.26,.047,9,5,5);
+ wall_sticker(.29,.83,.633,.26,.047,9,5,5);
+ wall_sticker(-.52,.28,.52,.045,.047,19,10,10);
+ wall_sticker(-.44,.25,.57,.035,.035,19,10,10);
+ wall_sticker(.52,.28,.52,.045,.047,19,10,10);
+ wall_sticker(.44,.25,.57,.035,.035,19,10,10);
  ellipse(0,.30,.64,.14,.12,.085,28,18,14);
  ellipse(-.40,.29,.58,.12,.08,.022,31,15,18);
  ellipse(.40,.29,.58,.12,.08,.022,31,15,18);
@@ -199,7 +262,7 @@ void world_init(void){
 void world_draw(const Game *s,uint32_t frame,int activity){
  glMatrixMode(GL_MODELVIEW);glLoadIdentity();
  /* This is a room with true depth and perspective, not a flat orthographic collage. */
- gluLookAt(3.30f,2.35f,6.55f,0,.08f,-.25f,0,1,0);
+ gluLookAt(3.02f,2.26f,6.12f,-.05f,.08f,-.25f,0,1,0);
  glPolyFmt(POLY_ALPHA(31)|POLY_CULL_NONE);
  frame_vertices=0;frame_polygons=0;
  room();

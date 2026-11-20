@@ -37,10 +37,20 @@ int main(void){
  assert(ui_arcade_touch(127,148)==2);
  assert(ui_arcade_touch(100,126)==3);
  assert(ui_arcade_touch(0,0)==-1);
+ assert(ui_diaper_touch(120,100)==0);
+ assert(ui_diaper_touch(40,140)==3);
+ assert(ui_diaper_touch(185,140)==1);
+ assert(ui_diaper_touch(124,162)==2);
+ assert(ui_diaper_touch(2,142)==-1);
+ assert(ui_diaper_touch(240,179)==-1);
  ui_draw(&g,&a,4,0,END_GRADUATION,0,1,"CONTINUE");
  ui_draw(&g,&a,3,0,0,1,1,"RESET?");
  ui_draw(&g,&a,5,0,0,0,1,"START");
  ui_draw(&g,&a,6,0,0,0,1,"ALBUM");
+ ui_touch_observe(1,120,130,3);
+ ui_draw(&g,&a,7,0,0,0,1,"TOUCH DEBUG");
+ ui_touch_observe(0,0,0,3);
+ ui_draw(&g,&a,7,0,0,0,1,"TOUCH DEBUG");
  puts("PASS: bitmap UI and touch hitboxes");
  return 0;
 }
