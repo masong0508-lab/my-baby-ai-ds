@@ -75,3 +75,18 @@ GitHub Actions now uploads **two ROMs** in each artifact:
 **Suggested test:** First try the DS-only ROM, starting a *new emulator session*, not a saved state. If it still gives two white screens, try the normal ROM and disable CPU JIT in the emulator if that option exists. If the lower title screen appears but selecting **X** freezes, the problem is probably in emulator storage support rather than initial video setup. If START leads to a freeze, investigate the heavy 3D renderer. Record which stage fails. Neither variant is currently certified by a successful DraStic or melonDS runtime test.
 
 Hardware note: DraStic's emulation differs from current melonDS; devkitPro/libnds v2 changes have been reported to affect some older emulators, so this is a compatibility test, not a guaranteed final fix.
+
+## DraStic white-screen compatibility investigation
+
+A tester reported that the previous binary booted to **two entirely white screens** in DraStic before any game interface appeared. A successful GitHub Actions cross-build does not constitute an emulator boot test.
+
+This compatibility branch introduces **two independent mitigations**:
+
+1. The startup shows the title on the DS **2D display engines first**, without initializing the full 3D nursery or FAT storage. A purple top screen and a colorful bottom title confirm that the program reached its first graphics frame. Press **A/START/touch** to initialize the 3D engine and enter the nursery.
+2. GitHub Actions also packages a validated **DS-only** compatibility ROM (`my-baby-ai-ds-only.nds`) alongside the standard `my-baby-ai.nds`. This adjusts cartridge header unit code 0x12 and recalculates header CRC16 without changing the game binaries.
+
+**Important temporary save change:** at the title screen, press **X** to attempt loading/enabling DLDI/FAT saves. The game otherwise starts in RAM-only mode, deliberately avoiding potentially blocking emulator storage init. Do not assume progress persists unless the title shows that saving is enabled. Try the DS-only binary in DraStic using **Start Game**, not an emulator save state from the broken ROM.
+
+For a diagnostic report, record whether (a) the purple/colorful title appears, (b) pressing START enters the nursery, and (c) pressing X at title freezes or reports no save device. A white screen *before* the title in both ROM variants suggests a deeper emulator/runtime incompatibility and needs an emulator-level reproduction; it is not proof of a 3D scene bug.
+
+This is a compatibility **candidate**, not a runtime-verified fix.
