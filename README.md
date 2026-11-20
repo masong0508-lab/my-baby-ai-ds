@@ -29,3 +29,7 @@ Discover **Tiny Diploma Ceremony**, **Rattle Arcade Champion**, **Bugs Become Fe
 The top screen now runs a multi-object, shaded, original low-poly scene via the DS hardware 3D engine. The lower screen uses 256×192 native pixel art and interactive status displays with a 16-bit BG bitmap in **128 KiB of dedicated VRAM** (not an extra 128 KiB main-RAM framebuffer), plus a small embedded bitmap font. The UI refreshes on changes, with lower-frequency countdown updates. See `docs/graphics-pipeline.md`.
 
 **Verification status:** portable C simulation/save tests passed previously; host UI raster checks are present in CI. A native `.nds` build, original-hardware frame-rate validation, and emulator screenshots have **not yet been confirmed**. The sixteen cabinets currently share one arcade microgame; they are not sixteen finished unique minigames.
+
+### Title screen, album, settings
+
+A proper startup screen offers touchscreen/START entry to nursery. From the nursery press **L** to view the ending collection (records good and bad endings without losing progress). Press **R** to toggle visual corruption effects, while retaining gameplay interference. Holding **L+R** after enough bad endings enters the separately-confirmed secret reset ending. The new `source/ui.c` renders all of these screens in native DS VRAM.

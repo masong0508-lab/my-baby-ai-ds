@@ -33,6 +33,8 @@ int main(void){
  assert(ui_arcade_touch(0,0)==-1);
  ui_draw(&g,&a,4,0,END_GRADUATION,0,1,"CONTINUE");
  ui_draw(&g,&a,3,0,0,1,1,"RESET?");
+ ui_draw(&g,&a,5,0,0,0,1,"START");
+ ui_draw(&g,&a,6,0,0,0,1,"ALBUM");
  puts("PASS: bitmap UI and touch hitboxes");
  return 0;
 }

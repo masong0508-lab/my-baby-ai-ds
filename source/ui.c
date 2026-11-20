@@ -275,6 +275,38 @@ static void finale(const Game *s,int ending){
  foot(PURPLE);
  fit(28,181,"A / B CONTINUE PLAYING",WHITE,30);
 }
+static void title_screen(const Game *s){
+ int i;char count[40];
+ solid(0,27,256,149,PINK);
+ /* Arcade-era promotional title screen drawn by the DS itself. */
+ for(i=0;i<18;i++){
+  int x=(i*59)%247,y=29+(i*47)%135;
+  solid(x,y,5,5,(i&1)?LEMON:SKY);
+ }
+ panel(15,42,226,118,WHITE,DEEP_PINK);
+ capsule(28,52,200,37,LILAC,PURPLE);
+ label(50,63,"MY BABY A.I.!",INK,1,21);
+ capsule(52,104,152,29,MINT,TEAL);
+ label(81,114,"START GAME",INK,1,20);
+ snprintf(count,sizeof(count),"DAY %lu  $%u",(unsigned long)s->days,s->dollars);
+ fit(73,141,count,MUTED,21);
+ foot(PURPLE);fit(38,181,"TOUCH OR PRESS START",WHITE,30);
+}
+static void ending_album(const Game *s){
+ int row,col,id,x,y;char tmp[40];
+ solid(0,27,256,149,BLUSH);
+ panel(6,32,244,27,WHITE,PURPLE);
+ fit(15,42,"ENDING MEMORY ALBUM",PURPLE,31);
+ for(row=0;row<4;row++)for(col=0;col<2;col++){
+  id=1+row+col*4;x=8+col*124;y=64+row*24;
+  capsule(x,y,116,21,(s->ending_mask&(1u<<id))?(id>=5?MINT:LEMON):GRAY,PURPLE);
+  snprintf(tmp,sizeof(tmp),"%02d",id);
+  fit(x+5,y+6,tmp,INK,3);
+  fit(x+25,y+6,(s->ending_mask&(1u<<id))?game_ending_name(id):"NOT FOUND",INK,14);
+ }
+ foot(PURPLE);
+ fit(11,181,"B: BACK  SAVE KEPT",WHITE,32);
+}
 static void reset_screen(int confirm){
  solid(0,27,256,149,LILAC);
  panel(11,37,234,132,IVORY,DEEP_PINK);
@@ -294,13 +326,15 @@ void ui_draw(const Game *s,const Arcade *a,int view,int selection,
              int ending,int reset_step,int can_save,const char *message){
  if(!pixels||!s)return;
  solid(0,0,256,192,IVORY);
- header(view==0?"MY BABY A.I.!":view==1?"BABY ARCADE":view==2?"MINIGAME":view==3?"SAVE MEMORY": "ENDING ALBUM",s);
+ header(view==0?"MY BABY A.I.!":view==1?"BABY ARCADE":view==2?"MINIGAME":view==3?"SAVE MEMORY":view==4?"ENDING!":view==5?"WELCOME":"MEMORY ALBUM",s);
  switch(view){
  case 0:home(s,can_save,message);break;
  case 1:arcade_list(s,selection);break;
  case 2:challenge(s,a);break;
  case 3:reset_screen(reset_step);break;
  case 4:finale(s,ending);break;
+ case 5:title_screen(s);break;
+ case 6:ending_album(s);break;
  }
 }
 int ui_nursery_touch(int x,int y){

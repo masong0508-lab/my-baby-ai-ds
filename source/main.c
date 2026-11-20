@@ -11,7 +11,7 @@
 #define SAVE_BASE "fat:/my_baby_ai"
 static Game baby;
 static Arcade arc;
-static int storage_ok,view,selected,reset_step,last_ending,pose;
+static int storage_ok,view=5,selected,reset_step,last_ending,pose;
 static const char *message="WELCOME TO DAYCARE 2.0";
 static void persist(void){if(storage_ok)(void)save_write(SAVE_BASE,&baby);}
 static void care(Care action){
@@ -74,6 +74,11 @@ int main(void){
     else if(nav==2){end_day();dirty=1;}
    }else if((held&(KEY_L|KEY_R))==(KEY_L|KEY_R)&&game_reset_unlocked(&baby)){
     view=3;reset_step=0;dirty=1;
+   }else if(down&KEY_L){view=6;dirty=1;}
+   else if(down&KEY_R){
+    baby.safe_visuals^=1;
+    message=baby.safe_visuals?"QUIET GRAPHICS, SAME GAMEPLAY.":"VISUAL GLITCHES RESTORED.";
+    persist();dirty=1;
    }
   }else if(view==1){
    if(down&KEY_UP){selected=(selected+15)%16;dirty=1;}
@@ -126,6 +131,14 @@ int main(void){
   }else if(view==4){
    if((down&(KEY_A|KEY_B|KEY_START))||(down&KEY_TOUCH)){
     view=0;message="BACK TO DAYCARE. SAME SAVE!";dirty=1;
+   }
+  }else if(view==5){
+   if(down&(KEY_A|KEY_START|KEY_TOUCH)){
+    view=0;message="WELCOME BACK, SHAREHOLDER.";dirty=1;
+   }
+  }else if(view==6){
+   if(down&(KEY_B|KEY_START|KEY_A|KEY_TOUCH)){
+    view=0;message="COLLECTION CLOSED.";dirty=1;
    }
   }
   world_draw(&baby,frame,pose);
