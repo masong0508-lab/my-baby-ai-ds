@@ -8,6 +8,13 @@
 #include "save.h"
 #include "world.h"
 #include "ui.h"
+#if defined(__BLOCKSDS__)
+/* BlocksDS main loop convention: traditional foreground VBlank loop. */
+#define GAME_LOOP_ACTIVE() 1
+#else
+/* Modern devkitPro libnds2/calico asks applications to use pmMainLoop(). */
+#define GAME_LOOP_ACTIVE() pmMainLoop()
+#endif
 #define SAVE_BASE "fat:/my_baby_ai"
 static Game baby;
 static Arcade arc;
@@ -58,7 +65,7 @@ int main(void){
  ui_draw(&baby,&arc,view,selected,last_ending,reset_step,storage_ok,message);
  /* Stay in RAM-only mode until the player explicitly requests save access.
   * New and old .nds game saves remain compatible when FAT is available. */
- while(pmMainLoop()){
+ while(GAME_LOOP_ACTIVE()){
   int down,held,previous=view;
   touchPosition touch;
   swiWaitForVBlank();scanKeys();touchRead(&touch);
