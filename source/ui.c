@@ -67,8 +67,12 @@ static int test_touch_down,test_touch_x,test_touch_y;
 static unsigned long test_touch_count;
 void ui_touch_observe(int down,int x,int y,uint32_t count){
  test_touch_down=down;
- test_touch_x=x;
- test_touch_y=y;
+ /* A release is not a touch at 0,0. Keep the last real coordinate visible
+  * so emulator testers can inspect where the previous press landed. */
+ if(down&&x>=0&&x<256&&y>=0&&y<192){
+  test_touch_x=x;
+  test_touch_y=y;
+ }
  test_touch_count=(unsigned long)count;
 }
 /* Glyph rows are a compact bitset, 5 columns x 7 rows, uppercase ASCII. */
@@ -414,7 +418,15 @@ void ui_touch_diag_update(void){
  }
  /* Only erase/draw a 13x13 patch within the little touch canvas. */
  if(!test_touch_down||test_touch_x<0||test_touch_y<0||
-    test_touch_x>255||test_touch_y>191)return;
+    test_touch_x>255||test_touch_y>191){
+  /* Release must remove the previous crosshair exactly once. Otherwise
+   * the touch-test canvas appears to show a stylus still being held. */
+  if(diag_cross_x>=0){
+   solid(diag_cross_x-7,diag_cross_y-7,15,15,BLUSH);
+   diag_cross_x=-1;diag_cross_y=-1;
+  }
+  return;
+ }
  x=31+(test_touch_x*194)/255;
  y=119+(test_touch_y*30)/191;
  if(x==diag_cross_x&&y==diag_cross_y)return;

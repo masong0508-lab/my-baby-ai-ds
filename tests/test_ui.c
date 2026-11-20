@@ -49,9 +49,25 @@ int main(void){
  ui_draw(&g,&a,6,0,0,0,1,"ALBUM");
  ui_touch_observe(1,120,130,3);
  ui_draw(&g,&a,7,0,0,0,1,"TOUCH DEBUG");
- ui_touch_diag_update();
- ui_touch_diag_update(); /* same state should be a no-op */
- ui_touch_observe(0,0,0,3);
+ {
+  /* Crosshair must not stick after stylus release, or ghost at 0,0. */
+  unsigned index=139u*256u+122u; /* x=31+120*194/255, y=119+130*30/191 */
+  uint16_t canvas=screen[index];
+  ui_touch_diag_update();
+  assert(screen[index]!=canvas);
+  ui_touch_diag_update(); /* same state should be a no-op */
+  ui_touch_observe(0,0,0,3);
+  ui_touch_diag_update();
+  assert(screen[index]==canvas);
+  ui_touch_observe(1,120,130,4);
+  ui_touch_diag_update();
+  assert(screen[index]!=canvas);
+  ui_touch_observe(1,220,170,4);
+  ui_touch_diag_update();
+  assert(screen[index]==canvas); /* old crosshair erased on movement */
+  ui_touch_observe(0,0,0,4);
+  ui_touch_diag_update();
+ }
  ui_draw(&g,&a,7,0,0,0,1,"TOUCH DEBUG");
  ui_touch_diag_update();
  /* Cursor must restore the exact pixels it covered, then obey a UI
