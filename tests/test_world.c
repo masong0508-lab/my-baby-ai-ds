@@ -5,6 +5,9 @@
 int main(void){
  Game s;int i;unsigned worst_v=0,worst_p=0;
  game_init(&s);world_init();
+ world_draw_title(0);
+ assert(world_vertex_count()<=1024);
+ assert(world_polygon_count()<=350);
  for(i=0;i<256;i++){
   s.corruption=(uint8_t)((i&1)?95:5);
   s.safe_visuals=0;

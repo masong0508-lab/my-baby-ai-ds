@@ -73,10 +73,20 @@ jobs:
           print(f"ROM size={len(rom):,} bytes, ARM9 offset={arm9_offset:#x}, ARM9 bytes={arm9_size:,}")
           PY
 
-      - name: Upload playable Nintendo DS ROM (.nds)
+      - name: Package legacy DS-only compatibility ROM
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python3 tools/nds_legacy_header.py my-baby-ai.nds my-baby-ai-ds-only.nds
+          test -s my-baby-ai-ds-only.nds
+          ndstool -i my-baby-ai-ds-only.nds
+
+      - name: Upload standard and DS-only homebrew ROMs
         uses: actions/upload-artifact@v4
         with:
           name: my-baby-ai-nds
-          path: my-baby-ai.nds
+          path: |
+            my-baby-ai.nds
+            my-baby-ai-ds-only.nds
           if-no-files-found: error
           retention-days: 30

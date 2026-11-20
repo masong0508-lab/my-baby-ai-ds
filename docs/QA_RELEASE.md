@@ -75,3 +75,19 @@ Pass / fail and issue links:
 A release candidate needs (1) green cross-build/tests, (2) verified emulator gameplay, (3) original DS/DS Lite smoke test or an explicitly labeled hardware-untested preview, (4) working saves/recovery, (5) all advertised minigames actually implemented, (6) no high-severity crashes/corruption, (7) clear controls and support docs, (8) original/legally usable assets and licensing, and (9) reproducible tagged binaries with changelog.
 
 Never put an ESRB rating, Nintendo endorsement or third-party character/artwork on the package unless actually authorized. The game's parody branding and rating are separate from any official endorsement.
+
+## DraStic double-white-screen regression (2026-11-20)
+
+A user-provided screen recording of DraStic opening the ROM shows both displays remaining white before any title graphics; the emulator radial menu opens, but the game itself shows no visible progress. Root cause is **not yet proven**.
+
+Check both CI binaries after the boot compatibility patch:
+- `my-baby-ai.nds`: standard devkitARM packaging.
+- `my-baby-ai-ds-only.nds`: identical program code, DS-only unit code and recomputed header CRC.
+
+Expected diagnostic order:
+1. Boot into a purple top screen and full-color title UI on the bottom **without** touching storage or running 3D.
+2. Press A/START to enter nursery 3D. Record whether it freezes at that transition.
+3. Restart, press X on the title to attempt enabling saves. Test only with disposable saves and record whether storage initialization stalls.
+4. If both ROM variants still show immediate white screens, investigate libnds v2/ARM7 runtime and DraStic-specific homebrew behavior; test the same exact SHA in melonDS and real hardware before asserting the root cause.
+
+No regression is considered fixed without actual emulator screenshots or a successful player confirmation.
