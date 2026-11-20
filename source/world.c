@@ -199,17 +199,21 @@ static void room(void){
  /* One darkened ground plane under the play mat gives contact shadow
   * without expensive translucent blending or extra VRAM. */
  flat_floor(.04f,-1.222f,.78f,3.00f,2.58f,20,17,14);
- block(.04,-1.20,.78,2.86,.09,2.43,18,20,18);
- block(.04,-1.145,.78,2.62,.045,2.18,27,28,25);
- for(i=0;i<5;i++)flat_floor(-.88f+i*.45f,-1.112f,1.78,.15,.04,26,24,18);
+ block(.04,-1.20,.78,2.86,.09,2.43,15,22,8);
+ block(.04,-1.145,.78,2.62,.045,2.18,25,29,11);
+ for(i=0;i<4;i++)flat_floor(-.89f+i*.56f,-1.112f,1.78f,.13f,.035f,18,25,9);
+ /* Big stylized flowers, a defining motif of the 2000s reference. */
+ rug_flower(-.92f,1.32f);
+ rug_flower(.92f,1.48f);
+ rug_flower(-.33f,1.77f);
  /* Glazed nursery window, mullions, curtains and cornice. */
  block(-1.76,1.15,-3.06,1.95,1.76,.07,29,28,25);
  block(-1.76,1.15,-3.01,1.65,1.51,.04,16,24,29);
  wall_sticker(-1.76,1.15,-2.97,.10,1.57,28,27,24);
  wall_sticker(-1.76,1.15,-2.965,1.71,.10,28,27,24);
- block(-2.63,1.12,-2.81,.27,1.84,.15,22,18,18);
- block(-.89,1.12,-2.81,.27,1.84,.15,22,18,18);
- block(-1.76,2.11,-2.79,2.09,.13,.15,22,18,18);
+ block(-2.63,1.12,-2.81,.27,1.84,.15,25,12,18);
+ block(-.89,1.12,-2.81,.27,1.84,.15,25,12,18);
+ block(-1.76,2.11,-2.79,2.09,.13,.15,25,12,18);
  /* Picture frame, yellow stars and faux painting. */
  block(.53,1.93,-3.03,.85,.75,.11,21,17,13);
  block(.53,1.93,-2.96,.69,.57,.03,27,27,23);
@@ -218,30 +222,38 @@ static void room(void){
  block(1.62,1.84,-2.96,.60,.64,.02,21,27,23);
  ellipse(1.62,1.85,-2.92,.19,.16,.02,27,24,17);
  /* Dresser, three actual drawers and bottle atop it. */
- block(-2.55,-.48,-.48,1.20,1.36,.94,21,19,16);
- block(-2.55,.23,-.48,1.36,.16,1.11,26,24,21);
+ block(-2.55,-.48,-.48,1.20,1.36,.94,27,24,20);
+ block(-2.55,.23,-.48,1.36,.16,1.11,29,26,22);
  for(i=0;i<3;i++){
-  block(-2.55,-.13f-i*.36f,.011,1.05,.28,.05,27,25,22);
-  ellipse(-2.55,-.13f-i*.36f,.063,.059,.055,.04,20,16,11);
+  block(-2.55,-.13f-i*.36f,.011,1.05,.28,.05,29,27,23);
+  ellipse(-2.55,-.13f-i*.36f,.063,.059,.055,.04,28,13,18);
  }
- block(-2.55,.42,-.48,.19,.25,.17,29,28,25);
- ellipse(-2.55,.61,-.48,.22,.24,.22,30,27,23);
+ block(-2.55,.42,-.48,.14,.28,.14,29,23,21);
+ ellipse(-2.55,.65,-.48,.34,.16,.32,31,27,13);
  /* Warm white wall panels and a subtle horizontal chair rail ground
   * the room visually without large textures or extra 3D geometry. */
  wall_sticker(.35f,-.69f,-3.125f,5.65f,.035f,23,23,20);
  wall_sticker(.36f,-1.01f,-3.125f,5.65f,.04f,24,23,21);
  /* 3D crib with rails on two visible sides, mattresses and legs. */
- block(2.28,-.64,-1.49,1.49,.20,1.61,25,22,18);
- block(2.28,-.48,-1.49,1.23,.10,1.35,29,27,25);
- ellipse(2.20f,-.39f,-1.87f,.34f,.07f,.25f,30,29,27); /* cotton pillow */
+ block(2.28,-.64,-1.49,1.49,.20,1.61,29,28,24);
+ block(2.28,-.48,-1.49,1.23,.10,1.35,31,20,24);
+ ellipse(2.20f,-.39f,-1.87f,.34f,.07f,.25f,31,27,28); /* cotton pillow */
  for(i=0;i<5;i++){
-  crib_rail(1.76f+i*.26f,-.16,-.64,.075,1.19,.085,28,26,22);
-  crib_rail(1.76f+i*.26f,-.16,-2.34,.075,1.19,.085,28,26,22);
+  crib_rail(1.76f+i*.26f,-.16,-.64,.075,1.19,.085,30,29,25);
+  crib_rail(1.76f+i*.26f,-.16,-2.34,.075,1.19,.085,30,29,25);
  }
- block(2.28,.45,-.64,1.52,.14,.13,27,25,21);
- block(2.28,.45,-2.34,1.52,.14,.13,27,25,21);
- block(1.55,-.14,-1.49,.13,1.13,1.72,27,25,21);
- block(3.03,-.14,-1.49,.13,1.13,1.72,27,25,21);
+ block(2.28,.45,-.64,1.52,.14,.13,30,29,25);
+ block(2.28,.45,-2.34,1.52,.14,.13,30,29,25);
+ block(1.55,-.14,-1.49,.13,1.13,1.72,30,29,25);
+ block(3.03,-.14,-1.49,.13,1.13,1.72,30,29,25);
+ /* The nursery's slightly too-cheerful flower decals. */
+ tulip(-.44f,.84f,-3.122f,1);
+ tulip(.12f,.76f,-3.122f,0);
+ tulip(.74f,.70f,-3.122f,1);
+ tulip(1.29f,.70f,-3.122f,0);
+ /* A single soft daisy on the green side wall. */
+ side_wall_mark(-3.328f,1.51f,.38f,.34f,.31f,29,15,20);
+ side_wall_mark(-3.327f,1.51f,.38f,.12f,.13f,31,25,10);
  /* Shelf and a row of toy blocks, no giant texture atlas needed. */
  block(2.59,1.06,-3.00,1.09,.13,.38,24,20,16);
  for(i=0;i<4;i++)block(2.16f+i*.26f,1.28,-2.91,.20,.30,.24,19+i*2,20-i,20+i);
@@ -263,19 +275,24 @@ static void room(void){
  ellipse(-2.68,-1.00,1.03,.22,.22,.20,20,26,21);
 }
 static void teddy(void){
- float x=.89,y=-.80f,z=1.19f;
- ellipse(x,y,z,.28,.32,.25,19,14,10);
- ellipse(x,y+.38f,z+.04f,.25,.25,.23,21,16,11);
- ellipse(x-.22f,y+.57f,z,.12,.12,.12,22,16,11);
- ellipse(x+.22f,y+.57f,z,.12,.12,.12,22,16,11);
- ellipse(x,y+.30f,z+.25f,.13,.10,.055,29,25,21);
- ellipse(x-.09f,y+.43f,z+.255f,.038,.047,.03,6,5,4);
- ellipse(x+.09f,y+.43f,z+.255f,.038,.047,.03,6,5,4);
- ellipse(x,y+.32f,z+.31f,.052,.035,.027,5,4,4);
- ellipse(x-.27f,y-.07f,z,.13,.17,.15,20,15,11);
- ellipse(x+.27f,y-.07f,z,.13,.17,.15,20,15,11);
- ellipse(x-.16f,y-.27f,z+.08f,.13,.13,.17,21,15,11);
- ellipse(x+.16f,y-.27f,z+.08f,.13,.13,.17,21,15,11);
+ /* Positioned between the baby's splayed legs, not off on the right.
+  * The bear's cheaply molded expression matches the uncanny reference. */
+ const float x=.02f,y=-.79f,z=1.27f;
+ ellipse(x,y,z,.31f,.34f,.25f,27,16,5);
+ ellipse(x,y+.38f,z+.05f,.255f,.265f,.23f,28,17,5);
+ ellipse(x-.205f,y+.59f,z,.125f,.125f,.12f,28,17,5);
+ ellipse(x+.205f,y+.59f,z,.125f,.125f,.12f,28,17,5);
+ ellipse(x,y+.285f,z+.258f,.145f,.115f,.051f,30,26,21);
+ ellipse(x-.087f,y+.43f,z+.255f,.043f,.055f,.03f,5,5,4);
+ ellipse(x+.090f,y+.42f,z+.255f,.043f,.055f,.03f,5,5,4);
+ ellipse(x,y+.295f,z+.311f,.049f,.035f,.026f,7,5,4);
+ ellipse(x-.295f,y-.045f,z+.07f,.14f,.18f,.15f,28,17,5);
+ ellipse(x+.295f,y-.045f,z+.07f,.14f,.18f,.15f,28,17,5);
+ ellipse(x-.175f,y-.285f,z+.09f,.13f,.13f,.17f,27,16,5);
+ ellipse(x+.175f,y-.285f,z+.09f,.13f,.13f,.17f,27,16,5);
+ /* Wear patches read like slightly low-resolution printed texture. */
+ soft_mark(x,y-.06f,z+.255f,.105f,.100f,30,26,21);
+ soft_mark(x-.205f,y-.27f,z+.245f,.066f,.066f,30,26,21);
 }
 static void baby_model(const Game *s,uint32_t frame,int action){
  /* The reference is uneasy because the infant smiles a little too steadily,
