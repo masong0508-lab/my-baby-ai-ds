@@ -214,3 +214,9 @@ path is fixed. The actual stylus path remains available when delivered by an
 emulator or physical DS. Moving the cursor updates an 11x11 patch (242-byte
 color backup), avoiding a 256x192 VRAM repaint or secondary framebuffer.
 It does not affect save files or the core game's state.
+
+## Why the other DS ports matter
+
+The persistent DraStic touchscreen failure was compared against the actual implementations in **Mandex** and **Bore: GodGuy**, both of which use custom, direct-register ARM7 input and pass it through shared memory. The current My Baby A.I. BlocksDS ROM uses a filtered ARM7 touchscreen FIFO and has shown no native touch events on the user's DraStic build. See [cross-repository touchscreen audit](docs/DS_PORT_TOUCH_AUDIT.md).
+
+A new **standalone native input architecture test** is built through GitHub Actions as `bare-touch-arm7.nds`. It uses Mandex-style ARM7 register reads plus SPI and a classic ARM9/ARM7 boot image, but **no BlocksDS** or My Baby A.I. game code. Its upper screen turns green on raw pen detection and yellow for the A-button control; the lower screen becomes pink if the pen is present but ADC sampling fails. If it responds in DraStic, the legacy ARM7 path is a promising route to a real native touch backend. This is a separate diagnostic, not a silently substituted engine in the playable game.
