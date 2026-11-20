@@ -110,7 +110,7 @@ static void diaper_next(Game *s,Arcade *a){
  a->target=diaper_tasks[a->stage];
  a->progress=0;a->taped=0;
  a->reverse=(uint8_t)(game_glitch_tier(s)>=2&&a->stage==2);
- a->timer=(uint16_t)(game_glitch_tier(s)>=3?95:140);
+ a->timer=(uint16_t)(game_glitch_tier(s)>=3?240:360);
 }
 static void rattle_next(Game *s,Arcade *a){
  a->target=(uint8_t)(next(s)%3u);
@@ -235,14 +235,15 @@ int game_arcade_diaper_touch(Game *s,Arcade *a,int touching,int x,int y){
  }
  if(a->stage==0&&inside(x,y,89,103,169,151)){
   dx=x-a->touch_last_x;dy=y-a->touch_last_y;
-  if(dx<0)dx=-dx;if(dy<0)dy=-dy;
+  if(dx<0)dx=-dx;
+  if(dy<0)dy=-dy;
   step=dx+dy;
   if(step>=3&&step<=48){
    int total=a->progress+(step>18?18:step);
    a->progress=(uint8_t)(total>100?100:total);
    if(a->progress>=90)return diaper_advance(s,a,1);
    a->touch_last_x=(int16_t)x;a->touch_last_y=(int16_t)y;
-   return 1;
+   return 0; /* periodic UI repaint shows progress without VRAM tearing */
   }
  }
  a->touch_last_x=(int16_t)x;a->touch_last_y=(int16_t)y;
