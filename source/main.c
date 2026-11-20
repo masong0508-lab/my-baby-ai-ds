@@ -194,11 +194,11 @@ int main(void){
   }
   if(three_d_ready)world_draw(&baby,frame,pose);
   /* Keep bitmap VRAM writes off the hot path unless UI state changed. */
-  if(dirty||previous!=view||(view==2&&frame%(arc.id==0?3u:9u)==0u)||
-     (view==7&&((held&KEY_TOUCH)||(frame%12u==0u)))){
+  if(dirty||previous!=view||(view==2&&frame%(arc.id==0?3u:9u)==0u)){
    ui_draw(&baby,&arc,view,selected,last_ending,reset_step,storage_ok,message);
    dirty=0;
   }
+  if(view==7)ui_touch_diag_update();
   frame++;
  }
  return 0;
