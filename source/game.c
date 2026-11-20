@@ -101,8 +101,8 @@ const char *game_ending_name(int e){
  default:return "A NORMAL DAY. SUSPICIOUS.";
  }
 }
-/* Cabinets 0, 1 and 7 have independent real-time mechanics.
- * The other cabinets retain the six-round directional game for now.
+/* Bottle, Diaper, Tax Teether, Baby Beatbox and Rattle use distinct rules.
+ * The remaining arcade cabinets retain the six-round direction fallback.
  * Arcade state is intentionally not part of the persistent Game save.
  */
 static const uint8_t diaper_tasks[4]={3,1,2,0}; /* left,right,down,up */
@@ -111,6 +111,20 @@ static void diaper_next(Game *s,Arcade *a){
  a->progress=0;a->taped=0;
  a->reverse=(uint8_t)(game_glitch_tier(s)>=2&&a->stage==2);
  a->timer=(uint16_t)(game_glitch_tier(s)>=3?240:360);
+}
+static void teether_next(Game *s,Arcade *a){
+ /* File the refund (LEFT) or shred the bogus bill (RIGHT). */
+ a->target=(uint8_t)((next(s)&1u)?1:3);
+ a->timer=(uint16_t)(game_glitch_tier(s)>=3?180:240);
+ a->touch_active=0;
+}
+static void beatbox_next(Game *s,Arcade *a){
+ int i;
+ a->stage=0;
+ a->phase=0;  /* Watch three notes before repeating the pattern. */
+ a->elapsed=0;
+ a->timer=(uint16_t)(game_glitch_tier(s)>=3?72:90);
+ for(i=0;i<3;i++)a->notes[i]=(uint8_t)(next(s)&3u);
 }
 static void rattle_next(Game *s,Arcade *a){
  a->target=(uint8_t)(next(s)%3u);
@@ -131,12 +145,15 @@ void game_arcade_start(Game *s,Arcade *a,int id){
   a->timer=600;
   a->reverse=(uint8_t)(game_glitch_tier(s)>=2);
  }else if(id==1)diaper_next(s,a);
+ else if(id==2)teether_next(s,a);
+ else if(id==4)beatbox_next(s,a);
  else if(id==7)rattle_next(s,a);
  else round_next(s,a);
 }
 int game_arcade_expected(const Arcade *a){
  if(a->id==1)return a->target^(a->reverse?2:0);
- if(a->id==7)return a->target;
+ if(a->id==7||a->id==2)return a->target;
+ if(a->id==4)return a->notes[a->stage<3?a->stage:2];
  return a->direction^(a->reverse?2:0);
 }
 static void finish(Game *s,Arcade *a,int won){
@@ -159,6 +176,24 @@ void game_arcade_steer(Arcade *a,int direction){
 }
 void game_arcade_input(Game *s,Arcade *a,int dir){
  if(!a->active||a->id==0||dir<0||dir>3)return;
+ if(a->id==4){
+  int correct;
+  if(!a->phase)return; /* Sounds/visuals are demonstrating the tune. */
+  correct=dir==a->notes[a->stage];
+  if(correct){
+   a->stage++;
+   if(a->stage>=3){
+    a->round++;
+    if(a->round>=3)finish(s,a,1);
+    else beatbox_next(s,a);
+   }
+  }else{
+   a->mistakes++;s->corruption=clamp(s->corruption+3);
+   if(a->mistakes>=3)finish(s,a,0);
+   else beatbox_next(s,a);
+  }
+  return;
+ }
  if(a->id==7){
   /* Match the lane only when the falling rattle enters the catch zone.
    * Tapping immediately on spawn is not a valid catch. */
@@ -181,18 +216,46 @@ void game_arcade_input(Game *s,Arcade *a,int dir){
   }else{
    a->round++;
    if(a->round>=MBAI_ROUNDS)finish(s,a,1);
+   else if(a->id==2)teether_next(s,a);
    else round_next(s,a);
   }
  }else{
   a->mistakes++;s->corruption=clamp(s->corruption+4);
   if(a->mistakes>=3)finish(s,a,0);
   else if(a->id==1)diaper_next(s,a);
+  else if(a->id==2)teether_next(s,a);
   else if(a->id==7)rattle_next(s,a);
   else round_next(s,a);
  }
 }
 static int inside(int x,int y,int x0,int y0,int x1,int y1){
  return x>=x0&&x<x1&&y>=y0&&y<y1;
+}
+/* Gesture-based receipt sorting: source -> matching destination, on release.
+ * Holding the paper while dragging updates its position in the illustrated
+ * UI, but releasing outside a tray never causes an undeserved mistake. */
+int game_arcade_teether_touch(Game *s,Arcade *a,int touching,int x,int y){
+ int dir=-1;
+ if(!a->active||a->id!=2)return 0;
+ if(!touching){
+  if(a->touch_active&&inside(a->touch_start_x,a->touch_start_y,99,91,160,150)){
+   if(inside(a->touch_last_x,a->touch_last_y,11,128,96,174))dir=3;
+   else if(inside(a->touch_last_x,a->touch_last_y,159,128,245,174))dir=1;
+  }
+  a->touch_active=0;
+  if(dir>=0){game_arcade_input(s,a,dir);return 1;}
+  return 0;
+ }
+ if(x<0||x>=256||y<27||y>=176)return 0;
+ if(!a->touch_active){
+  a->touch_active=1;
+  a->touch_start_x=a->touch_last_x=(int16_t)x;
+  a->touch_start_y=a->touch_last_y=(int16_t)y;
+  return 1;
+ }
+ a->touch_last_x=(int16_t)x;
+ a->touch_last_y=(int16_t)y;
+ return 0;
 }
 static int diaper_advance(Game *s,Arcade *a,int still_touching){
  a->stage++;a->round=a->stage;
@@ -274,11 +337,26 @@ static void bottle_tick(Game *s,Arcade *a){
 void game_arcade_tick(Game *s,Arcade *a){
  if(!a->active)return;
  if(a->id==0){bottle_tick(s,a);return;}
+ if(a->id==4){
+  if(!a->phase)a->elapsed++;
+  if(a->timer)a->timer--;
+  if(!a->timer){
+   if(!a->phase){
+    a->phase=1;a->timer=(uint16_t)(game_glitch_tier(s)>=3?180:240);
+   }else{
+    a->mistakes++;s->corruption=clamp(s->corruption+3);
+    if(a->mistakes>=3)finish(s,a,0);
+    else beatbox_next(s,a);
+   }
+  }
+  return;
+ }
  if(a->timer)a->timer--;
  if(!a->timer){
   a->mistakes++;s->corruption=clamp(s->corruption+3);
   if(a->mistakes>=3)finish(s,a,0);
   else if(a->id==1)diaper_next(s,a);
+  else if(a->id==2)teether_next(s,a);
   else if(a->id==7)rattle_next(s,a);
   else round_next(s,a);
  }
