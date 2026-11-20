@@ -50,9 +50,12 @@ int main(void){
   int layer=bgInitSub(3,BgType_Bmp16,BgSize_B16_256x256,0,0);
   ui_init(bgGetGfxPtr(layer));
  }
+ /* Always show a visible title before touching the filesystem or heavy 3D.
+  * Some older emulators hang during their emulated DLDI/FAT setup. */
+ ui_draw(&baby,&arc,view,selected,last_ending,reset_step,storage_ok,message);
  world_init();
- storage_ok=fatInitDefault();
- if(storage_ok)(void)save_load(SAVE_BASE,&baby);
+ /* Stay in RAM-only mode until the player explicitly requests save access.
+  * New and old .nds game saves remain compatible when FAT is available. */
  while(pmMainLoop()){
   int down,held,previous=view;
   touchPosition touch;
@@ -146,15 +149,27 @@ int main(void){
     view=0;message="BACK TO DAYCARE. SAME SAVE!";dirty=1;
    }
   }else if(view==5){
-   if(down&(KEY_A|KEY_START|KEY_TOUCH)){
-    view=0;message="WELCOME BACK, SHAREHOLDER.";dirty=1;
+   if(down&KEY_X){
+    message="CHECKING SAVE STORAGE...";
+    ui_draw(&baby,&arc,view,selected,last_ending,reset_step,0,message);
+    storage_ok=fatInitDefault();
+    if(storage_ok){
+     if(save_load(SAVE_BASE,&baby))message="SAVED BABY RESTORED!";
+     else message="SAVING ENABLED!";
+    }else message="NO SAVE DEVICE - RAM ONLY.";
+    dirty=1;
+   }else if(down&(KEY_A|KEY_START|KEY_TOUCH)){
+    view=0;
+    message=storage_ok?"WELCOME BACK, SHAREHOLDER.":"RAM MODE: NO SAVE DEVICE YET.";
+    dirty=1;
    }
   }else if(view==6){
    if(down&(KEY_B|KEY_START|KEY_A|KEY_TOUCH)){
     view=0;message="COLLECTION CLOSED.";dirty=1;
    }
   }
-  world_draw(&baby,frame,pose);
+  if(view==5)world_draw_title(frame);
+  else world_draw(&baby,frame,pose);
   /* Keep bitmap VRAM writes off the hot path unless UI state changed. */
   if(dirty||previous!=view||(view==2&&frame%(arc.id==0?3u:9u)==0u)){
    ui_draw(&baby,&arc,view,selected,last_ending,reset_step,storage_ok,message);
