@@ -101,28 +101,102 @@ const char *game_ending_name(int e){
  default:return "A NORMAL DAY. SUSPICIOUS.";
  }
 }
+/* Cabinet 0 is Bottle Balance: steer an unsteady bottle into the safe zone.
+ * Cabinet 1 is Diaper Dash: complete four distinct timed touch tasks.
+ * Others retain the generic directional game pending their own implementations.
+ */
+static const uint8_t diaper_tasks[4]={3,1,2,0}; /* left,right,down,up */
+static void diaper_next(Game *s,Arcade *a){
+ a->target=diaper_tasks[a->stage];
+ a->reverse=(uint8_t)(game_glitch_tier(s)>=2&&a->stage==2);
+ a->timer=(uint16_t)(game_glitch_tier(s)>=3?95:140);
+}
 static void round_next(Game *s,Arcade *a){
  a->direction=(uint8_t)(next(s)&3u);
  a->reverse=(uint8_t)(game_glitch_tier(s)>=2&&a->round%3==2);
  a->timer=(uint16_t)(game_glitch_tier(s)>=3?75:120);
 }
 void game_arcade_start(Game *s,Arcade *a,int id){
- memset(a,0,sizeof(*a));if(!game_unlocked(s,id))return;
- a->active=1;a->id=(uint8_t)id;round_next(s,a);
+ memset(a,0,sizeof(*a));
+ if(!game_unlocked(s,id))return;
+ a->active=1;a->id=(uint8_t)id;
+ if(id==0){
+  a->timer=600;
+  a->reverse=(uint8_t)(game_glitch_tier(s)>=2);
+ }else if(id==1)diaper_next(s,a);
+ else round_next(s,a);
 }
-int game_arcade_expected(const Arcade *a){return a->direction^(a->reverse?2:0);}
+int game_arcade_expected(const Arcade *a){
+ if(a->id==1)return a->target^(a->reverse?2:0);
+ return a->direction^(a->reverse?2:0);
+}
 static void finish(Game *s,Arcade *a,int won){
  a->active=0;a->finished=(uint8_t)(won?1:2);
- if(won){s->wins++;s->dollars=(uint16_t)(s->dollars<=65530?s->dollars+5:65535);if(!(s->wins&1u)&&s->favors<65535)s->favors++;s->mood=clamp(s->mood+4);}
- else {s->losses++;s->mood=clamp(s->mood-8);s->chaos=clamp(s->chaos+15);s->corruption=clamp(s->corruption+18);}
+ if(won){
+  s->wins++;
+  s->dollars=(uint16_t)(s->dollars<=65530?s->dollars+5:65535);
+  if(!(s->wins&1u)&&s->favors<65535)s->favors++;
+  s->mood=clamp(s->mood+4);
+ }else{
+  s->losses++;s->mood=clamp(s->mood-8);
+  s->chaos=clamp(s->chaos+15);s->corruption=clamp(s->corruption+18);
+ }
+}
+void game_arcade_steer(Arcade *a,int direction){
+ int force;
+ if(!a->active||a->id!=0)return;
+ force=direction<0?-4:direction>0?4:0;
+ a->steering=(int8_t)(a->reverse?-force:force);
 }
 void game_arcade_input(Game *s,Arcade *a,int dir){
- if(!a->active||dir<0||dir>3)return;
- if(dir==game_arcade_expected(a)){a->round++;if(a->round>=MBAI_ROUNDS)finish(s,a,1);else round_next(s,a);}
- else {a->mistakes++;s->corruption=clamp(s->corruption+4);if(a->mistakes>=3)finish(s,a,0);else round_next(s,a);}
+ if(!a->active||a->id==0||dir<0||dir>3)return;
+ if(dir==game_arcade_expected(a)){
+  if(a->id==1){
+   a->stage++;a->round=a->stage;
+   if(a->stage>=4)finish(s,a,1);
+   else diaper_next(s,a);
+  }else{
+   a->round++;
+   if(a->round>=MBAI_ROUNDS)finish(s,a,1);
+   else round_next(s,a);
+  }
+ }else{
+  a->mistakes++;s->corruption=clamp(s->corruption+4);
+  if(a->mistakes>=3)finish(s,a,0);
+  else if(a->id==1)diaper_next(s,a);
+  else round_next(s,a);
+ }
+}
+static void bottle_tick(Game *s,Arcade *a){
+ int drift;
+ a->elapsed++;
+ drift=((a->elapsed/34u)&1u)?-2:2;
+ a->balance+=(int16_t)(drift+a->steering);
+ a->steering=0;
+ if(a->balance>62||a->balance< -62){
+  a->mistakes++;
+  a->balance=0;a->hold_frames=0;
+  s->corruption=clamp(s->corruption+3);
+  if(a->mistakes>=3){finish(s,a,0);return;}
+ }
+ if(a->balance>=-22&&a->balance<=22){
+  if(a->hold_frames<150)a->hold_frames++;
+ }else{
+  a->hold_frames=(uint16_t)(a->hold_frames>2?a->hold_frames-2:0);
+ }
+ a->round=(uint8_t)((a->hold_frames*6u)/150u);
+ if(a->hold_frames>=150){finish(s,a,1);return;}
+ if(a->timer)a->timer--;
+ if(!a->timer)finish(s,a,0);
 }
 void game_arcade_tick(Game *s,Arcade *a){
  if(!a->active)return;
+ if(a->id==0){bottle_tick(s,a);return;}
  if(a->timer)a->timer--;
- if(!a->timer){a->mistakes++;s->corruption=clamp(s->corruption+3);if(a->mistakes>=3)finish(s,a,0);else round_next(s,a);}
+ if(!a->timer){
+  a->mistakes++;s->corruption=clamp(s->corruption+3);
+  if(a->mistakes>=3)finish(s,a,0);
+  else if(a->id==1)diaper_next(s,a);
+  else round_next(s,a);
+ }
 }
