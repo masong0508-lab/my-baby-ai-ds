@@ -28,6 +28,41 @@
 #define SHADOW RGB(22,19,24)
 #define GRAY RGB(26,25,27)
 static volatile uint16_t *pixels;
+/* 11x11 cursor backup: 242 bytes. Restores exactly the underlying UI.
+ * No additional framebuffers or per-frame allocations. */
+#define CURSOR_W 11
+static uint16_t cursor_bg[CURSOR_W*CURSOR_W];
+static int cursor_visible,cursor_x,cursor_y,cursor_pressed;
+static void cursor_erase(void){
+ int x,y;
+ if(!cursor_visible||!pixels)return;
+ for(y=0;y<CURSOR_W;y++)for(x=0;x<CURSOR_W;x++){
+  int px=cursor_x+x-5,py=cursor_y+y-5;
+  if(px>=0&&px<256&&py>=0&&py<192)
+   pixels[py*256+px]=cursor_bg[y*CURSOR_W+x];
+ }
+ cursor_visible=0;
+}
+void ui_virtual_cursor_update(int enabled,int cx,int cy,int pressed){
+ int x,y;
+ uint16_t color=pressed?LEMON:WHITE;
+ if(!pixels)return;
+ if(!enabled){cursor_erase();return;}
+ if(cursor_visible&&cx==cursor_x&&cy==cursor_y&&pressed==cursor_pressed)
+  return;
+ cursor_erase();
+ cursor_x=cx;cursor_y=cy;cursor_pressed=pressed;
+ for(y=0;y<CURSOR_W;y++)for(x=0;x<CURSOR_W;x++){
+  int px=cx+x-5,py=cy+y-5,k=y*CURSOR_W+x;
+  if(px<0||px>=256||py<0||py>=192){cursor_bg[k]=0;continue;}
+  cursor_bg[k]=pixels[py*256+px];
+  if(x==5||y==5||((x==1||x==9)&&(y>=3&&y<=7)))
+   pixels[py*256+px]=RGB(5,3,8);
+  if((x==5&&y>=2&&y<=8)||(y==5&&x>=2&&x<=8))
+   pixels[py*256+px]=color;
+ }
+ cursor_visible=1;
+}
 static int test_touch_down,test_touch_x,test_touch_y;
 static unsigned long test_touch_count;
 void ui_touch_observe(int down,int x,int y,uint32_t count){
@@ -441,6 +476,9 @@ int ui_arcade_navigation(int x,int y){
 void ui_draw(const Game *s,const Arcade *a,int view,int selection,
              int ending,int reset_step,int can_save,const char *message){
  if(!pixels||!s)return;
+ /* Full UI render overwrites prior cursor pixels; don't restore old
+  * background from a different screen into the newly drawn screen. */
+ cursor_visible=0;
  solid(0,0,256,192,IVORY);
  header(view==0?"MY BABY A.I.!":view==1?"BABY ARCADE":view==2?"MINIGAME":view==3?"SAVE MEMORY":view==4?"ENDING!":view==5?"WELCOME":"MEMORY ALBUM",s);
  switch(view){

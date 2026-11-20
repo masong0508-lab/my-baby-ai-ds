@@ -192,3 +192,25 @@ On this diagnostic ROM:
 
 No emulator runtime is considered fixed solely by this CI build. This
 independent probe reduces ambiguity and does not erase game save data.
+
+## Controller-driven virtual stylus (DraStic / no touchscreen required)
+
+The user confirmed both the BlocksDS Maxmod and minimal ARM7 variants fail to
+receive touch events in their DraStic configuration, even after trying all
+emulator touch-input settings. Rather than asking the player to repeat those
+steps, a **controller-driven software cursor is now available on every screen**:
+
+- Hold **L** and press **SELECT** to toggle *VIRTUAL PEN* on/off.
+- Use **D-PAD** to move the small on-screen crosshair to a button or menu item.
+- Press **A** to tap it. This calls the **same interactive hitboxes** as actual
+  stylus taps, so care, arcade selection, cabinet purchase, endings, and
+  in-game menus can all be operated without a working touch digitizer.
+- The existing **B, X, Y and START** shortcuts remain available.
+- In Bottle Balance, hold A with the virtual cursor over either steering area
+  to apply continuous left/right input.
+
+This is a functional workaround, *not* a claim that DraStic's physical touch
+path is fixed. The actual stylus path remains available when delivered by an
+emulator or physical DS. Moving the cursor updates an 11x11 patch (242-byte
+color backup), avoiding a 256x192 VRAM repaint or secondary framebuffer.
+It does not affect save files or the core game's state.

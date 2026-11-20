@@ -9,6 +9,7 @@
 #include "world.h"
 #include "ui.h"
 #include "touch_input.h"
+#include "virtual_stylus.h"
 #if defined(__BLOCKSDS__)
 /* BlocksDS main loop convention: traditional foreground VBlank loop. */
 #define GAME_LOOP_ACTIVE() 1
@@ -22,6 +23,7 @@ static Arcade arc;
 static int storage_ok,view=5,selected,reset_step,last_ending,pose;
 static int three_d_ready;
 static TouchGate gesture;
+static VirtualStylus vpen;
 static const char *message="WELCOME TO DAYCARE 2.0";
 static void persist(void){if(storage_ok)(void)save_write(SAVE_BASE,&baby);}
 static void care(Care action){
@@ -53,6 +55,7 @@ int main(void){
  int dirty=1;
  game_init(&baby);
  touch_gate_init(&gesture);
+ virtual_stylus_init(&vpen);
  lcdMainOnTop();
  /* Title must appear before 3D or filesystem work; this isolates crashes. */
  videoSetMode(MODE_0_2D);
@@ -69,14 +72,40 @@ int main(void){
  /* Stay in RAM-only mode until the player explicitly requests save access.
   * New and old .nds game saves remain compatible when FAT is available. */
  while(GAME_LOOP_ACTIVE()){
-  int down,held,tap,previous=view;
+  int down,held,tap,previous=view,virtual_move=0;
+  int raw_touch;
   touchPosition touch={0};
   swiWaitForVBlank();
   scanKeys();
   down=keysDown();held=keysHeld();
-  if(held&KEY_TOUCH)touchRead(&touch);
-  tap=touch_gate_step(&gesture,(held&KEY_TOUCH)!=0,touch.px,touch.py);
-  ui_touch_observe((held&KEY_TOUCH)!=0,touch.px,touch.py,gesture.total_presses);
+  raw_touch=(held&KEY_TOUCH)!=0;
+  if(raw_touch)touchRead(&touch);
+  tap=touch_gate_step(&gesture,raw_touch,touch.px,touch.py);
+  ui_touch_observe(raw_touch,touch.px,touch.py,gesture.total_presses);
+  /* Compare against the proven button-scanning pattern from the user's
+   * Mandex DS bare-metal port. This fallback needs no working ARM7 stylus. */
+  if((down&KEY_SELECT)&&(held&KEY_L)){
+   virtual_stylus_toggle(&vpen);
+   down &= ~(KEY_SELECT|KEY_L); /* not "end day" or "album" */
+   message=vpen.enabled?"VIRTUAL PEN: D-PAD MOVE, A TAP":"VIRTUAL PEN DISABLED.";
+   dirty=1;
+  }
+  if(vpen.enabled){
+   unsigned move=0;
+   if(held&KEY_LEFT)move|=VS_LEFT;
+   if(held&KEY_RIGHT)move|=VS_RIGHT;
+   if(held&KEY_UP)move|=VS_UP;
+   if(held&KEY_DOWN)move|=VS_DOWN;
+   virtual_move=virtual_stylus_move(&vpen,move);
+   if((down&KEY_A)&&!tap){
+    tap=1;
+    touch.px=vpen.x;
+    touch.py=vpen.y;
+   }
+   /* D-pad belongs to cursor when it is enabled. X/Y and Start/B remain
+    * normal shortcuts. A triggers the existing native tap hitboxes. */
+   down &= ~(KEY_A|KEY_LEFT|KEY_RIGHT|KEY_UP|KEY_DOWN);
+  }
   if(view==0){
    int action=-1;
    if(down&KEY_A)action=FEED;
@@ -129,10 +158,12 @@ int main(void){
    else{
     if(arc.id==0){
      int steer=0;
-     if(held&KEY_LEFT)steer=-1;
-     else if(held&KEY_RIGHT)steer=1;
-     else if((held&KEY_TOUCH)&&touch.py>=90&&touch.py<173)
+     if(!vpen.enabled && (held&KEY_LEFT))steer=-1;
+     else if(!vpen.enabled && (held&KEY_RIGHT))steer=1;
+     else if(raw_touch&&touch.py>=90&&touch.py<173)
       steer=touch.px<128?-1:1;
+     else if(vpen.enabled&&(held&KEY_A)&&vpen.y>=90&&vpen.y<173)
+      steer=vpen.x<128?-1:1;
      if((tap)&&touch.py>=176){leave_game();dirty=1;}
      else{
       game_arcade_steer(&arc,steer);
@@ -199,6 +230,11 @@ int main(void){
    dirty=0;
   }
   if(view==7)ui_touch_diag_update();
+  /* Overlay a tiny cursor only when virtual pen is enabled. The bottom BG
+   * needn't be fully repainted on every frame, avoiding DraStic flicker. */
+  ui_virtual_cursor_update(vpen.enabled,vpen.x,vpen.y,
+                           vpen.enabled && (held&KEY_A)!=0);
+  (void)virtual_move;
   frame++;
  }
  return 0;
