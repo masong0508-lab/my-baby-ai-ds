@@ -322,7 +322,7 @@ static void finale(const Game *s,int ending){
  foot(PURPLE);
  fit(28,181,"A / B CONTINUE PLAYING",WHITE,30);
 }
-static void title_screen(const Game *s){
+static void title_screen(const Game *s,int storage_ok,const char *status){
  int i;char count[40];
  solid(0,27,256,149,PINK);
  /* Arcade-era promotional title screen drawn by the DS itself. */
@@ -330,13 +330,15 @@ static void title_screen(const Game *s){
   int x=(i*59)%247,y=29+(i*47)%135;
   solid(x,y,5,5,(i&1)?LEMON:SKY);
  }
- panel(15,42,226,118,WHITE,DEEP_PINK);
+ panel(15,42,226,128,WHITE,DEEP_PINK);
  capsule(28,52,200,37,LILAC,PURPLE);
  label(50,63,"MY BABY A.I.!",INK,1,21);
- capsule(52,104,152,29,MINT,TEAL);
- label(81,114,"START GAME",INK,1,20);
+ capsule(52,103,152,26,MINT,TEAL);
+ label(81,112,"START GAME",INK,1,20);
  snprintf(count,sizeof(count),"DAY %lu  $%u",(unsigned long)s->days,s->dollars);
- fit(73,141,count,MUTED,21);
+ fit(75,134,count,MUTED,21);
+ fit(42,148,storage_ok?"SAVE STORAGE ACTIVE":"X: TRY SAVE STORAGE",TEAL,32);
+ fit(33,160,status,DEEP_PINK,36);
  foot(PURPLE);fit(38,181,"TOUCH OR PRESS START",WHITE,30);
 }
 static void ending_album(const Game *s){
@@ -383,7 +385,7 @@ void ui_draw(const Game *s,const Arcade *a,int view,int selection,
         break;
  case 3:reset_screen(reset_step);break;
  case 4:finale(s,ending);break;
- case 5:title_screen(s);break;
+ case 5:title_screen(s,can_save,message);break;
  case 6:ending_album(s);break;
  }
 }
