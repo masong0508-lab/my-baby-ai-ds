@@ -3,6 +3,7 @@
 /* No-op 3D API for native geometry-count tests; NOT a DS emulator. */
 #include <stdint.h>
 #define RGB15(r,g,b) ((unsigned)((r)|((g)<<5)|((b)<<10)))
+#define GL_TRIANGLES 0
 #define GL_QUADS 1
 #define GL_QUAD_STRIP 3
 #define GL_PROJECTION 0

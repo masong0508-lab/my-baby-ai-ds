@@ -56,3 +56,27 @@ test to avoid regressing the known-good BlocksDS input behavior.
 
 The aesthetic aims for a **soft, believable 2000s-era DS nursery**, not
 modern high-polygon realism that would be impossible on the original DS.
+
+## Uneasy early-DS baby-simulator reference (2026-11-20)
+
+The target is not a modern realistic baby or a polished nursery. The user
+provided a still of an early 3D baby-care game: **short jagged near-black
+hair, pink clip, small dark eyes, round doll-like face, oddly fixed open
+smile, pink shirt, dark trousers, orange teddy sitting between splayed
+legs, lime-green flower rug, tulip decals and creamy nursery furniture**.
+The strange combination of artificial cheer and low-detail realism is
+intentional.
+
+`source/world.c` is edited to implement that look on the actual DS GPU,
+not with a generated image or a prerecorded sprite. The new doll-like
+face, feathery hair points, altered pose and centered bear are all
+real 3D geometry, while flower decals and clothing prints are cheap
+flat quads. This patch does not copy any game assets or textures from
+the supplied reference; it reconstructs its **visual direction** from
+original procedural geometry and DS palette colors.
+
+Stay within the stricter **1,900 polygons / 5,600 submitted vertices**
+test headroom. No imported textures, heap allocation, additional
+framebuffers or changes to the saved-game schema. Real emulator captures
+and the touchscreen START/FEED regression tests are required prior to
+merge. Cosmetic references should never be passed off as tested ROM screenshots.
