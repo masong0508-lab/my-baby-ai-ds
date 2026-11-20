@@ -90,3 +90,34 @@ This compatibility branch introduces **two independent mitigations**:
 For a diagnostic report, record whether (a) the purple/colorful title appears, (b) pressing START enters the nursery, and (c) pressing X at title freezes or reports no save device. A white screen *before* the title in both ROM variants suggests a deeper emulator/runtime incompatibility and needs an emulator-level reproduction; it is not proof of a 3D scene bug.
 
 This is a compatibility **candidate**, not a runtime-verified fix.
+
+## Alternate BlocksDS runtime for DraStic white-screen reports
+
+A real-world DraStic test still showed two white screens with the original
+devkitPro/libnds 2 build, even after switching the game to a simple 2D title
+screen and patching the original-ROM header. The problem is **not resolved**
+without further emulator testing.
+
+An independent BlocksDS build is now available alongside the regular devkitPro
+build. This changes both the ARM9 startup/runtime and the ARM7 firmware code,
+not just the cartridge header. The standard `Makefile` and its CI are kept
+unchanged; `Makefile.blocksds` builds the alternate ROM in the official
+`skylyrac/blocksds:slim-latest` image.
+
+A separate **diagnostic boot probe** (`diagnostics/main.c`) is also built
+under BlocksDS. It initializes just two color-filled 2D screens, no gameplay,
+no fatInitDefault(), no 3D and no baby model. This separates emulator/runtime
+compatibility from the game's own graphics code.
+
+The BlocksDS workflow produces original ROMs plus DS-only header copies with
+recomputed CRC16, retaining identical ARM9/ARM7 executable bytes. On Android
+DraStic, first try `my-baby-ai-blocksds-ds-only.nds` using **Start Game**;
+do not load a saved emulator state from the old build. If it remains white,
+try `blocksds-dual-screen-test-ds-only.nds`:
+
+- **Probe shows colorful screens:** The basic BlocksDS runtime works in the emulator. Investigate the game's UI, RAM usage and startup code.
+- **Probe stays white:** The problem is likely earlier (ROM loader, runtime, ARM7 or emulator compatibility); a 3D geometry change will not help.
+- **Game title appears but START freezes:** Investigate 3D initialization and vertex/display-list traffic.
+- **Title appears but X freezes:** Investigate FAT/DLDI initialization. The title's X button is optional; regular gameplay starts in RAM-only mode.
+
+These are **diagnostic predictions**, not verified facts about the user's DraStic device. A green GitHub Actions build establishes only a compiled ROM, not an emulator/hardware runtime pass.
