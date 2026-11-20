@@ -89,7 +89,6 @@ def test_probe(path: Path, output: Path) -> dict:
     assert off_after[0] > off_after[1] + 45, (
         f"ROM never saw stylus release: {off_after}"
     )
-    emu.destroy()
     return {
         "A_button_yellow": list(a_color),
         "touch_off_red": list(off),
@@ -140,7 +139,6 @@ def test_actual_game(path: Path, output: Path) -> dict:
     emu.input.touch_release()
     frames(emu, 15)
     picture(emu, output, "game_touch_diagnostic_released")
-    emu.destroy()
     return {
         "title_to_diagnostic_changed_pixels": new_screen,
         "KEY_TOUCH_status_changed_pixels": status,
@@ -155,21 +153,26 @@ def main() -> int:
     parser.add_argument("probe", type=Path)
     parser.add_argument("game", type=Path)
     parser.add_argument("--output", type=Path, default=Path("emulator-proof"))
+    parser.add_argument("--stage", choices=("probe", "game"), required=True,
+                        help="One emulator instance per process avoids py-desmume teardown crashes")
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=True)
-    report = {"emulator": "DeSmuME (py-desmume)", "status": "FAILED"}
+    report = {"emulator": "DeSmuME (py-desmume)", "stage": args.stage, "status": "FAILED"}
+    output = args.output / f"{args.stage}-report.json"
     try:
-        report["probe"] = test_probe(args.probe, args.output)
-        report["actual_game"] = test_actual_game(args.game, args.output)
-        report["status"] = "PASSED: emulated ARM7+ARM9 consumed native stylus and updated game UI"
+        if args.stage == "probe":
+            report["probe"] = test_probe(args.probe, args.output)
+        else:
+            report["actual_game"] = test_actual_game(args.game, args.output)
+        report["status"] = "PASSED: native emulator stylus input reached ARM7/ARM9 and visible UI"
     except Exception as exc:
         traceback.print_exc()
         report["error"] = f"{type(exc).__name__}: {exc}"
-        (args.output / "report.json").write_text(
+        output.write_text(
             json.dumps(report, indent=2) + "\n", encoding="utf-8"
         )
         return 1
-    (args.output / "report.json").write_text(
+    output.write_text(
         json.dumps(report, indent=2) + "\n", encoding="utf-8"
     )
     print(json.dumps(report, indent=2))
