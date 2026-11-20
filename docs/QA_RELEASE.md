@@ -137,3 +137,18 @@ or physical DS tests have been supplied.
 
 The field report does not establish that the stylus regression is fixed
 until an emulator retest verifies those steps.
+
+## ARM7 touchscreen runtime A/B isolation (November 2026)
+
+The user's DraStic recording demonstrates the standalone stylus probe not receiving `KEY_TOUCH`, while game screens render. The user has confirmed that **every DraStic touch-toggle combination has already been tried**, so repeating settings instructions is not appropriate.
+
+BlocksDS provides both `arm7_maxmod.elf` (original default used by this project, with optional sound handling) and `arm7_minimal.elf` (basic libnds services only). Both should support stylus input, but they have different ARM7 executable code. GitHub Actions now generates the same diagnostic and full game using the minimal core, and publishes DS-only variants. The old Maxmod build is retained unchanged.
+
+**Next emulator comparison:**
+
+- Open `blocksds-touch-probe-minimal-arm7-ds-only.nds` on DraStic. Press lower screen; observe TOUCH and X/Y.
+- If the indicator turns green on minimal but not Maxmod: isolate a runtime/core compatibility difference; test the matching `my-baby-ai-blocksds-minimal-arm7-ds-only.nds`.
+- If both remain OFF: the common input path or DraStic's stylus mapping/runtime is suspect. Stop changing on-screen button hitboxes and use a known working touchscreen DS game or a second emulator as an external control.
+- If input works in the independent probe but not the matching game: investigate game-specific polling, screen modes or overlay behavior.
+
+This is an experiment, not a confirmed fix. Always label the exact ROM and emulator version used in reports.
