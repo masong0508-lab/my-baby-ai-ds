@@ -207,3 +207,21 @@ void world_draw(const Game *s,uint32_t frame,int activity){
  teddy();
  glFlush(0);
 }
+
+/* Tiny boot/title scene: do not submit the full ~1800-polygon nursery before
+ * the player confirms the program reached its first interactive screen. */
+void world_draw_title(uint32_t frame){
+ (void)frame;
+ glMatrixMode(GL_MODELVIEW);glLoadIdentity();
+ gluLookAt(0.0f,0.3f,5.5f,0.0f,0.0f,0.0f,0,1,0);
+ glPolyFmt(POLY_ALPHA(31)|POLY_CULL_NONE);
+ frame_vertices=0;frame_polygons=0;
+ block(0.0f,-.82f,-.9f,3.0f,.22f,1.6f,24,17,20);
+ ellipse(0.0f,.05f,-.2f,.85f,.91f,.57f,27,17,12);
+ ellipse(-.29f,.12f,.33f,.20f,.24f,.08f,31,30,30);
+ ellipse(.29f,.12f,.33f,.20f,.24f,.08f,31,30,30);
+ ellipse(-.29f,.12f,.41f,.10f,.14f,.04f,3,2,3);
+ ellipse(.29f,.12f,.41f,.10f,.14f,.04f,3,2,3);
+ ellipse(0,-.32f,.36f,.20f,.11f,.06f,13,4,6);
+ glFlush(0);
+}
