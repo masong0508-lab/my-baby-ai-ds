@@ -1,0 +1,30 @@
+name: DS hardware-toolchain build
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    container: devkitpro/devkitarm:latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify toolchain
+        run: |
+          test -x /opt/devkitpro/devkitARM/bin/arm-none-eabi-gcc
+          /opt/devkitpro/devkitARM/bin/arm-none-eabi-gcc --version
+      - name: Portable game and save regression tests
+        run: sh tests/run.sh
+      - name: Cross-compile actual Nintendo DS ROM
+        run: |
+          export DEVKITPRO=/opt/devkitpro
+          export DEVKITARM=/opt/devkitpro/devkitARM
+          make -j2
+          test -s my-baby-ai.nds
+      - name: Publish testable .nds artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: my-baby-ai-nds
+          path: my-baby-ai.nds
+          if-no-files-found: error

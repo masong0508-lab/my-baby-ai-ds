@@ -1,0 +1,9 @@
+build/
+*.nds
+*.elf
+*.o
+*.d
+*.map
+*.lst
+*.sav
+.DS_Store
