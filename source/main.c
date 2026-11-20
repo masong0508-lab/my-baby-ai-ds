@@ -12,6 +12,7 @@
 static Game baby;
 static Arcade arc;
 static int storage_ok,view=5,selected,reset_step,last_ending,pose;
+static int three_d_ready;
 static const char *message="WELCOME TO DAYCARE 2.0";
 static void persist(void){if(storage_ok)(void)save_write(SAVE_BASE,&baby);}
 static void care(Care action){
@@ -43,7 +44,9 @@ int main(void){
  int dirty=1;
  game_init(&baby);
  lcdMainOnTop();
- videoSetMode(MODE_0_3D);
+ /* Title must appear before 3D or filesystem work; this isolates crashes. */
+ videoSetMode(MODE_0_2D);
+ setBackdropColor(RGB15(15,8,21));
  videoSetModeSub(MODE_5_2D);
  vramSetBankC(VRAM_C_SUB_BG);
  {
@@ -53,7 +56,6 @@ int main(void){
  /* Always show a visible title before touching the filesystem or heavy 3D.
   * Some older emulators hang during their emulated DLDI/FAT setup. */
  ui_draw(&baby,&arc,view,selected,last_ending,reset_step,storage_ok,message);
- world_init();
  /* Stay in RAM-only mode until the player explicitly requests save access.
   * New and old .nds game saves remain compatible when FAT is available. */
  while(pmMainLoop()){
@@ -159,8 +161,12 @@ int main(void){
     }else message="NO SAVE DEVICE - RAM ONLY.";
     dirty=1;
    }else if(down&(KEY_A|KEY_START|KEY_TOUCH)){
+    /* Successfully displaying the 2D title means ARM9 game code ran. */
+    videoSetMode(MODE_0_3D);
+    world_init();
+    three_d_ready=1;
     view=0;
-    message=storage_ok?"WELCOME BACK, SHAREHOLDER.":"RAM MODE: NO SAVE DEVICE YET.";
+    message=storage_ok?"WELCOME BACK, SHAREHOLDER.":"RAM MODE: X ON TITLE ENABLES SAVES.";
     dirty=1;
    }
   }else if(view==6){
@@ -168,8 +174,7 @@ int main(void){
     view=0;message="COLLECTION CLOSED.";dirty=1;
    }
   }
-  if(view==5)world_draw_title(frame);
-  else world_draw(&baby,frame,pose);
+  if(three_d_ready)world_draw(&baby,frame,pose);
   /* Keep bitmap VRAM writes off the hot path unless UI state changed. */
   if(dirty||previous!=view||(view==2&&frame%(arc.id==0?3u:9u)==0u)){
    ui_draw(&baby,&arc,view,selected,last_ending,reset_step,storage_ok,message);
