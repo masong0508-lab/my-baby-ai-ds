@@ -23,3 +23,36 @@ Still missing for full production: authored mesh/texture assets, unique minigame
 ## Geometry-batch correction
 
 Rounded meshes use DS-native `GL_QUAD_STRIP`: 8 angular segments × 3 bands, 24 quadrilateral polygons but only 54 submitted vertices per mesh rather than 96 with independent quads (44% reduction). Boxes use 6 quads/24 submitted vertices. `world_vertex_count()` and `world_polygon_count()` report submitted geometry each frame, making the 6,144-vertex and 2,048-polygon caps auditable. This is a source-level budget improvement, not an emulator FPS benchmark.
+
+## More natural-looking baby and nursery — rendering pass (2026-11-20)
+
+A visual review of the real DeSmuME gameplay capture showed that the original
+baby had a caricatured bulging-eyed face, black hair clumps, detached-looking
+extremities, highly saturated furniture and a floor-board pattern resembling
+square tiles. This patch alters **the actual DS hardware-rendered gameplay
+model**, not a stand-alone concept image.
+
+- Baby: a smoother 12-sided, five-band head contour, toned-down facial
+  proportions, proportionally smaller inset eyes with eyelids, irises and
+  restrained highlights, subtle nose/mouth/cheeks, warm skin and chestnut hair,
+  better connected limbs, a woven teal top, cream bib and soft booties.
+- Room: daylight-inspired cream and sage wall colors, warm wood floors,
+  staggered plank joints, muted curtains/furnishings, cotton pillow and framed
+  wainscot detail, instead of candy-pink material blocks.
+- Framing: camera closer and more squarely on the baby, retaining recognizable
+  crib, dresser, window, rug and toys within the hardware perspective room.
+- Geometry: inexpensive 8-sided ellipsoids remain for ordinary props, while
+  only the three prominent character masses use 12-sided contours.
+  Palette-based vertex shading produces material depth without a texture atlas.
+
+There are **zero new textures, 3D VRAM allocations, heap allocations, or
+framebuffers**. A few static surface quads replace full extruded blocks.
+The hardware geometry regression test enforces **<=1,900 polygons and
+<=5,600 submitted vertices** (below the theoretical 2,048/6,144 DS maxima).
+Those counts are **software submission estimates**, not device FPS
+measurements. Visual inspection of real DeSmuME screen captures is required
+before merging the art pass, as is a passing native touchscreen integration
+test to avoid regressing the known-good BlocksDS input behavior.
+
+The aesthetic aims for a **soft, believable 2000s-era DS nursery**, not
+modern high-polygon realism that would be impossible on the original DS.
