@@ -236,6 +236,49 @@ static void arrow(int x,int y,int dir,uint16_t fill){
  if(dir==1){for(i=0;i<8;i++)solid(x+i,y-i,2,2*i+1,fill);solid(x-12,y-3,17,7,fill);}
  if(dir==3){for(i=0;i<8;i++)solid(x-i,y-i,2,2*i+1,fill);solid(x-5,y-3,17,7,fill);}
 }
+/* The first two cabinets have genuinely different native-resolution UIs. */
+static void bottle_challenge(const Arcade *a){
+ char text[40];int cursor=128+a->balance/2;
+ solid(0,27,256,149,BLUSH);
+ panel(7,31,242,45,WHITE,TEAL);
+ fit(16,39,"BOTTLE BALANCE",PURPLE,32);
+ fit(16,55,a->reverse?"GLITCH! CONTROLS FLIPPED":"KEEP BOTTLE UPRIGHT",a->reverse?DEEP_PINK:TEAL,35);
+ solid(26,89,204,17,WHITE);outline(26,89,204,17,INK);
+ solid(94,91,68,13,MINT);
+ solid(cursor-2,86,5,24,DEEP_PINK);
+ icon_bottle(cursor-15,107);
+ snprintf(text,sizeof(text),"STABLE %u / 150",a->hold_frames);
+ fit(58,117,text,INK,26);
+ capsule(8,138,110,32,SKY,BLUE);
+ capsule(138,138,110,32,LEMON,GOLD);
+ label(33,149,"< LEFT",INK,1,11);
+ label(162,149,"RIGHT >",INK,1,11);
+ foot(PURPLE);
+ snprintf(text,sizeof(text),"SPILLS %u/3  TIME %u",a->mistakes,a->timer/60);
+ fit(16,181,text,WHITE,36);
+}
+static void diaper_challenge(const Arcade *a){
+ static const char *const steps[4]={"WIPE","NEW DIAPER","FOLD","TAPE"};
+ char text[40];int target=game_arcade_expected(a);
+ solid(0,27,256,149,BLUSH);
+ panel(6,31,244,51,WHITE,PINK);
+ fit(15,39,"DIAPER DASH",PURPLE,28);
+ snprintf(text,sizeof(text),"STEP %u/4 : %s",a->stage+1,steps[a->stage<4?a->stage:3]);
+ fit(15,53,text,INK,36);
+ fit(15,68,a->reverse?"CORRUPTION: OPPOSITE!":"TAP THE CORRECT TASK",a->reverse?DEEP_PINK:TEAL,36);
+ capsule(77,88,103,29,target==0?LEMON:GRAY,GOLD);
+ fit(108,99,"TAPE",INK,10);
+ capsule(8,119,106,36,target==3?LEMON:SKY,TEAL);
+ fit(40,132,"WIPE",INK,10);
+ capsule(142,119,106,36,target==1?LEMON:SKY,TEAL);
+ fit(180,132,"NEW",INK,8);
+ capsule(77,155,103,19,target==2?LEMON:MINT,GREEN);
+ fit(115,161,"FOLD",INK,8);
+ foot(PURPLE);
+ snprintf(text,sizeof(text),"MISTAKES %u/3   %u F",a->mistakes,a->timer);
+ fit(15,181,text,WHITE,37);
+}
+
 static void challenge(const Game *s,const Arcade *a){
  char tmp[40];int i;
  solid(0,27,256,149,IVORY);
@@ -334,7 +377,10 @@ void ui_draw(const Game *s,const Arcade *a,int view,int selection,
  switch(view){
  case 0:home(s,can_save,message);break;
  case 1:arcade_list(s,selection);break;
- case 2:challenge(s,a);break;
+ case 2:if(a->id==0)bottle_challenge(a);
+        else if(a->id==1)diaper_challenge(a);
+        else challenge(s,a);
+        break;
  case 3:reset_screen(reset_step);break;
  case 4:finale(s,ending);break;
  case 5:title_screen(s);break;
