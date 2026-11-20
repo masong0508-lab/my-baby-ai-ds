@@ -1,9 +1,10 @@
 #include <nds.h>
 #include "world.h"
 
-/* Intentionally ugly-cute NDS-era art: 3D bodies, furniture, camera depth.
- * Entire scene uses DS polygon hardware; no software framebuffer or texture.
- * Ellipsoids are 8-sided and have only three rings (24 quads each).
+/* Warm, naturally proportioned NDS nursery: geometry is native DS hardware 3D.
+ * This pass replaces intentionally grotesque eye/head proportions with
+ * smaller embedded facial features, soft material colors and curved contours.
+ * Avoid texture VRAM, dynamic allocation or extra framebuffers.
  */
 static const float cx[8]={1,.7071f,0,-.7071f,-1,-.7071f,0,.7071f};
 static const float cz[8]={0,.7071f,1,.7071f,0,-.7071f,-1,-.7071f};
@@ -89,6 +90,41 @@ static void ellipse(float x,float y,float z,float rx,float ry,float rz,
  }
  frame_vertices+=54;
  frame_polygons+=24;
+}
+/* 12-sided, five-band curved surface for the baby's main face.
+ * Costs only 60 quads/130 submitted vertices; all other rounded shapes
+ * remain on the cheaper eight-sided mesh. No trigonometry per frame.
+ * The 5-bit vertex shading is baked from a soft upper-left light source.
+ */
+static void soft_head(float x,float y,float z,float rx,float ry,float rz,
+                      int red,int green,int blue){
+ static const float ring_x[12]={1,.866f,.5f,0,-.5f,-.866f,-1,-.866f,-.5f,0,.5f,.866f};
+ static const float ring_z[12]={0,.5f,.866f,1,.866f,.5f,0,-.5f,-.866f,-1,-.866f,-.5f};
+ static const float v[6]={-1,-.72f,-.28f,.28f,.72f,1};
+ static const float radius[6]={0,.66f,.96f,.96f,.66f,0};
+ static const int light[12]={0,1,2,3,4,5,2,-1,-3,-4,-3,-1};
+ int a,i,j;
+ for(a=0;a<5;a++){
+  glBegin(GL_QUAD_STRIP);
+  for(i=0;i<=12;i++){
+   j=i%12;
+   color(red,green,blue,light[j]+(a>=3?2:a==0?-3:0));
+   glVertex3f(x+rx*radius[a]*ring_x[j],
+              y+ry*v[a],z+rz*radius[a]*ring_z[j]);
+   color(red,green,blue,light[j]+(a>=2?2:-2));
+   glVertex3f(x+rx*radius[a+1]*ring_x[j],
+              y+ry*v[a+1],z+rz*radius[a+1]*ring_z[j]);
+  }
+  glEnd();
+ }
+ frame_vertices+=130;
+ frame_polygons+=60;
+}
+/* Thin surface layers read as fabric, eyebrows or facial blush rather than
+ * big detached spheres. Each costs a single GPU quad. */
+static void soft_mark(float x,float y,float z,float sx,float sy,
+                      int r,int g,int b){
+ wall_sticker(x,y,z,sx,sy,r,g,b);
 }
 unsigned world_vertex_count(void){return frame_vertices;}
 unsigned world_polygon_count(void){return frame_polygons;}
@@ -177,77 +213,79 @@ static void teddy(void){
  ellipse(x+.16f,y-.27f,z+.08f,.13,.13,.17,24,13,5);
 }
 static void baby_model(const Game *s,uint32_t frame,int action){
- float bob=(float)((int)(frame%80u)-40)*.0009f;
- float waving=(float)((int)(frame%110u)-55)*.002f;
- int blink=(frame%143u)<5u || (action==4 && (frame%110u)<55u);
- int glitched=game_glitch_tier(s)>=2&&!s->safe_visuals&&(frame%121u<13u);
+ float bob=(float)((int)(frame%96u)-48)*.00035f;
+ float wave=(float)((int)(frame%105u)-52)*.00125f;
+ int blink=(frame%149u)<5u||(action==4&&(frame%110u)<55u);
+ int tier=game_glitch_tier(s);
+ int glitched=tier>=2&&!s->safe_visuals&&(frame%121u<13u);
  int happy=s->mood>42;
  glPushMatrix();
  glTranslatef(-.12f,bob,.22f);
- /* Jeans, legs, socks, soft cloth torso. */
- ellipse(0,-.74f,.00f,.61,.30,.46,9,12,19);
- ellipse(-.39,-.91,.20,.30,.25,.36,9,12,19);
- ellipse(.39,-.91,.20,.30,.25,.36,9,12,19);
- ellipse(-.43,-1.07,.42,.27,.14,.25,30,20,25);
- ellipse(.43,-1.07,.42,.27,.14,.25,30,20,25);
- ellipse(0,-.32f,-.05f,.53,.54,.39,30,14,19);
- ellipse(0,.05f,.16f,.28,.075,.22,31,24,26);
- /* Sleeves, arms and hands animate as separate masses. */
- ellipse(-.54,-.15,.04,.25,.27,.29,30,13,18);
- ellipse(.54,-.15,.04,.25,.27,.29,30,13,18);
- ellipse(-.72,-.43+waving*(action==2?2:1),.20,.19,.29,.18,27,17,12);
- ellipse(.72,-.43-waving*(action==2?2:1),.20,.19,.29,.18,27,17,12);
- ellipse(-.77,-.68+waving,.27,.19,.15,.19,28,18,13);
- ellipse(.77,-.68-waving,.27,.19,.15,.19,28,18,13);
- /* Quilted shirt stripes and color-blocked sleeves. */
- wall_sticker(-.32f,-.44f,.344f,.10f,.36f,24,9,18);
- wall_sticker(.32f,-.44f,.344f,.10f,.36f,24,9,18);
- wall_sticker(0,-.65f,.392f,.65f,.055f,29,20,12);
- /* Sweater bunny embroidery, raised above the clothing. */
- ellipse(0,-.37,.36,.21,.16,.025,30,25,24);
- ellipse(-.12,-.27,.36,.09,.14,.022,30,25,24);
- ellipse(.12,-.27,.36,.09,.14,.022,30,25,24);
- ellipse(-.07,-.37,.387,.021,.026,.013,5,4,5);
- ellipse(.06,-.37,.387,.021,.026,.013,5,4,5);
- /* Huge asymmetric, unmistakable head with realistic surface depth. */
- ellipse(0,.61,-.10,.72,.77,.56,5,3,4);
- ellipse(0,.50,.08,.66,.71,.54,28,17,12);
- ellipse(-.65,.39,.06,.15,.18,.18,26,16,11);
- ellipse(.65,.39,.06,.15,.18,.18,26,16,11);
- ellipse(-.42,1.05,.13,.35,.22,.34,6,4,4);
- ellipse(.09,1.10,.08,.52,.22,.36,6,4,4);
- ellipse(.50,.96,.10,.22,.24,.31,6,4,4);
- ellipse(-.65,.73,.07,.13,.34,.17,5,4,4);
- ellipse(.63,.71,.07,.12,.31,.17,5,4,4);
- /* Pink hair clip and shiny, intentionally overlarge DS-era eyes. */
- ellipse(-.56,.98,.37,.12,.18,.075,30,9,18);
- ellipse(-.55,.96,.435,.060,.10,.017,31,19,25);
- ellipse(-.29,.57,.607,.225,blink?.025f:.228f,.071,13,8,10);
- ellipse(.29,.57,.607,.225,blink?.025f:.228f,.071,13,8,10);
- ellipse(-.29,.57,.631,.20,blink?.022f:.20f,.071,31,29,29);
- ellipse(.29,.57,.631,.20,blink?.022f:.20f,.071,31,29,29);
+ /* Seated toddler, softly rounded but no giant floating boots or wrists. */
+ ellipse(0,-.79f,.00f,.53f,.27f,.41f,11,13,18);
+ ellipse(-.30f,-.94f,.23f,.25f,.21f,.30f,12,15,20);
+ ellipse(.30f,-.94f,.23f,.25f,.21f,.30f,12,15,20);
+ ellipse(-.33f,-1.09f,.46f,.24f,.12f,.23f,26,24,24);
+ ellipse(.33f,-1.09f,.46f,.24f,.12f,.23f,26,24,24);
+ /* Muted teal knit top with cream bib and soft fabric neck seam. */
+ ellipse(0,-.29f,-.07f,.50f,.50f,.38f,15,23,22);
+ ellipse(0,.16f,.04f,.25f,.13f,.23f,26,22,18);
+ ellipse(0,-.37f,.294f,.27f,.32f,.048f,29,27,23);
+ ellipse(0,-.61f,.31f,.31f,.055f,.04f,21,25,22);
+ /* Sewn-on pocket and two tiny buttons are flatter than the old 3D logo. */
+ soft_mark(0,-.38f,.345f,.20f,.12f,25,23,21);
+ soft_mark(-.055f,-.29f,.346f,.031f,.031f,17,14,12);
+ soft_mark(.055f,-.29f,.346f,.031f,.031f,17,14,12);
+ /* Sleeves and forearms connect continuously. Activity gives gentle motion. */
+ ellipse(-.49f,-.15f,-.015f,.22f,.26f,.23f,15,22,22);
+ ellipse(.49f,-.15f,-.015f,.22f,.26f,.23f,15,22,22);
+ ellipse(-.60f,-.39f+wave,.16f,.17f,.24f,.19f,28,20,16);
+ ellipse(.60f,-.39f-wave,.16f,.17f,.24f,.19f,28,20,16);
+ ellipse(-.62f,-.55f+wave,.29f,.18f,.14f,.16f,30,22,18);
+ ellipse(.62f,-.55f-wave,.29f,.18f,.14f,.16f,30,22,18);
+ /* Hair at the rear: chestnut, not black, leaving visible forehead. */
+ ellipse(0,.59f,-.095f,.64f,.65f,.50f,12,8,6);
+ /* One smoother facial mesh makes the head less blocky without increasing
+  * every other object in the nursery to a prohibitively expensive topology. */
+ soft_head(0,.54f,.04f,.625f,.61f,.525f,29,21,17);
+ ellipse(-.62f,.46f,.05f,.13f,.155f,.14f,27,18,15);
+ ellipse(.62f,.46f,.05f,.13f,.155f,.14f,27,18,15);
+ /* Asymmetric locks sit above the forehead, not across the eyes. */
+ ellipse(-.41f,1.02f,.115f,.23f,.115f,.29f,13,8,6);
+ ellipse(.04f,1.095f,-.005f,.39f,.125f,.30f,13,9,7);
+ ellipse(.46f,1.01f,.055f,.18f,.135f,.24f,11,7,6);
+ ellipse(-.55f,.78f,.055f,.085f,.19f,.14f,12,8,6);
+ ellipse(.55f,.78f,.055f,.085f,.19f,.14f,12,8,6);
+ /* Small fabric hairclip instead of the oversized hot-pink disk. */
+ ellipse(-.47f,1.025f,.33f,.085f,.075f,.025f,23,15,16);
+ soft_mark(-.47f,1.025f,.365f,.042f,.055f,30,26,24);
+ /* Smaller, embedded eyes have lids/irises rather than bulging frog-eyes.
+  * 0.125-radius eyeballs, ~half the old exaggerated size. */
+ ellipse(-.225f,.57f,.548f,.145f,blink?.018f:.129f,.027f,20,15,13);
+ ellipse(.225f,.57f,.548f,.145f,blink?.018f:.129f,.027f,20,15,13);
  if(!blink){
-  ellipse(-.27,.57,.707,.12,.15,.044,10,19,12);
-  ellipse(.29+(glitched?.16f:0),.57,.707,.12,.15,.044,10,19,12);
-  ellipse(-.27,.565,.743,.064,.096,.028,3,2,3);
-  ellipse(.29+(glitched?.16f:0),.565,.743,.064,.096,.028,3,2,3);
-  ellipse(-.32,.65,.765,.039,.040,.018,31,31,31);
-  ellipse(.25+(glitched?.16f:0),.65,.765,.039,.040,.018,31,31,31);
+  ellipse(-.225f,.57f,.565f,.126f,.112f,.023f,30,29,27);
+  ellipse(.225f,.57f,.565f,.126f,.112f,.023f,30,29,27);
+  ellipse(-.213f,.563f,.589f,.062f,.078f,.018f,11,15,14);
+  ellipse(.213f+(glitched?.065f:0),.563f,.589f,.062f,.078f,.018f,11,15,14);
+  ellipse(-.214f,.560f,.606f,.035f,.057f,.013f,5,5,6);
+  ellipse(.214f+(glitched?.065f:0),.560f,.606f,.035f,.057f,.013f,5,5,6);
+  soft_mark(-.233f,.612f,.625f,.034f,.035f,31,31,31);
+  soft_mark(.194f+(glitched?.065f:0),.612f,.625f,.034f,.035f,31,31,31);
+ }else{
+  soft_mark(-.225f,.566f,.580f,.27f,.025f,15,9,8);
+  soft_mark(.225f,.566f,.580f,.27f,.025f,15,9,8);
  }
- /* Eyebrows, tiny freckles and a shaped nose are inexpensive decals. */
- wall_sticker(-.29,.83,.633,.26,.047,9,5,5);
- wall_sticker(.29,.83,.633,.26,.047,9,5,5);
- wall_sticker(-.52,.28,.52,.045,.047,19,10,10);
- wall_sticker(-.44,.25,.57,.035,.035,19,10,10);
- wall_sticker(.52,.28,.52,.045,.047,19,10,10);
- wall_sticker(.44,.25,.57,.035,.035,19,10,10);
- ellipse(0,.30,.64,.14,.12,.085,28,18,14);
- ellipse(-.40,.29,.58,.12,.08,.022,31,15,18);
- ellipse(.40,.29,.58,.12,.08,.022,31,15,18);
- ellipse(0,.08,.615,happy?.23f:.15f,happy?.12f:.055f,.035,13,4,7);
- if(happy)ellipse(0,.035,.64,.115,.034,.016,31,17,20);
+ /* Graceful eyelid contours, low-saturation cheeks, tiny nose and mouth. */
+ soft_mark(-.225f,.764f,.523f,.24f,.031f,14,9,8);
+ soft_mark(.225f,.764f,.523f,.24f,.031f,14,9,8);
+ soft_mark(-.42f,.345f,.435f,.16f,.070f,29,17,17);
+ soft_mark(.42f,.345f,.435f,.16f,.070f,29,17,17);
+ ellipse(0,.393f,.582f,.084f,.069f,.055f,30,23,19);
+ ellipse(0,.228f,.575f,happy?.14f:.10f,happy?.042f:.024f,.018f,17,9,9);
+ if(happy)soft_mark(0,.199f,.588f,.13f,.018f,29,20,19);
  glPopMatrix(1);
- if(glitched)block(.55,.64,.96,.22,.13,.10,1,30,20);
+ if(glitched)block(.55f,.64f,.91f,.10f,.035f,.04f,8,29,23);
 }
 void world_init(void){
  glInit();
@@ -262,7 +300,7 @@ void world_init(void){
 void world_draw(const Game *s,uint32_t frame,int activity){
  glMatrixMode(GL_MODELVIEW);glLoadIdentity();
  /* This is a room with true depth and perspective, not a flat orthographic collage. */
- gluLookAt(3.02f,2.26f,6.12f,-.05f,.08f,-.25f,0,1,0);
+ gluLookAt(2.55f,1.82f,4.86f,-.06f,.05f,-.28f,0,1,0);
  glPolyFmt(POLY_ALPHA(31)|POLY_CULL_NONE);
  frame_vertices=0;frame_polygons=0;
  room();
