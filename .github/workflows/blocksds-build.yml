@@ -43,13 +43,29 @@ jobs:
           set -euxo pipefail
           make -f Makefile.blocksds -j2 SOURCEDIRS=diagnostics/touch NAME=blocksds-touch-probe
           test -s blocksds-touch-probe.nds
-      - name: Validate all three dual-CPU ROM packages
+      - name: Compare alternative ARM7 touchscreen runtimes
+        shell: bash
+        run: |
+          set -euxo pipefail
+          # Same ARM9 source and SDK, but a smaller built-in ARM7 core.
+          # BlocksDS documents that this core still includes basic libnds
+          # services, including touchscreen reporting.
+          test -f "${BLOCKSDS:-/opt/blocksds/core}/sys/arm7/main_core/arm7_minimal.elf"
+          make -f Makefile.blocksds -j2 SOURCEDIRS=diagnostics/touch NAME=blocksds-touch-probe-minimal-arm7 ARM7ELF="${BLOCKSDS:-/opt/blocksds/core}/sys/arm7/main_core/arm7_minimal.elf"
+          make -f Makefile.blocksds -j2 NAME=my-baby-ai-blocksds-minimal-arm7 ARM7ELF="${BLOCKSDS:-/opt/blocksds/core}/sys/arm7/main_core/arm7_minimal.elf"
+          test -s blocksds-touch-probe-minimal-arm7.nds
+          test -s my-baby-ai-blocksds-minimal-arm7.nds
+      - name: Validate all dual-CPU ROM packages
         shell: bash
         run: |
           set -euxo pipefail
           test -s my-baby-ai-blocksds.nds
           test -s blocksds-dual-screen-test.nds
           test -s blocksds-touch-probe.nds
+          test -s blocksds-touch-probe-minimal-arm7.nds
+          test -s my-baby-ai-blocksds-minimal-arm7.nds
+          ${BLOCKSDS:-/opt/blocksds/core}/tools/ndstool/ndstool -i blocksds-touch-probe-minimal-arm7.nds
+          ${BLOCKSDS:-/opt/blocksds/core}/tools/ndstool/ndstool -i my-baby-ai-blocksds-minimal-arm7.nds
           ${BLOCKSDS:-/opt/blocksds/core}/tools/ndstool/ndstool -i blocksds-touch-probe.nds
           ${BLOCKSDS:-/opt/blocksds/core}/tools/ndstool/ndstool -i my-baby-ai-blocksds.nds
           ${BLOCKSDS:-/opt/blocksds/core}/tools/ndstool/ndstool -i blocksds-dual-screen-test.nds
@@ -61,6 +77,8 @@ jobs:
             my-baby-ai-blocksds.nds
             blocksds-dual-screen-test.nds
             blocksds-touch-probe.nds
+            blocksds-touch-probe-minimal-arm7.nds
+            my-baby-ai-blocksds-minimal-arm7.nds
           if-no-files-found: error
           retention-days: 30
 
@@ -82,12 +100,14 @@ jobs:
           python3 tools/nds_legacy_header.py my-baby-ai-blocksds.nds my-baby-ai-blocksds-ds-only.nds
           python3 tools/nds_legacy_header.py blocksds-dual-screen-test.nds blocksds-dual-screen-test-ds-only.nds
           python3 tools/nds_legacy_header.py blocksds-touch-probe.nds blocksds-touch-probe-ds-only.nds
+          python3 tools/nds_legacy_header.py blocksds-touch-probe-minimal-arm7.nds blocksds-touch-probe-minimal-arm7-ds-only.nds
+          python3 tools/nds_legacy_header.py my-baby-ai-blocksds-minimal-arm7.nds my-baby-ai-blocksds-minimal-arm7-ds-only.nds
           python3 - <<'PY'
           from pathlib import Path
           from sys import path
           path.insert(0, "tools")
           from nds_legacy_header import crc16
-          for filename in ("my-baby-ai-blocksds","blocksds-dual-screen-test","blocksds-touch-probe"):
+          for filename in ("my-baby-ai-blocksds","blocksds-dual-screen-test","blocksds-touch-probe","blocksds-touch-probe-minimal-arm7","my-baby-ai-blocksds-minimal-arm7"):
               a=Path(filename+".nds").read_bytes()
               b=Path(filename+"-ds-only.nds").read_bytes()
               assert b[0x12]==0 and a[0x160:]==b[0x160:], filename
@@ -105,5 +125,9 @@ jobs:
             blocksds-dual-screen-test-ds-only.nds
             blocksds-touch-probe.nds
             blocksds-touch-probe-ds-only.nds
+            blocksds-touch-probe-minimal-arm7.nds
+            blocksds-touch-probe-minimal-arm7-ds-only.nds
+            my-baby-ai-blocksds-minimal-arm7.nds
+            my-baby-ai-blocksds-minimal-arm7-ds-only.nds
           if-no-files-found: error
           retention-days: 30
