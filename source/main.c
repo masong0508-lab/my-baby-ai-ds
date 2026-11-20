@@ -108,16 +108,29 @@ int main(void){
    int direction=-1;
    if(down&KEY_B){leave_game();dirty=1;}
    else{
-    if(down&KEY_UP)direction=0;
-    else if(down&KEY_RIGHT)direction=1;
-    else if(down&KEY_DOWN)direction=2;
-    else if(down&KEY_LEFT)direction=3;
-    else if(down&KEY_TOUCH){
-     if(touch.py>=176){leave_game();dirty=1;}
-     else direction=ui_arcade_touch(touch.px,touch.py);
+    if(arc.id==0){
+     int steer=0;
+     if(held&KEY_LEFT)steer=-1;
+     else if(held&KEY_RIGHT)steer=1;
+     else if((held&KEY_TOUCH)&&touch.py>=90&&touch.py<173)
+      steer=touch.px<128?-1:1;
+     if((down&KEY_TOUCH)&&touch.py>=176){leave_game();dirty=1;}
+     else{
+      game_arcade_steer(&arc,steer);
+      game_arcade_tick(&baby,&arc);
+     }
+    }else{
+     if(down&KEY_UP)direction=0;
+     else if(down&KEY_RIGHT)direction=1;
+     else if(down&KEY_DOWN)direction=2;
+     else if(down&KEY_LEFT)direction=3;
+     else if(down&KEY_TOUCH){
+      if(touch.py>=176){leave_game();dirty=1;}
+      else direction=ui_arcade_touch(touch.px,touch.py);
+     }
+     if(direction>=0){game_arcade_input(&baby,&arc,direction);dirty=1;}
+     if(arc.active)game_arcade_tick(&baby,&arc);
     }
-    if(direction>=0){game_arcade_input(&baby,&arc,direction);dirty=1;}
-    if(!arc.finished)game_arcade_tick(&baby,&arc);
     if(arc.finished){leave_game();dirty=1;}
    }
   }else if(view==3){
@@ -143,7 +156,7 @@ int main(void){
   }
   world_draw(&baby,frame,pose);
   /* Keep bitmap VRAM writes off the hot path unless UI state changed. */
-  if(dirty||previous!=view||(view==2&&frame%9u==0u)){
+  if(dirty||previous!=view||(view==2&&frame%(arc.id==0?3u:9u)==0u)){
    ui_draw(&baby,&arc,view,selected,last_ending,reset_step,storage_ok,message);
    dirty=0;
   }
