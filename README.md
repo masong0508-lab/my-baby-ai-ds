@@ -4,7 +4,7 @@ An ugly-cute DS-era baby simulator parody with an overeducated baby, 16 arcade g
 
 ## First playable prototype
 
-The ARM9 program renders a furnished perspective-3D nursery and a modeled, animated, intentionally ugly-cute baby, with crib rails, dresser drawers, window, play mat, toys and teddy bear. The lower screen now uses a colored bitmap touchscreen interface, not the old text console. Buttons, arcade cabinets, care meters, prompts and ending cards are drawn directly into the DS sub-engine VRAM. There are 16 catalog entries; the minigames currently share a *temporary* directional/timing challenge. The baby uses a tiny, deterministic dialogue/state engine rather than an unimplementable large model. A quantized classifier is planned.
+The ARM9 program renders a furnished perspective-3D nursery and a modeled, animated, intentionally ugly-cute baby, with crib rails, dresser drawers, window, play mat, toys and teddy bear. The lower screen now uses a colored bitmap touchscreen interface, not the old text console. Buttons, arcade cabinets, care meters, prompts and ending cards are drawn directly into the DS sub-engine VRAM. There are 16 catalog entries; the minigames currently share a *temporary* directional/timing challenge. The baby uses a compact, fixed-weight, integer-only neural intent classifier with 24 authored responses—not a modern generative language model.
 
 ### Controls
 * A feed, B chat, X play, Y nap; the four large touchscreen buttons provide the same actions.
@@ -28,7 +28,7 @@ Discover **Tiny Diploma Ceremony**, **Rattle Arcade Champion**, **Bugs Become Fe
 
 The top screen now runs a multi-object, shaded, original low-poly scene via the DS hardware 3D engine. The lower screen uses 256×192 native pixel art and interactive status displays with a 16-bit BG bitmap in **128 KiB of dedicated VRAM** (not an extra 128 KiB main-RAM framebuffer), plus a small embedded bitmap font. The UI refreshes on changes, with lower-frequency countdown updates. See `docs/graphics-pipeline.md`.
 
-**Verification status:** portable C simulation/save tests passed previously; host UI raster checks are present in CI. A native `.nds` build, original-hardware frame-rate validation, and emulator screenshots have **not yet been confirmed**. The sixteen cabinets currently share one arcade microgame; they are not sixteen finished unique minigames.
+**Verification status:** GitHub Actions has successfully cross-compiled a real `.nds` ROM and run host tests on a CI pull request; emulator boot/screenshots, original-hardware performance, RAM usage and persistent save behavior have **not** yet been independently verified. The sixteen cabinets still share one arcade microgame, not sixteen finished minigames. See [development status](docs/DEVELOPMENT_STATUS.md) and [release QA](docs/QA_RELEASE.md).
 
 ### Title screen, album, settings
 
@@ -37,3 +37,16 @@ A proper startup screen offers touchscreen/START entry to nursery. From the nurs
 ## Downloading the compiled Nintendo DS ROM
 
 Every push to `main` or `ci/*` and every pull request runs [the GitHub Actions DS builder](https://github.com/masong0508-lab/my-baby-ai-ds/actions/workflows/nds-build.yml). The workflow installs the official devkitPro `nds-dev` packages in the devkitARM container, runs portable tests, calls `make clean && make -j2` using this repository's `Makefile`, checks the ROM header, and uploads an artifact named `my-baby-ai-nds` containing `my-baby-ai.nds`. Open the latest **successful** run, scroll to **Artifacts**, and download it. A build failure means there is no verified ROM artifact yet. This is original homebrew, not a commercial DS game.
+
+## Planning and developer documentation
+
+These files describe the current codebase and distinguish confirmed implementation from proposed enhancements:
+
+- **[Current development status](docs/DEVELOPMENT_STATUS.md)** — implemented systems, known gaps, and the meaning of a successful ROM build.
+- **[Prioritized development roadmap](docs/ROADMAP.md)** — staged work, acceptance criteria and a complete set of 16 proposed distinct arcade mechanics.
+- **[Feature suggestions](docs/FEATURE_IDEAS.md)** — baby personality, nursery interactions, cosmetics, comedy glitches and hardware-friendly polish.
+- **[Testing and release checklist](docs/QA_RELEASE.md)** — emulator/original-DS verification, FPS/RAM telemetry, save safety, CI and release gates.
+- **[Glitch endings](docs/glitches.md)** — ending conditions, continuing play and optional reset safety.
+- **[Graphics pipeline](docs/graphics-pipeline.md)** — hardware 3D and touchscreen rendering approach.
+
+**Recommended next engineering patch:** run the latest ROM in melonDS, record genuine screen captures and performance readings, then fix any boot, input or save issues *before* enlarging the game.
