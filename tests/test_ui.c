@@ -54,6 +54,20 @@ int main(void){
  ui_touch_observe(0,0,0,3);
  ui_draw(&g,&a,7,0,0,0,1,"TOUCH DEBUG");
  ui_touch_diag_update();
+ /* Cursor must restore the exact pixels it covered, then obey a UI
+  * redraw without resurrecting stale pixels from the previous scene. */
+ {
+  int x=121,y=130;
+  uint16_t before=screen[y*256+x];
+  ui_virtual_cursor_update(1,x,y,0);
+  assert(screen[y*256+x]!=before);
+  ui_virtual_cursor_update(0,x,y,0);
+  assert(screen[y*256+x]==before);
+  ui_virtual_cursor_update(1,x,y,1);
+  ui_draw(&g,&a,5,0,0,0,1,"TITLE");
+  ui_virtual_cursor_update(1,42,112,0);
+  ui_virtual_cursor_update(0,42,112,0);
+ }
  puts("PASS: bitmap UI and touch hitboxes");
  return 0;
 }
