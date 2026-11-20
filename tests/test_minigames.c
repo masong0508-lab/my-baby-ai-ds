@@ -21,7 +21,7 @@ static void diaper(void){
  Game g;Arcade a;int i;
  const int tasks[4]={3,1,2,0};
  game_init(&g);game_arcade_start(&g,&a,1);
- assert(a.active&&a.stage==0&&a.timer==140);
+ assert(a.active&&a.stage==0&&a.timer==360);
  for(i=0;i<4;i++){
   assert(a.stage==i&&a.target==tasks[i]);
   game_arcade_input(&g,&a,game_arcade_expected(&a));
@@ -31,7 +31,7 @@ static void diaper(void){
  game_arcade_input(&g,&a,0);
  assert(a.mistakes==1&&a.stage==0&&a.active);
  g.corruption=65;game_arcade_start(&g,&a,1);
- assert(a.timer==95);
+ assert(a.timer==240);
  game_arcade_input(&g,&a,3);
  game_arcade_input(&g,&a,1);
  assert(a.stage==2&&a.reverse&&game_arcade_expected(&a)==0);
