@@ -10,4 +10,5 @@ int ui_nursery_touch(int x,int y);
 int ui_home_navigation(int x,int y);
 int ui_arcade_select(int x,int y);
 int ui_arcade_touch(int x,int y);
+int ui_arcade_navigation(int x,int y); /* 1 play, 2 buy, 3 back */
 #endif

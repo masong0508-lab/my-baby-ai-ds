@@ -87,8 +87,17 @@ int main(void){
     dirty=1;
    }else if(down&KEY_A){begin_game();dirty=1;}
    else if(down&KEY_TOUCH){
-    int id=ui_arcade_select(touch.px,touch.py);
-    if(id>=0){if(id==selected)begin_game();else selected=id;dirty=1;}
+    int nav=ui_arcade_navigation(touch.px,touch.py);
+    if(nav==1){begin_game();dirty=1;}
+    else if(nav==2){
+     if(game_unlock(&baby,selected)){message="CABINET BOUGHT!";persist();}
+     else message="EARN MORE WINS OR CURRENCY.";
+     dirty=1;
+    }else if(nav==3){view=0;message="BACK TO THE NURSERY.";dirty=1;}
+    else{
+     int id=ui_arcade_select(touch.px,touch.py);
+     if(id>=0){if(id==selected)begin_game();else selected=id;dirty=1;}
+    }
    }
   }else if(view==2){
    int direction=-1;
@@ -98,7 +107,10 @@ int main(void){
     else if(down&KEY_RIGHT)direction=1;
     else if(down&KEY_DOWN)direction=2;
     else if(down&KEY_LEFT)direction=3;
-    else if(down&KEY_TOUCH)direction=ui_arcade_touch(touch.px,touch.py);
+    else if(down&KEY_TOUCH){
+     if(touch.py>=176){leave_game();dirty=1;}
+     else direction=ui_arcade_touch(touch.px,touch.py);
+    }
     if(direction>=0){game_arcade_input(&baby,&arc,direction);dirty=1;}
     if(!arc.finished)game_arcade_tick(&baby,&arc);
     if(arc.finished){leave_game();dirty=1;}

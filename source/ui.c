@@ -144,6 +144,8 @@ static void header(const char *title,const Game *s){
  snprintf(tmp,sizeof(tmp),"DAY %lu",(unsigned long)s->days);
  capsule(191,5,58,17,PINK,WHITE);
  label(196,10,tmp,INK,1,9);
+ snprintf(tmp,sizeof(tmp),"$%u",s->dollars);
+ fit(153,10,tmp,LEMON,6);
 }
 static void foot(uint16_t color){
  solid(0,176,256,16,color);
@@ -189,8 +191,10 @@ static void home(const Game *s,int can_save,const char *message){
  capsule(7,148,117,23,MINT,GREEN);icon_play(9,146);label(43,155,"PLAY",INK,1,11);
  capsule(132,148,117,23,PINK,DEEP_PINK);icon_nap(133,146);label(168,155,"NAP",INK,1,11);
  foot(PURPLE);
- snprintf(line,sizeof(line),"$%u  FAV %u  %s",s->dollars,s->favors,can_save?"SAVED":"RAM");
- fit(6,181,line,WHITE,28);
+ fit(12,181,"ARCADE",WHITE,14);
+ fit(149,181,"END DAY",WHITE,14);
+ (void)line;
+ (void)can_save;
 }
 static const char *const nick[16]={
  "BOTTLE","DIAPER","TAX","KART","BEATS","SOCKS","NAP","RATTLE",
@@ -216,7 +220,9 @@ static void arcade_list(const Game *s,int selection){
  snprintf(tmp,sizeof(tmp),"%s",game_names[selection]);
  fit(12,167,tmp,INK,38);
  foot(PURPLE);
- fit(8,181,"A PLAY  X BUY  B BACK",WHITE,27);
+ fit(10,181,"PLAY",WHITE,8);
+ fit(98,181,"BUY",WHITE,8);
+ fit(191,181,"BACK",WHITE,8);
 }
 static void arrow(int x,int y,int dir,uint16_t fill){
  int i;
@@ -279,6 +285,10 @@ static void reset_screen(int confirm){
  fit(24,129,confirm?"HOLD L+R AND PRESS X":"A: REVIEW RESET",PURPLE,38);
  fit(40,147,"B: CANCEL",INK,26);
  foot(PURPLE);fit(38,181,"ONLY IF YOU CHOOSE",WHITE,30);
+}
+int ui_arcade_navigation(int x,int y){
+ if(y<176||y>=192||x<0||x>=256)return 0;
+ return x<80?1:x<174?2:3;
 }
 void ui_draw(const Game *s,const Arcade *a,int view,int selection,
              int ending,int reset_step,int can_save,const char *message){

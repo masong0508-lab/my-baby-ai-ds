@@ -19,6 +19,10 @@ int main(void){
  assert(ui_arcade_select(9,66)==0);
  assert(ui_arcade_select(195,145)==15);
  assert(ui_arcade_select(255,191)==-1);
+ assert(ui_arcade_navigation(11,181)==1);
+ assert(ui_arcade_navigation(112,181)==2);
+ assert(ui_arcade_navigation(221,181)==3);
+ assert(ui_arcade_navigation(11,122)==0);
  a.timer=110;
  ui_draw(&g,&a,1,0,0,0,1,"ARCADE");
  ui_draw(&g,&a,2,0,0,0,1,"GO!");
