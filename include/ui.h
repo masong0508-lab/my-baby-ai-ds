@@ -1,0 +1,13 @@
+#ifndef MBAI_UI_H
+#define MBAI_UI_H
+#include <stdint.h>
+#include "game.h"
+/* Bottom-screen native bitmap UI: no heap, no asset files, no extra framebuffer. */
+void ui_init(void *vram);
+void ui_draw(const Game *s,const Arcade *a,int view,int selected,
+             int ending,int reset_step,int can_save,const char *message);
+int ui_nursery_touch(int x,int y);
+int ui_home_navigation(int x,int y);
+int ui_arcade_select(int x,int y);
+int ui_arcade_touch(int x,int y);
+#endif
