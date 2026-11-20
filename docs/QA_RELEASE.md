@@ -91,3 +91,21 @@ Expected diagnostic order:
 4. If both ROM variants still show immediate white screens, investigate libnds v2/ARM7 runtime and DraStic-specific homebrew behavior; test the same exact SHA in melonDS and real hardware before asserting the root cause.
 
 No regression is considered fixed without actual emulator screenshots or a successful player confirmation.
+
+## Alternative-runtime boot regression
+
+The first DraStic tester still reported white screens with both devkitPro
+ROM header variants. Based on independent libnds 2 startup/emulator reports, an
+alternate **BlocksDS** runtime is now built by
+`.github/workflows/blocksds-build.yml`. It ships a whole-game ROM and a
+minimal dual-screen color probe. Both receive DS-only compatibility copies.
+
+- [ ] DraStic: DS-only BlocksDS color probe produces two distinct colorful screens.
+- [ ] DraStic: DS-only BlocksDS full game shows a title.
+- [ ] DraStic: START enters 3D nursery without hanging.
+- [ ] DraStic: X save-device probe does not prevent normal RAM-only gameplay.
+- [ ] melonDS: exact same BlocksDS ROM passes boot + 30-minute gameplay.
+- [ ] Original DS Lite: same build boots and passes basic input/save tests.
+
+Without a positive report for at least the first two checks, **do not**
+describe the DraStic white-screen bug as fixed.
