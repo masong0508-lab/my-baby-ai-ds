@@ -81,6 +81,23 @@ jobs:
           test -s my-baby-ai-ds-only.nds
           ndstool -i my-baby-ai-ds-only.nds
 
+      - name: Build bare-metal ARM7 native touch comparison ROM
+        shell: bash
+        run: |
+          set -euxo pipefail
+          export PATH="$DEVKITARM/bin:$DEVKITPRO/tools/bin:$PATH"
+          sh tools/build_bare_touch_probe.sh bare-touch-arm7.nds
+          test -s bare-touch-arm7.nds
+          ndstool -i bare-touch-arm7.nds
+
+      - name: Upload independent Mandex-style ARM7 touch probe
+        uses: actions/upload-artifact@v4
+        with:
+          name: my-baby-ai-bare-arm7-touch-probe
+          path: bare-touch-arm7.nds
+          if-no-files-found: error
+          retention-days: 30
+
       - name: Upload standard and DS-only homebrew ROMs
         uses: actions/upload-artifact@v4
         with:
