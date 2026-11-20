@@ -1,4 +1,5 @@
 #include "game.h"
+#include "dialogue.h"
 #include <string.h>
 const char *const game_names[MBAI_GAMES]={
  "Bottle Balance","Diaper Dash","Tax Return Teether","Crib Kart",
@@ -20,16 +21,7 @@ const char *game_care(Game *s,Care action){
  }
  if(s->hunger>80||s->energy<15)s->corruption=clamp(s->corruption+5);
  if(s->chaos>75)s->corruption=clamp(s->corruption+3);
- if(s->corruption>=80)return "MY THOUGHTS HAVE TABS NOW.";
- if(s->hunger>75)return "MY BOTTLE HAS A SUBSCRIPTION.";
- if(s->chaos>65)return "THE BOARD IS NOT PLEASED.";
- switch(action){
- case FEED:return "CAN I EXPENSE THIS BOTTLE?";
- case CHAT:return "TELL HR I'M TEETHING.";
- case PLAY:return "I OWN 3% OF THIS RATTLE.";
- case NAP:return "WAKE ME WHEN STOCKS RECOVER.";
- default:return "BEEP.";
- }
+ return dialogue_reply(s,action);
 }
 int game_unlocked(const Game *s,int id){return id>=0&&id<MBAI_GAMES&&!!(s->unlocked&(1u<<id));}
 int game_unlock(Game *s,int id){
