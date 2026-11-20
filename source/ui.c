@@ -346,8 +346,10 @@ static void touch_diagnostic(void){
  fit(22,149,"B / START: TITLE",DEEP_PINK,34);
  if(test_touch_down){
   x=test_touch_x;y=test_touch_y;
-  if(x<5)x=5;if(x>250)x=250;
-  if(y<31)y=31;if(y>172)y=172;
+  if(x<5)x=5;
+  if(x>250)x=250;
+  if(y<31)y=31;
+  if(y>172)y=172;
   solid(x-1,y-6,3,13,DEEP_PINK);
   solid(x-6,y-1,13,3,DEEP_PINK);
  }
