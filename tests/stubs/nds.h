@@ -25,6 +25,8 @@
 #define glPushMatrix() ((void)0)
 #define glPopMatrix(n) ((void)(n))
 #define glTranslatef(x,y,z) ((void)(x),(void)(y),(void)(z))
+#define degreesToAngle(n) (n)
+#define glRotateZ(n) ((void)(n))
 #define glBegin(mode) ((void)(mode))
 #define glEnd() ((void)0)
 #define glColor(value) ((void)(value))
