@@ -59,6 +59,19 @@ static void wall_sticker(float x,float y,float z,float sx,float sy,
  glEnd();
  frame_vertices+=4;frame_polygons++;
 }
+/* Simple graphic on the inside left wall; the normal back-wall decal
+ * cannot be rotated there. One quad per field, not a six-faced box. */
+static void side_wall_mark(float x,float y,float z,float sz,float sy,
+                           int r,int g,int b){
+ glBegin(GL_QUADS);
+ color(r,g,b,0);
+ face(x,y-sy*.5f,z-sz*.5f,
+      x,y-sy*.5f,z+sz*.5f,
+      x,y+sy*.5f,z+sz*.5f,
+      x,y+sy*.5f,z-sz*.5f);
+ glEnd();
+ frame_vertices+=4;frame_polygons++;
+}
 /* A rail has three visible faces rather than all six box faces. */
 static void crib_rail(float x,float y,float z,float width,float height,
                       float depth,int r,int g,int b){
@@ -136,9 +149,22 @@ static void room(void){
  block(-3.45,.67,0,.18,4.05,7.0,25,27,25);
  block(0,-1.15,-3.12,6.9,.16,.12,24,22,19);
  block(-3.32,-1.15,0,.12,.16,6.9,24,22,19);
+ /* Wainscot panel on the large side wall; a few restrained surfaces give
+  * the room structure, unlike the old solid saturated wall plane. */
+ side_wall_mark(-3.33f,.20f,-.96f,2.05f,.045f,21,24,21);
+ side_wall_mark(-3.33f,-.57f,-.96f,2.05f,.035f,21,24,21);
+ side_wall_mark(-3.33f,-.17f,-1.99f,.035f,.73f,21,24,21);
+ side_wall_mark(-3.33f,-.17f,.07f,.035f,.73f,21,24,21);
  /* Floor boards, big soft nursery rug and stitched edging. */
  for(i=0;i<8;i++)flat_floor(-3.1f+i*.84f,-1.227f,0,.025,6.7,19,14,11);
- for(i=0;i<5;i++)flat_floor(0,-1.227f,-3.05f+i*1.40f,6.8,.025,21,16,12);
+ /* Stagger plank-end seams instead of a tiled/checkerboard grid. */
+ for(i=0;i<3;i++){
+  flat_floor(-1.72f,-1.227f,-2.45f+i*1.70f,3.25f,.024f,21,16,12);
+  flat_floor(2.12f,-1.227f,-1.59f+i*1.70f,2.70f,.024f,21,16,12);
+ }
+ /* One darkened ground plane under the play mat gives contact shadow
+  * without expensive translucent blending or extra VRAM. */
+ flat_floor(.04f,-1.222f,.78f,3.00f,2.58f,20,17,14);
  block(.04,-1.20,.78,2.86,.09,2.43,18,20,18);
  block(.04,-1.145,.78,2.62,.045,2.18,27,28,25);
  for(i=0;i<5;i++)flat_floor(-.88f+i*.45f,-1.112f,1.78,.15,.04,26,24,18);
@@ -233,7 +259,7 @@ static void baby_model(const Game *s,uint32_t frame,int action){
  ellipse(-.33f,-1.09f,.46f,.24f,.12f,.23f,26,24,24);
  ellipse(.33f,-1.09f,.46f,.24f,.12f,.23f,26,24,24);
  /* Muted teal knit top with cream bib and soft fabric neck seam. */
- ellipse(0,-.29f,-.07f,.50f,.50f,.38f,15,23,22);
+ soft_head(0,-.29f,-.07f,.50f,.50f,.38f,15,23,22);
  ellipse(0,.16f,.04f,.25f,.13f,.23f,26,22,18);
  ellipse(0,-.37f,.294f,.27f,.32f,.048f,29,27,23);
  ellipse(0,-.61f,.31f,.31f,.055f,.04f,21,25,22);
@@ -249,7 +275,7 @@ static void baby_model(const Game *s,uint32_t frame,int action){
  ellipse(-.62f,-.55f+wave,.29f,.18f,.14f,.16f,30,22,18);
  ellipse(.62f,-.55f-wave,.29f,.18f,.14f,.16f,30,22,18);
  /* Hair at the rear: chestnut, not black, leaving visible forehead. */
- ellipse(0,.59f,-.095f,.64f,.65f,.50f,12,8,6);
+ soft_head(0,.59f,-.095f,.64f,.65f,.50f,12,8,6);
  /* One smoother facial mesh makes the head less blocky without increasing
   * every other object in the nursery to a prohibitively expensive topology. */
  soft_head(0,.54f,.04f,.625f,.61f,.525f,29,21,17);
@@ -305,7 +331,7 @@ void world_init(void){
 void world_draw(const Game *s,uint32_t frame,int activity){
  glMatrixMode(GL_MODELVIEW);glLoadIdentity();
  /* This is a room with true depth and perspective, not a flat orthographic collage. */
- gluLookAt(2.55f,1.82f,4.86f,-.06f,.05f,-.28f,0,1,0);
+ gluLookAt(2.30f,1.70f,4.08f,-.08f,.04f,-.22f,0,1,0);
  glPolyFmt(POLY_ALPHA(31)|POLY_CULL_NONE);
  frame_vertices=0;frame_polygons=0;
  room();
