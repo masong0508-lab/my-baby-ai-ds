@@ -7,3 +7,6 @@ cc -std=c11 -Wall -Wextra -Werror -pedantic -O2 -Iinclude source/game.c source/d
 /tmp/my_baby_ai_ui_test
 cc -std=c11 -Wall -Wextra -Werror -pedantic -O2 -Iinclude source/game.c source/dialogue.c tests/test_dialogue.c -o /tmp/my_baby_ai_dialogue_test
 /tmp/my_baby_ai_dialogue_test
+cc -std=c11 -Wall -Wextra -Werror -pedantic -O2 -Itests/stubs -Iinclude \
+ source/world.c source/game.c source/dialogue.c tests/test_world.c -o /tmp/my_baby_ai_world_budget
+/tmp/my_baby_ai_world_budget
