@@ -121,3 +121,35 @@ try `blocksds-dual-screen-test-ds-only.nds`:
 - **Title appears but X freezes:** Investigate FAT/DLDI initialization. The title's X button is optional; regular gameplay starts in RAM-only mode.
 
 These are **diagnostic predictions**, not verified facts about the user's DraStic device. A green GitHub Actions build establishes only a compiled ROM, not an emulator/hardware runtime pass.
+
+## Touchscreen and visual update — DraStic field-testing patch
+
+The first DraStic screenshot confirms the **BlocksDS** ROM reaches both the native
+bitmap bottom UI and perspective-3D nursery. This establishes a real emulator
+boot on the tester's installation, not a tested FPS benchmark.
+
+The new input code in `touch_input.c` recognizes a stylus gesture while
+`KEY_TOUCH` is held, allowing a one-frame delayed valid position while
+preventing repeat taps from one long press. The original DS `scanKeys()`
+call remains before `touchRead()`, as BlocksDS requires.
+
+**To diagnose touch if the lower screen does not respond:**
+1. Restart the game with a fresh emulator session.
+2. On the title screen, press **SELECT** on the DS controls for **STYLUS SIGNAL TEST**.
+3. Touch several points on the **lower screen**. The crosshair, **PEN DOWN**,
+   X/Y coordinates and tap counter should respond.
+4. Use B or START to exit the diagnostic screen.
+5. If the counter stays at zero, inspect DraStic's virtual-button touch
+   regions and touchscreen mapping, not just the in-game button positions.
+   A game cannot create stylus input that an emulator does not deliver.
+6. If the counter moves but FEED/CHAT/PLAY/NAP still fail, preserve a
+   screenshot of the diagnostic coordinates and the button being tapped.
+
+Diaper Dash's actual WIPE/NEW/FOLD/TAPE tap zones now match its displayed
+buttons rather than reusing the generic arcade prompt layout.
+
+The 3D scene also has fewer floorboard/rail faces and a richer baby model:
+colored irises and pupils, eyebrows, freckles, shirt stripes, and additional
+crib mobile and shelf decorations. These improvements are hardware 3D
+geometry and palette colors, **not AI-generated screenshots**. The extra
+details must still pass vertex/polygon budgets and real-device framerate tests.
