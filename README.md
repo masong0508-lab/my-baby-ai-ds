@@ -220,3 +220,29 @@ It does not affect save files or the core game's state.
 The persistent DraStic touchscreen failure was compared against the actual implementations in **Mandex** and **Bore: GodGuy**, both of which use custom, direct-register ARM7 input and pass it through shared memory. The current My Baby A.I. BlocksDS ROM uses a filtered ARM7 touchscreen FIFO and has shown no native touch events on the user's DraStic build. See [cross-repository touchscreen audit](docs/DS_PORT_TOUCH_AUDIT.md).
 
 A new **standalone native input architecture test** is built through GitHub Actions as `bare-touch-arm7.nds`. It uses Mandex-style ARM7 register reads plus SPI and a classic ARM9/ARM7 boot image, but **no BlocksDS** or My Baby A.I. game code. Its upper screen turns green on raw pen detection and yellow for the A-button control; the lower screen becomes pink if the pen is present but ADC sampling fails. If it responds in DraStic, the legacy ARM7 path is a promising route to a real native touch backend. This is a separate diagnostic, not a silently substituted engine in the playable game.
+
+## Verified touchscreen gameplay in a second DS emulator (DeSmuME)
+
+The **BlocksDS DS-only ROM**, built with the same source and standard ARM7 input
+services as the DraStic binary, now has a **real automated emulator test**. The
+`.github/workflows/blocksds-build.yml` `desmume-touch` job boots the
+compiled ROMs with **DeSmuME 0.9.12** via `py-desmume`. The test injects a real
+DeSmuME stylus event (not a game callback), advances ARM7/ARM9 emulated frames,
+and verifies the rendered screenshots.
+
+For the standalone probe, the test asserts: TOUCH OFF/red → TOUCH ON/green;
+native A button → yellow; moving the stylus changes X/Y; release → red.
+
+For **My Baby A.I. itself**, it asserts: SELECT enters the in-game diagnostic;
+`KEY_TOUCH` changes to DOWN, coordinates and the tap counter update; a
+touchscreen press on START GAME **enters the nursery**; and touching **FEED**
+changes the care interface. The CI job fails on missing visual changes and
+uploads actual emulator screenshot PNGs plus JSON evidence even on failure.
+
+**Result:** native stylus handling works in DeSmuME on this exact game build.
+The user's DraStic setup still does not deliver native stylus presses even
+though virtual gamepad buttons work. This isolates a **likely emulator-specific
+compatibility issue**, not a universally broken game touchscreen. It does
+**not** establish that every DraStic version, melonDS build or original DS
+hardware will behave identically. The **L+SELECT / D-pad / A virtual stylus**
+remains available for DraStic users.

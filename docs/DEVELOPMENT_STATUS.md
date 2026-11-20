@@ -16,7 +16,7 @@ This is a source-based inventory of `main` as audited after the first successful
 | Endings | Four good, four bad, ending album, continuing play; separately confirmed optional reset | Basic text/bitmap endings rather than bespoke cinematics; needs stress testing around reset and recovery |
 | Saves | DLDI/libfat storage, two checksummed alternating save slots, validation and scoped erase | FAT write interruption, filesystem failures, version migration and real-flashcart persistence need testing |
 | Audio | No active sound engine, SFX or music code identified in current `source/` modules | Full audio pipeline missing |
-| Tests | Host-side logic, dialogue, touch UI and geometry-budget tests; cross-compile and ROM header checks in GitHub Actions | No emulator screenshots, verified FPS/memory telemetry, soak tests, input latency numbers or hardware matrix recorded |
+| Tests | Host-side logic, dialogue, UI and geometry budgets; GitHub Actions cross-compiles the ROM; DeSmuME 0.9.12 emulator CI now injects real touchscreen presses, verifies tap/move/release, START GAME and FEED, and captures screenshots | Still no verified original-DS hardware run, FPS/RAM telemetry, 30-minute soak, save-persistence proof, or working native touch on the reported DraStic installation |
 | Distribution | CI artifact `my-baby-ai-nds` attached to successful workflow run | No tagged release, release notes, license/attribution review or player-facing manual yet |
 
 ## Current game loop (implemented)
@@ -43,3 +43,7 @@ This is a source-based inventory of `main` as audited after the first successful
 - Unexpected erasure of save files. The optional reset finale must remain explicit, scoped, and cancelable.
 
 **Source of truth:** `source/`, `include/`, `tests/`, `Makefile`, and `.github/workflows/nds-build.yml`. Update this matrix when features land; never change an item's status on the strength of concept art or a plan alone.
+
+## DeSmuME touchscreen verification (2026-11-20)
+
+The BlocksDS native-touch path **has now been verified in a real emulator**, not just compiled: automated DeSmuME tests run both the independent input probe and the full game, inject stylus events, check screenshots for KEY_TOUCH and X/Y changes, and activate START GAME and FEED via the touchscreen. See [QA_RELEASE.md](QA_RELEASE.md). The corresponding DraStic user still reports **no native stylus events** despite working gamepad buttons; the root cause specific to DraStic remains unverified. This does not supersede original-hardware testing or frame-rate profiling.

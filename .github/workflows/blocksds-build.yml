@@ -131,3 +131,47 @@ jobs:
             my-baby-ai-blocksds-minimal-arm7-ds-only.nds
           if-no-files-found: error
           retention-days: 30
+
+  desmume-touch:
+    name: Emulate native stylus and assert ROM touchscreen signals
+    needs: ds-only-packaging
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Retrieve the exact ROMs built in this run
+        uses: actions/download-artifact@v4
+        with:
+          name: my-baby-ai-blocksds-legacy-compat
+      - name: Configure Python test harness
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install actual DeSmuME emulator and screenshot backend
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python -m pip install --disable-pip-version-check py-desmume==0.0.9 Pillow
+      - name: Boot both ROMs, inject stylus coordinates and assert visible updates
+        shell: bash
+        env:
+          SDL_VIDEODRIVER: dummy
+          SDL_AUDIODRIVER: dummy
+        run: |
+          set -euxo pipefail
+          timeout 160 python tests/emulator_touch.py \
+            blocksds-touch-probe-ds-only.nds \
+            my-baby-ai-blocksds-ds-only.nds \
+            --output emulator-proof --stage probe
+          timeout 160 python tests/emulator_touch.py \
+            blocksds-touch-probe-ds-only.nds \
+            my-baby-ai-blocksds-ds-only.nds \
+            --output emulator-proof --stage game
+      - name: Upload captured emulator screens and result even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: desmume-native-touch-evidence
+          path: emulator-proof/
+          retention-days: 30
+          if-no-files-found: warn
