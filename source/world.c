@@ -394,7 +394,7 @@ void world_init(void){
 void world_draw(const Game *s,uint32_t frame,int activity){
  glMatrixMode(GL_MODELVIEW);glLoadIdentity();
  /* This is a room with true depth and perspective, not a flat orthographic collage. */
- gluLookAt(2.30f,1.70f,4.08f,-.08f,.04f,-.22f,0,1,0);
+ gluLookAt(1.42f,1.30f,3.26f,-.12f,.08f,.18f,0,1,0);
  glPolyFmt(POLY_ALPHA(31)|POLY_CULL_NONE);
  frame_vertices=0;frame_polygons=0;
  room();
