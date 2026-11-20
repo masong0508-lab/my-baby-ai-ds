@@ -6,7 +6,7 @@
 #include "save.h"
 static Game baby;
 static Arcade arc;
-static int can_save,view,sel,reset_step;
+static int can_save,view,sel,reset_step,last_ending;
 static const char *message="WELCOME TO DAYCARE 2.0";
 #define SAVE_BASE "fat:/my_baby_ai"
 static void oval(float x,float y,float w,float h,float z,int r,int g,int b){
@@ -67,12 +67,13 @@ static void hud(void){
  iprintf("MY BABY A.I.! DEMO\nDay %lu   $%u  Favor %u\n",(unsigned long)baby.days,baby.dollars,baby.favors);
  iprintf("Hunger %u Mood %u Energy %u\n",baby.hunger,baby.mood,baby.energy);
  iprintf("Chaos %u  GLITCH %u / T%u\n",baby.chaos,baby.corruption,game_glitch_tier(&baby));
- iprintf("Bad endings %u / unique %X\n",baby.bad_endings,baby.ending_mask);
+ iprintf("Bad %u  Good %d / 4\n",baby.bad_endings,game_good_ending_count(&baby));
  iprintf("SAVE: %s\n\n",can_save?"FAT":"RAM ONLY");
  if(view==0)iprintf("A Feed  B Chat\nX Play  Y Nap\nSTART Arcade SELECT End day\nTouch: quadrants care\nL+R: optional reset ending\n");
  if(view==1)iprintf("ARCADE 16 CABINETS\n%02d %s\n%s\nUP/DOWN choose\nA Play X Unlock B Back\nWins %lu\n",sel+1,game_names[sel],game_unlocked(&baby,sel)?"UNLOCKED":"LOCKED",(unsigned long)baby.wins);
  if(view==2)iprintf("ARCADE: %s\nROUND %u/6 MISS %u/3\nD-PAD: %s\n%s\nTIMER %u frames\nB exit\n",game_names[arc.id],arc.round+1,arc.mistakes,((const char*[]){"UP","RIGHT","DOWN","LEFT"})[arc.direction],arc.reverse?"GLITCH: REVERSE!":"normal",arc.timer);
  if(view==3)iprintf("SECRET ENDING: RESET\nERASES ONLY THIS GAME SAVE!\nNO OTHER FILES.\n\n%s\nB cancel\n",reset_step?"Hold L+R and press X":"A to continue");
+ if(view==4)iprintf("%s ENDING!\n\n%s\n\n%s\nA or B: CONTINUE PLAYING\nProgress is saved.\n",game_is_good_ending(last_ending)?"GOOD":"BAD",game_ending_name(last_ending),game_is_good_ending(last_ending)?"+8 DOLLARS, +1 FAVOR":"Baby survived. Try again!");
  iprintf("\n-------------------------\n%s\n",message);
 }
 static void care(Care c){message=game_care(&baby,c);persist();}
@@ -95,7 +96,7 @@ int main(void){
    else if(down&KEY_Y)care(NAP);
    else if(down&KEY_TOUCH)care(touch.py<96?(touch.px<128?FEED:CHAT):(touch.px<128?PLAY:NAP));
    else if(down&KEY_START){view=1;message="WELCOME TO THE ARCADE.";}
-   else if(down&KEY_SELECT){int e=game_end_day(&baby);message=game_ending_name(e);persist();}
+   else if(down&KEY_SELECT){int e=game_end_day(&baby);last_ending=e;message=game_ending_name(e);if(e!=END_OK)view=4;persist();}
    else if((held&(KEY_L|KEY_R))==(KEY_L|KEY_R)&&game_reset_unlocked(&baby)){
     view=3;reset_step=0;message="NO GLITCHES ON THIS SCREEN.";
    }
@@ -115,7 +116,7 @@ int main(void){
     if(!arc.finished)game_arcade_tick(&baby,&arc);
     if(arc.finished){view=1;message=arc.finished==1?"DIAPER DOLLARS EARNED!":"THE GLITCHES WON.";persist();}
    }
-  }else{
+  }else if(view==3){
    if(down&KEY_B){view=0;reset_step=0;message="RESET CANCELED.";}
    else if(!reset_step){if(down&KEY_A)reset_step=1;}
    else if((down&KEY_X)&&(held&(KEY_L|KEY_R))==(KEY_L|KEY_R)){
@@ -123,6 +124,8 @@ int main(void){
     else{game_init(&baby);message="COLD BOOT. WHO AM I?";}
     view=0;reset_step=0;
    }
+  }else if(view==4){
+   if(down&(KEY_A|KEY_B|KEY_START)){view=0;message="BACK TO DAYCARE. SAME SAVE!";}
   }
   scene(frame);
   if(down||prev!=view||(view==2&&frame%10==0))hud();

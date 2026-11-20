@@ -39,23 +39,60 @@ int game_unlock(Game *s,int id){
  if(s->wins<(unsigned)((level+1)*2)||s->dollars<cost||s->favors<favors)return 0;
  s->dollars-=cost;s->favors-=favors;s->unlocked|=(uint16_t)(1u<<id);return 1;
 }
+/* Ending IDs 1..4 are bad, IDs 5..8 are good. The existing 16-bit
+ * ending_mask records both categories without changing on-disk save layout. */
+static uint16_t add_currency(uint16_t value,unsigned amount){
+ return (uint16_t)(value>65535u-amount?65535u:value+amount);
+}
+int game_is_good_ending(int ending){
+ return ending>=END_GRADUATION && ending<=END_SECOND_CHANCE;
+}
+int game_good_ending_count(const Game *s){
+ uint16_t x=(uint16_t)((s->ending_mask>>END_GRADUATION)&15u);
+ int n=0;while(x){n+=(x&1u);x>>=1;}return n;
+}
 int game_end_day(Game *s){
  int e=END_OK;
+ /* A real bad ending takes priority over a positive outcome. */
  if(s->corruption>=80&&s->chaos>=45)e=END_REBOOT;
  else if(s->hunger>=78)e=END_BOTTLE;
  else if(s->mood<=24)e=END_CEO;
  else if(s->chaos>=72)e=END_INTERN;
- if(e){
-  if(s->bad_endings!=65535)s->bad_endings++;
+ if(e!=END_OK){
+  if(s->bad_endings<65535u)s->bad_endings++;
   s->ending_mask|=(uint16_t)(1u<<e);
   s->corruption=clamp(s->corruption+15);
   s->hunger=clamp(s->hunger-35);s->energy=clamp(s->energy+30);
   s->chaos=clamp(s->chaos-35);s->mood=clamp(s->mood+30);
+ }else{
+  /* Each positive story finale occurs only once per save. All return to
+   * nursery; a finale is never a forced exit or an implicit save wipe. */
+  if(s->days>=10&&s->bad_endings>0&&s->hunger<=35&&s->mood>=85&&
+     s->energy>=55&&s->chaos<=40&&!(s->ending_mask&(1u<<END_SECOND_CHANCE)))
+   e=END_SECOND_CHANCE;
+  else if(s->wins>=6&&s->dollars>=25&&s->mood>=65&&s->hunger<=65&&
+          !(s->ending_mask&(1u<<END_ARCADE_CHAMP)))
+   e=END_ARCADE_CHAMP;
+  else if(s->days>=5&&s->corruption>=40&&s->corruption<80&&
+          s->chaos<=35&&s->energy>=50&&s->mood>=60&&
+          !(s->ending_mask&(1u<<END_GLITCH_TAMER)))
+   e=END_GLITCH_TAMER;
+  else if(s->days>=3&&s->hunger<=30&&s->mood>=80&&s->energy>=65&&
+          s->chaos<=35&&!(s->ending_mask&(1u<<END_GRADUATION)))
+   e=END_GRADUATION;
+  if(game_is_good_ending(e)){
+   s->ending_mask|=(uint16_t)(1u<<e);
+   s->dollars=add_currency(s->dollars,8);
+   s->favors=add_currency(s->favors,1);
+   s->corruption=clamp(s->corruption-8);
+  }
  }
- s->days++;return e;
+ s->days++;
+ return e;
 }
 int game_reset_unlocked(const Game *s){
- uint16_t x=s->ending_mask;int unique=0;
+ /* Count only distinct BAD endings. Good endings must not unlock a wipe. */
+ uint16_t x=(uint16_t)(s->ending_mask&0x001eu);int unique=0;
  while(x){unique+=(x&1u);x>>=1;}
  return s->bad_endings>=5||unique>=3;
 }
@@ -65,6 +102,10 @@ const char *game_ending_name(int e){
  case END_CEO:return "BABY CEO HAS QUIT";
  case END_REBOOT:return "MANDATORY DAYCARE REBOOT";
  case END_INTERN:return "UNPAID INTERN REVOLT";
+ case END_GRADUATION:return "TINY DIPLOMA CEREMONY";
+ case END_ARCADE_CHAMP:return "RATTLE ARCADE CHAMPION";
+ case END_GLITCH_TAMER:return "BUGS BECOME FEATURES";
+ case END_SECOND_CHANCE:return "SECOND-CHANCE DAYCARE";
  default:return "A NORMAL DAY. SUSPICIOUS.";
  }
 }
