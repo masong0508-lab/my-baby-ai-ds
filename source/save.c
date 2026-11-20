@@ -37,7 +37,9 @@ int save_write(const char *base,Game *s){
  r.game.sequence=s->sequence+1;r.hash=digest(&r);
  f=fopen(fn,"wb");if(!f)return 0;
  if(fwrite(&r,1,sizeof(r),f)!=sizeof(r)||fflush(f)!=0){fclose(f);return 0;}
- if(fclose(f)!=0)return 0;s->sequence=r.game.sequence;return 1;
+ if(fclose(f)!=0)return 0;
+ s->sequence=r.game.sequence;
+ return 1;
 }
 int save_erase(const char *base){
  int i;for(i=0;i<2;i++){char fn[192];FILE *f;if(!path(fn,sizeof(fn),base,i))return 0;

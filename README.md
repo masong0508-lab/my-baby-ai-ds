@@ -33,3 +33,7 @@ The top screen now runs a multi-object, shaded, original low-poly scene via the 
 ### Title screen, album, settings
 
 A proper startup screen offers touchscreen/START entry to nursery. From the nursery press **L** to view the ending collection (records good and bad endings without losing progress). Press **R** to toggle visual corruption effects, while retaining gameplay interference. Holding **L+R** after enough bad endings enters the separately-confirmed secret reset ending. The new `source/ui.c` renders all of these screens in native DS VRAM.
+
+## Downloading the compiled Nintendo DS ROM
+
+Every push to `main` or `ci/*` and every pull request runs [the GitHub Actions DS builder](https://github.com/masong0508-lab/my-baby-ai-ds/actions/workflows/nds-build.yml). The workflow installs the official devkitPro `nds-dev` packages in the devkitARM container, runs portable tests, calls `make clean && make -j2` using this repository's `Makefile`, checks the ROM header, and uploads an artifact named `my-baby-ai-nds` containing `my-baby-ai.nds`. Open the latest **successful** run, scroll to **Artifacts**, and download it. A build failure means there is no verified ROM artifact yet. This is original homebrew, not a commercial DS game.

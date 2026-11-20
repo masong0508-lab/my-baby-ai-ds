@@ -87,7 +87,10 @@ static const uint8_t glyph[96][7]={
 void ui_init(void *vram){pixels=(volatile uint16_t *)vram;}
 static void solid(int x,int y,int rw,int rh,uint16_t color){
  int a,b;int x2=x+rw,y2=y+rh;
- if(x<0)x=0;if(y<0)y=0;if(x2>W)x2=W;if(y2>H)y2=H;
+ if(x<0)x=0;
+ if(y<0)y=0;
+ if(x2>W)x2=W;
+ if(y2>H)y2=H;
  if(!pixels||x>=x2||y>=y2)return;
  for(b=y;b<y2;b++){
   volatile uint16_t *row=pixels+(unsigned)b*W;
@@ -131,7 +134,8 @@ static void capsule(int x,int y,int width,int height,uint16_t fill,uint16_t edge
 }
 static void meter(int x,int y,int value,uint16_t fill){
  int v=value;
- if(v<0)v=0;if(v>100)v=100;
+ if(v<0)v=0;
+ if(v>100)v=100;
  solid(x,y,71,8,WHITE);outline(x,y,71,8,INK);
  solid(x+2,y+2,(v*67)/100,4,fill);
 }

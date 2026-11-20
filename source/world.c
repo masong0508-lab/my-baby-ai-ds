@@ -183,7 +183,7 @@ static void baby_model(const Game *s,uint32_t frame,int action){
  ellipse(.40,.29,.58,.12,.08,.022,31,15,18);
  ellipse(0,.08,.615,happy?.23f:.15f,happy?.12f:.055f,.035,13,4,7);
  if(happy)ellipse(0,.035,.64,.115,.034,.016,31,17,20);
- glPopMatrix();
+ glPopMatrix(1);
  if(glitched)block(.55,.64,.96,.22,.13,.10,1,30,20);
 }
 void world_init(void){
