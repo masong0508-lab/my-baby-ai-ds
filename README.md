@@ -58,3 +58,20 @@ These files describe the current codebase and distinguish confirmed implementati
 - **Cabinets #3–#16:** still use the original directional-response proof-of-concept until their individual mechanics are implemented.
 
 Both games reuse the existing arcade win/loss economy and **do not change the on-disk save format**. Dedicated automated tests are in `tests/test_minigames.c`, and the existing GitHub Actions workflow continues to produce the `.nds` build. Actual emulator/physical-device behavior still requires validation.
+
+## DraStic / legacy-emulator boot compatibility (test build)
+
+**User-reported bug:** A previous `.nds` build opens to **two white screens** in DraStic. A successful cross-compile is not proof that a specific emulator or flashcart can boot it.
+
+The runtime now paints the lower-screen title interface immediately after video setup, **before optional file storage initialization and before the complex nursery render**. The title's upper-screen image uses a lightweight scene. Normal gameplay remains accessible in RAM-only mode by pressing **A** or **START**.
+
+**Important storage behavior:** Press **X on the title screen** to attempt to enable DLDI/FAT saves and load a saved game. This is intentionally opt-in until boot problems on older emulators have been traced. If storage is unavailable, simply restart and enter via START/A to play without persistent saving. Do not press X if the save probe itself causes a hang. The old two-slot save format has not changed.
+
+GitHub Actions now uploads **two ROMs** in each artifact:
+
+- `my-baby-ai.nds` — normal build from devkitARM.
+- `my-baby-ai-ds-only.nds` — experimental legacy compatibility copy with the **DS-only unit-code byte** and recomputed header CRC. Program data is identical.
+
+**Suggested test:** First try the DS-only ROM, starting a *new emulator session*, not a saved state. If it still gives two white screens, try the normal ROM and disable CPU JIT in the emulator if that option exists. If the lower title screen appears but selecting **X** freezes, the problem is probably in emulator storage support rather than initial video setup. If START leads to a freeze, investigate the heavy 3D renderer. Record which stage fails. Neither variant is currently certified by a successful DraStic or melonDS runtime test.
+
+Hardware note: DraStic's emulation differs from current melonDS; devkitPro/libnds v2 changes have been reported to affect some older emulators, so this is a compatibility test, not a guaranteed final fix.
