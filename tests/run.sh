@@ -16,3 +16,5 @@ cc -std=c11 -Wall -Wextra -Werror -pedantic -O2 -Iinclude source/touch_input.c t
 /tmp/my_baby_ai_touch_test
 cc -std=c11 -Wall -Wextra -Werror -pedantic -O2 -Iinclude source/virtual_stylus.c tests/test_virtual_stylus.c -o /tmp/my_baby_ai_virtual_stylus_test
 /tmp/my_baby_ai_virtual_stylus_test
+cc -std=c11 -Wall -Wextra -Werror -pedantic -O2 -Iinclude source/game.c source/dialogue.c source/save.c tests/test_stress.c -o /tmp/my_baby_ai_stress_test
+/tmp/my_baby_ai_stress_test
