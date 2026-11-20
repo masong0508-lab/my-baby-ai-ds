@@ -54,3 +54,44 @@ jobs:
             blocksds-dual-screen-test.nds
           if-no-files-found: error
           retention-days: 30
+
+  ds-only-packaging:
+    name: Publish DS-only variants for legacy emulators
+    needs: blocksds
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Retrieve independent BlocksDS runtime binaries
+        uses: actions/download-artifact@v4
+        with:
+          name: my-baby-ai-blocksds-drastic-test
+      - name: Correct unit code and CRC without changing either ARM program
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python3 tools/nds_legacy_header.py my-baby-ai-blocksds.nds my-baby-ai-blocksds-ds-only.nds
+          python3 tools/nds_legacy_header.py blocksds-dual-screen-test.nds blocksds-dual-screen-test-ds-only.nds
+          python3 - <<'PY'
+          from pathlib import Path
+          from sys import path
+          path.insert(0, "tools")
+          from nds_legacy_header import crc16
+          for filename in ("my-baby-ai-blocksds","blocksds-dual-screen-test"):
+              a=Path(filename+".nds").read_bytes()
+              b=Path(filename+"-ds-only.nds").read_bytes()
+              assert b[0x12]==0 and a[0x160:]==b[0x160:], filename
+              assert crc16(b[:0x15e])==int.from_bytes(b[0x15e:0x160],"little")
+              print(filename, "DS-only header verified; ARM program untouched")
+          PY
+      - name: Upload BlocksDS complete legacy-compatibility set
+        uses: actions/upload-artifact@v4
+        with:
+          name: my-baby-ai-blocksds-legacy-compat
+          path: |
+            my-baby-ai-blocksds.nds
+            my-baby-ai-blocksds-ds-only.nds
+            blocksds-dual-screen-test.nds
+            blocksds-dual-screen-test-ds-only.nds
+          if-no-files-found: error
+          retention-days: 30
