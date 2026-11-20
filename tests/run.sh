@@ -12,3 +12,5 @@ cc -std=c11 -Wall -Wextra -Werror -pedantic -O2 -Itests/stubs -Iinclude \
 /tmp/my_baby_ai_world_budget
 cc -std=c11 -Wall -Wextra -Werror -pedantic -O2 -Iinclude source/game.c source/dialogue.c tests/test_minigames.c -o /tmp/my_baby_ai_minigames_test
 /tmp/my_baby_ai_minigames_test
+cc -std=c11 -Wall -Wextra -Werror -pedantic -O2 -Iinclude source/touch_input.c tests/test_touch_input.c -o /tmp/my_baby_ai_touch_test
+/tmp/my_baby_ai_touch_test
