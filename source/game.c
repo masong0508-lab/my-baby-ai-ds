@@ -279,6 +279,7 @@ void game_arcade_tick(Game *s,Arcade *a){
   a->mistakes++;s->corruption=clamp(s->corruption+3);
   if(a->mistakes>=3)finish(s,a,0);
   else if(a->id==1)diaper_next(s,a);
+  else if(a->id==7)rattle_next(s,a);
   else round_next(s,a);
  }
 }
