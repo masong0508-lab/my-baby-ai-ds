@@ -15,10 +15,10 @@ int main(void){
   world_draw(&s,(uint32_t)i,i%5);
   if(world_vertex_count()>worst_v)worst_v=world_vertex_count();
   if(world_polygon_count()>worst_p)worst_p=world_polygon_count();
-  /* Reserve headroom for GPU scene submission; avoid living at the DS cap.
+  /* Keep room for expressive meshes after the continuous-hair art pass.
    * The NDS theoretical limits are 6144 vertices and 2048 polygons. */
-  assert(world_vertex_count()<=5600);
-  assert(world_polygon_count()<=1900);
+  assert(world_vertex_count()<=5000);
+  assert(world_polygon_count()<=1850);
  }
  printf("PASS: 3D budget (max %u vertices / 6144, %u polygons / 2048)\n",worst_v,worst_p);
  return 0;
