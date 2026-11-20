@@ -162,7 +162,11 @@ jobs:
           timeout 160 python tests/emulator_touch.py \
             blocksds-touch-probe-ds-only.nds \
             my-baby-ai-blocksds-ds-only.nds \
-            --output emulator-proof
+            --output emulator-proof --stage probe
+          timeout 160 python tests/emulator_touch.py \
+            blocksds-touch-probe-ds-only.nds \
+            my-baby-ai-blocksds-ds-only.nds \
+            --output emulator-proof --stage game
       - name: Upload captured emulator screens and result even on failure
         if: always()
         uses: actions/upload-artifact@v4
