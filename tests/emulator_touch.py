@@ -47,6 +47,14 @@ def difference(a, b, rectangle) -> int:
     return sum(1 for value in delta.convert("RGB").getdata() if value != (0, 0, 0))
 
 
+def stylus_tap(emu: DeSmuME, x: int, y: int) -> None:
+    """One complete native stylus gesture, with enough release frames to re-arm."""
+    emu.input.touch_set_pos(x, y)
+    frames(emu, 8)
+    emu.input.touch_release()
+    frames(emu, 8)
+
+
 def test_probe(path: Path, output: Path) -> dict:
     emu = DeSmuME()
     emu.open(str(path.resolve()))
@@ -138,7 +146,19 @@ def test_actual_game(path: Path, output: Path) -> dict:
     )
     emu.input.touch_release()
     frames(emu, 15)
-    picture(emu, output, "game_touch_diagnostic_released")
+    released = picture(emu, output, "game_touch_diagnostic_released")
+    cross_removed = difference(
+        moved, released, (20, 192 + 108, 238, 192 + 161)
+    )
+    assert cross_removed > 10, (
+        f"Touch-test crosshair did not disappear on stylus release ({cross_removed})"
+    )
+    xy_after_release = difference(
+        moved, released, (62, 192 + 77, 231, 192 + 92)
+    )
+    assert xy_after_release == 0, (
+        f"Touch-test X/Y jumped to fake 0,0 on release ({xy_after_release})"
+    )
     # Native touch must also ACTIVATE controls in the real game, not only
     # update a diagnostic label. Leave the diagnostic via real B first.
     emu.input.keypad_add_key(keymask(Keys.KEY_B))
@@ -166,13 +186,70 @@ def test_actual_game(path: Path, output: Path) -> dict:
         f"Touch FEED did not change needs bars or dialogue UI "
         f"({feed_changed} pixels)"
     )
+    # Exercise real arcade hitboxes and a complete multi-step touchscreen
+    # minigame. A successful press indicator alone is not enough.
+    stylus_tap(emu, 35, 183)  # ARCADE footer on nursery screen
+    arcade = picture(emu, output, "game_arcade_via_touch")
+    arcade_changed = difference(
+        after_feed, arcade, (0, 192 + 30, 256, 192 + 175)
+    )
+    assert arcade_changed > 500, (
+        f"Touch ARCADE footer did not open cabinet grid ({arcade_changed})"
+    )
+    stylus_tap(emu, 35, 76)  # Bottle Balance is preselected
+    bottle = picture(emu, output, "game_bottle_via_touch")
+    bottle_changed = difference(
+        arcade, bottle, (0, 192 + 30, 256, 192 + 175)
+    )
+    assert bottle_changed > 500, (
+        f"Touching the selected bottle cabinet did not start it ({bottle_changed})"
+    )
+    emu.input.keypad_add_key(keymask(Keys.KEY_B))
+    frames(emu, 6)
+    emu.input.keypad_rm_key(keymask(Keys.KEY_B))
+    frames(emu, 8)
+    stylus_tap(emu, 85, 76)  # select Diaper Dash
+    stylus_tap(emu, 85, 76)  # enter selected cabinet
+    diaper = picture(emu, output, "game_diaper_start")
+    diaper_changed = difference(
+        arcade, diaper, (0, 192 + 30, 256, 192 + 175)
+    )
+    assert diaper_changed > 500, (
+        f"Diaper Dash did not open from native stylus taps ({diaper_changed})"
+    )
+    stylus_tap(emu, 40, 137)  # WIPE: left panel
+    diaper_step2 = picture(emu, output, "game_diaper_after_wipe")
+    step_changed = difference(
+        diaper, diaper_step2, (0, 192 + 48, 256, 192 + 80)
+    )
+    assert step_changed > 30, (
+        f"Diaper Dash did not advance after WIPE touch ({step_changed})"
+    )
+    stylus_tap(emu, 187, 137)  # NEW: right panel
+    stylus_tap(emu, 124, 163)  # FOLD: bottom panel
+    stylus_tap(emu, 125, 100)  # TAPE: top panel
+    won = picture(emu, output, "game_arcade_after_diaper_win")
+    returned = difference(
+        diaper, won, (0, 192 + 30, 256, 192 + 175)
+    )
+    reward = difference(arcade, won, (150, 192 + 5, 190, 192 + 23))
+    assert returned > 500 and reward > 5, (
+        f"Four native stylus diaper tasks did not finish and award currency "
+        f"(screen={returned}, reward={reward})"
+    )
     return {
         "title_to_diagnostic_changed_pixels": new_screen,
         "KEY_TOUCH_status_changed_pixels": status,
         "coordinates_on_press_changed_pixels": xy1,
         "coordinates_on_move_changed_pixels": xy2,
+        "crosshair_release_changed_pixels": cross_removed,
         "touch_START_changed_pixels": start_changed,
         "touch_FEED_changed_pixels": feed_changed,
+        "touch_ARCADE_changed_pixels": arcade_changed,
+        "touch_BOTTLE_changed_pixels": bottle_changed,
+        "touch_DIAPER_changed_pixels": diaper_changed,
+        "touch_DIAPER_stage_changed_pixels": step_changed,
+        "touch_DIAPER_win_reward_changed_pixels": reward,
         "result": "PASS",
     }
 
