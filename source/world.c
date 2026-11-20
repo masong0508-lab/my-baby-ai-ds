@@ -133,6 +133,40 @@ static void soft_head(float x,float y,float z,float rx,float ry,float rz,
  frame_vertices+=130;
  frame_polygons+=60;
 }
+/* Hair's ragged silhouette is made from two cheap triangles rather than
+ * many ellipsoids. This mimics the jagged strands of the reference baby. */
+static void hair_point(float x,float y,float z,float dx,float dy,
+                       int r,int g,int b){
+ glBegin(GL_TRIANGLES);
+ color(r,g,b,1);
+ glVertex3f(x-.09f,y+.085f,z);
+ glVertex3f(x+.09f,y+.085f,z);
+ color(r,g,b,-2);
+ glVertex3f(x+dx,y+dy,z+.025f);
+ glEnd();
+ frame_vertices+=3;
+ frame_polygons++;
+}
+/* A pixel-budgeted flat tulip decal (stem, two leaves, two petals).
+ * Quads are kept to a single plane on the back wall. */
+static void tulip(float x,float y,float z,int pink){
+ const int r=pink?29:30, g=pink?15:23, b=pink?19:9;
+ wall_sticker(x,y-.075f,z,.025f,.22f,11,21,8);
+ wall_sticker(x-.06f,y-.125f,z,.105f,.035f,13,24,9);
+ wall_sticker(x+.06f,y-.09f,z,.09f,.032f,13,24,9);
+ wall_sticker(x-.055f,y+.065f,z,.115f,.12f,r,g,b);
+ wall_sticker(x+.055f,y+.065f,z,.115f,.12f,r,g,b);
+}
+/* Rounded-looking flower silhouettes on the floor: five petals and a center.
+ * All six details are one quad each, preserving polygon budget. */
+static void rug_flower(float x,float z){
+ flat_floor(x-.105f,-1.109f,z,.17f,.14f,10,18,6);
+ flat_floor(x+.105f,-1.109f,z,.17f,.14f,10,18,6);
+ flat_floor(x,-1.109f,z-.105f,.17f,.14f,10,18,6);
+ flat_floor(x,-1.109f,z+.105f,.17f,.14f,10,18,6);
+ flat_floor(x-.065f,-1.108f,z-.065f,.14f,.14f,11,20,6);
+ flat_floor(x,-1.107f,z,.12f,.11f,30,26,5);
+}
 /* Thin surface layers read as fabric, eyebrows or facial blush rather than
  * big detached spheres. Each costs a single GPU quad. */
 static void soft_mark(float x,float y,float z,float sx,float sy,
@@ -244,77 +278,89 @@ static void teddy(void){
  ellipse(x+.16f,y-.27f,z+.08f,.13,.13,.17,21,15,11);
 }
 static void baby_model(const Game *s,uint32_t frame,int action){
- float bob=(float)((int)(frame%96u)-48)*.00035f;
- float wave=(float)((int)(frame%105u)-52)*.00125f;
- int blink=(frame%149u)<5u||(action==4&&(frame%110u)<55u);
- int tier=game_glitch_tier(s);
- int glitched=tier>=2&&!s->safe_visuals&&(frame%121u<13u);
- int happy=s->mood>42;
+ /* The reference is uneasy because the infant smiles a little too steadily,
+  * not because of supernatural effects or physically impossible anatomy. */
+ const float bob=(float)((int)(frame%120u)-60)*.00020f;
+ const float wave=(float)((int)(frame%105u)-52)*.0013f;
+ const int blink=(frame%153u)<4u||(action==4&&(frame%110u)<55u);
+ const int glitched=game_glitch_tier(s)>=2&&!s->safe_visuals&&frame%121u<13u;
+ const int happy=s->mood>35;
  glPushMatrix();
  glTranslatef(-.12f,bob,.22f);
- /* Seated toddler, softly rounded but no giant floating boots or wrists. */
- ellipse(0,-.79f,.00f,.53f,.27f,.41f,11,13,18);
- ellipse(-.30f,-.94f,.23f,.25f,.21f,.30f,12,15,20);
- ellipse(.30f,-.94f,.23f,.25f,.21f,.30f,12,15,20);
- ellipse(-.33f,-1.09f,.46f,.24f,.12f,.23f,26,24,24);
- ellipse(.33f,-1.09f,.46f,.24f,.12f,.23f,26,24,24);
- /* Muted teal knit top with cream bib and soft fabric neck seam. */
- soft_head(0,-.29f,-.07f,.50f,.50f,.38f,15,23,22);
- ellipse(0,.16f,.04f,.25f,.13f,.23f,26,22,18);
- ellipse(0,-.37f,.294f,.27f,.32f,.048f,29,27,23);
- ellipse(0,-.61f,.31f,.31f,.055f,.04f,21,25,22);
- /* Sewn-on pocket and two tiny buttons are flatter than the old 3D logo. */
- soft_mark(0,-.38f,.345f,.20f,.12f,25,23,21);
- soft_mark(-.055f,-.29f,.346f,.031f,.031f,17,14,12);
- soft_mark(.055f,-.29f,.346f,.031f,.031f,17,14,12);
- /* Sleeves and forearms connect continuously. Activity gives gentle motion. */
- ellipse(-.49f,-.15f,-.015f,.22f,.26f,.23f,15,22,22);
- ellipse(.49f,-.15f,-.015f,.22f,.26f,.23f,15,22,22);
- ellipse(-.60f,-.39f+wave,.16f,.17f,.24f,.19f,28,20,16);
- ellipse(.60f,-.39f-wave,.16f,.17f,.24f,.19f,28,20,16);
- ellipse(-.62f,-.55f+wave,.29f,.18f,.14f,.16f,30,22,18);
- ellipse(.62f,-.55f-wave,.29f,.18f,.14f,.16f,30,22,18);
- /* Hair at the rear: chestnut, not black, leaving visible forehead. */
- soft_head(0,.59f,-.095f,.64f,.65f,.50f,12,8,6);
- /* One smoother facial mesh makes the head less blocky without increasing
-  * every other object in the nursery to a prohibitively expensive topology. */
- soft_head(0,.54f,.04f,.625f,.61f,.525f,29,21,17);
- ellipse(-.62f,.46f,.05f,.13f,.155f,.14f,27,18,15);
- ellipse(.62f,.46f,.05f,.13f,.155f,.14f,27,18,15);
- /* Asymmetric locks sit above the forehead, not across the eyes. */
- ellipse(-.41f,1.02f,.115f,.23f,.115f,.29f,13,8,6);
- ellipse(.04f,1.095f,-.005f,.39f,.125f,.30f,13,9,7);
- ellipse(.46f,1.01f,.055f,.18f,.135f,.24f,11,7,6);
- ellipse(-.55f,.78f,.055f,.085f,.19f,.14f,12,8,6);
- ellipse(.55f,.78f,.055f,.085f,.19f,.14f,12,8,6);
- /* Small fabric hairclip instead of the oversized hot-pink disk. */
- ellipse(-.47f,1.025f,.33f,.085f,.075f,.025f,23,15,16);
- soft_mark(-.47f,1.025f,.365f,.042f,.055f,30,26,24);
- /* Smaller, embedded eyes have lids/irises rather than bulging frog-eyes.
-  * 0.125-radius eyeballs, ~half the old exaggerated size. */
- ellipse(-.225f,.57f,.548f,.145f,blink?.018f:.129f,.027f,20,15,13);
- ellipse(.225f,.57f,.548f,.145f,blink?.018f:.129f,.027f,20,15,13);
+ /* Dark, baggy denim. Legs fan outward, teddy occupying the empty space. */
+ ellipse(0,-.81f,-.08f,.53f,.26f,.40f,7,9,15);
+ ellipse(-.39f,-.96f,.24f,.29f,.23f,.34f,7,9,15);
+ ellipse(.39f,-.96f,.24f,.29f,.23f,.34f,7,9,15);
+ ellipse(-.44f,-1.105f,.47f,.26f,.125f,.25f,6,7,9);
+ ellipse(.44f,-1.105f,.47f,.26f,.125f,.25f,6,7,9);
+ /* A little exposed pink sock band breaks up the dark shoes. */
+ soft_mark(-.43f,-1.02f,.695f,.26f,.045f,29,16,19);
+ soft_mark(.43f,-1.02f,.695f,.26f,.045f,29,16,19);
+ /* Dusty pink short-sleeved top and a cheap appliqué detail. */
+ soft_head(0,-.295f,-.07f,.54f,.49f,.37f,29,15,18);
+ ellipse(0,.13f,.02f,.25f,.09f,.23f,30,21,17);
+ ellipse(-.51f,-.16f,.015f,.235f,.26f,.22f,28,14,17);
+ ellipse(.51f,-.16f,.015f,.235f,.26f,.22f,28,14,17);
+ /* Arms bend forward and the open hands hover beside the bear. */
+ ellipse(-.65f,-.37f+wave,.32f,.18f,.22f,.22f,28,19,15);
+ ellipse(.65f,-.37f-wave,.32f,.18f,.22f,.22f,28,19,15);
+ ellipse(-.69f,-.42f+wave,.48f,.17f,.15f,.16f,30,22,17);
+ ellipse(.69f,-.42f-wave,.48f,.17f,.15f,.16f,30,22,17);
+ /* A deliberately blurry sewn teddy-face mark: tiny and low-poly. */
+ soft_mark(0,-.32f,.308f,.31f,.19f,29,19,18);
+ soft_mark(-.09f,-.28f,.323f,.045f,.045f,21,12,10);
+ soft_mark(.09f,-.28f,.323f,.045f,.045f,21,12,10);
+ soft_mark(0,-.37f,.329f,.11f,.032f,21,12,10);
+ /* Unruly dark hair under the skin-colored forehead; a more human, less
+  * geometric silhouette than the smooth cap used in the prior release. */
+ soft_head(0,.58f,-.105f,.69f,.66f,.54f,7,5,4);
+ soft_head(0,.525f,.05f,.695f,.675f,.525f,29,21,17);
+ ellipse(-.675f,.43f,.025f,.135f,.18f,.14f,27,18,14);
+ ellipse(.675f,.43f,.025f,.135f,.18f,.14f,27,18,14);
+ /* Side locks and uneven feathered strands surround the cheeks. */
+ hair_point(-.625f,.69f,.29f,-.08f,-.34f,8,5,4);
+ hair_point(-.56f,.50f,.22f,-.18f,-.30f,8,5,4);
+ hair_point(-.46f,.35f,.15f,-.20f,-.23f,8,5,4);
+ hair_point(.625f,.73f,.27f,.09f,-.31f,8,5,4);
+ hair_point(.56f,.51f,.21f,.19f,-.26f,8,5,4);
+ hair_point(.45f,.32f,.13f,.23f,-.16f,8,5,4);
+ ellipse(-.43f,1.055f,.14f,.25f,.115f,.25f,7,5,4);
+ ellipse(.03f,1.104f,.08f,.39f,.11f,.27f,8,5,4);
+ ellipse(.47f,1.035f,.10f,.21f,.12f,.24f,7,5,4);
+ /* Side-swept fringe and hot-pink clip anchored into the hairline. */
+ hair_point(-.25f,1.03f,.36f,.17f,-.25f,8,5,4);
+ hair_point(.02f,1.03f,.36f,.26f,-.17f,8,5,4);
+ hair_point(.36f,1.02f,.31f,.21f,-.15f,8,5,4);
+ ellipse(-.50f,1.01f,.345f,.095f,.14f,.038f,28,9,16);
+ ellipse(-.50f,1.035f,.382f,.045f,.073f,.016f,31,20,24);
+ /* Small, deep-set dark eyes, modest whites and a little asymmetry create
+  * the distinctly uneasy smile from the user's early-DS reference. */
+ ellipse(-.234f,.565f,.553f,.126f,blink?.016f:.091f,.023f,18,12,10);
+ ellipse(.222f,.575f,.553f,.125f,blink?.016f:.091f,.023f,18,12,10);
  if(!blink){
-  ellipse(-.225f,.57f,.565f,.126f,.112f,.023f,30,29,27);
-  ellipse(.225f,.57f,.565f,.126f,.112f,.023f,30,29,27);
-  ellipse(-.213f,.563f,.589f,.062f,.078f,.018f,11,15,14);
-  ellipse(.213f+(glitched?.065f:0),.563f,.589f,.062f,.078f,.018f,11,15,14);
-  ellipse(-.214f,.560f,.606f,.035f,.057f,.013f,5,5,6);
-  ellipse(.214f+(glitched?.065f:0),.560f,.606f,.035f,.057f,.013f,5,5,6);
-  soft_mark(-.233f,.612f,.625f,.034f,.035f,31,31,31);
-  soft_mark(.194f+(glitched?.065f:0),.612f,.625f,.034f,.035f,31,31,31);
+  ellipse(-.234f,.565f,.570f,.105f,.085f,.016f,29,28,26);
+  ellipse(.222f,.575f,.570f,.105f,.085f,.016f,29,28,26);
+  ellipse(-.207f,.564f,.586f,.057f,.068f,.017f,5,4,4);
+  ellipse(.244f+(glitched?.055f:0),.570f,.586f,.057f,.068f,.017f,5,4,4);
+  soft_mark(-.226f,.607f,.606f,.028f,.028f,31,30,28);
+  soft_mark(.224f,.614f,.606f,.028f,.028f,31,30,28);
  }else{
-  soft_mark(-.225f,.566f,.580f,.27f,.025f,15,9,8);
-  soft_mark(.225f,.566f,.580f,.27f,.025f,15,9,8);
+  soft_mark(-.23f,.565f,.571f,.22f,.019f,15,9,8);
+  soft_mark(.23f,.575f,.571f,.22f,.019f,15,9,8);
  }
- /* Graceful eyelid contours, low-saturation cheeks, tiny nose and mouth. */
- soft_mark(-.225f,.764f,.523f,.24f,.031f,14,9,8);
- soft_mark(.225f,.764f,.523f,.24f,.031f,14,9,8);
- soft_mark(-.42f,.345f,.435f,.16f,.070f,29,17,17);
- soft_mark(.42f,.345f,.435f,.16f,.070f,29,17,17);
- ellipse(0,.393f,.582f,.084f,.069f,.055f,30,23,19);
- ellipse(0,.228f,.575f,happy?.14f:.10f,happy?.042f:.024f,.018f,17,9,9);
- if(happy)soft_mark(0,.199f,.588f,.13f,.018f,29,20,19);
+ soft_mark(-.23f,.763f,.515f,.20f,.026f,14,9,8);
+ soft_mark(.23f,.767f,.515f,.20f,.026f,14,9,8);
+ /* Blushed cheeks sit almost flush with the face; not pink eyeballs. */
+ soft_mark(-.425f,.347f,.452f,.13f,.060f,30,17,16);
+ soft_mark(.427f,.347f,.452f,.13f,.060f,30,17,16);
+ ellipse(0,.395f,.591f,.085f,.065f,.046f,30,23,19);
+ /* The open, oddly delighted mouth is the key expression in the reference. */
+ ellipse(.008f,.195f,.565f,happy?.18f:.135f,happy?.085f:.049f,
+         .016f,12,4,6);
+ if(happy){
+  soft_mark(0,.231f,.584f,.19f,.023f,30,24,23); /* upper teeth */
+  soft_mark(.009f,.140f,.585f,.11f,.023f,27,13,17); /* tongue */
+ }
  glPopMatrix(1);
  if(glitched)block(.55f,.64f,.91f,.10f,.035f,.04f,8,29,23);
 }
