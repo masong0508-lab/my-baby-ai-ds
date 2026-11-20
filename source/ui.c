@@ -28,6 +28,14 @@
 #define SHADOW RGB(22,19,24)
 #define GRAY RGB(26,25,27)
 static volatile uint16_t *pixels;
+static int test_touch_down,test_touch_x,test_touch_y;
+static unsigned long test_touch_count;
+void ui_touch_observe(int down,int x,int y,uint32_t count){
+ test_touch_down=down;
+ test_touch_x=x;
+ test_touch_y=y;
+ test_touch_count=(unsigned long)count;
+}
 /* Glyph rows are a compact bitset, 5 columns x 7 rows, uppercase ASCII. */
 static const uint8_t glyph[96][7]={
  ['A'-32]={14,17,17,31,17,17,17},
@@ -322,6 +330,30 @@ static void finale(const Game *s,int ending){
  foot(PURPLE);
  fit(28,181,"A / B CONTINUE PLAYING",WHITE,30);
 }
+static void touch_diagnostic(void){
+ char text[50];int x,y;
+ solid(0,27,256,149,BLUSH);
+ panel(7,32,242,143,WHITE,PURPLE);
+ capsule(16,41,224,24,LILAC,PURPLE);
+ fit(29,49,"STYLUS SIGNAL TEST",INK,30);
+ fit(22,73,test_touch_down?"PEN DOWN: SIGNAL FOUND":"NO TOUCH SIGNAL YET",test_touch_down?GREEN:DEEP_PINK,34);
+ snprintf(text,sizeof(text),"X %d   Y %d",test_touch_x,test_touch_y);
+ fit(22,89,text,INK,30);
+ snprintf(text,sizeof(text),"DETECTED TAPS: %lu",test_touch_count);
+ fit(22,103,text,PURPLE,34);
+ fit(22,117,"TAP THE LOWER SCREEN",TEAL,34);
+ fit(22,132,"CROSS MARKS YOUR PEN",INK,34);
+ fit(22,149,"B / START: TITLE",DEEP_PINK,34);
+ if(test_touch_down){
+  x=test_touch_x;y=test_touch_y;
+  if(x<5)x=5;if(x>250)x=250;
+  if(y<31)y=31;if(y>172)y=172;
+  solid(x-1,y-6,3,13,DEEP_PINK);
+  solid(x-6,y-1,13,3,DEEP_PINK);
+ }
+ foot(PURPLE);
+ fit(8,181,"NO PEN? CHECK DRASTIC TOUCH",WHITE,39);
+}
 static void title_screen(const Game *s,int storage_ok,const char *status){
  int i;char count[40];
  solid(0,27,256,149,PINK);
@@ -339,7 +371,7 @@ static void title_screen(const Game *s,int storage_ok,const char *status){
  fit(75,134,count,MUTED,21);
  fit(42,148,storage_ok?"SAVE STORAGE ACTIVE":"X: TRY SAVE STORAGE",TEAL,32);
  fit(33,160,status,DEEP_PINK,36);
- foot(PURPLE);fit(38,181,"TOUCH OR PRESS START",WHITE,30);
+ foot(PURPLE);fit(10,181,"START PLAY  SELECT TOUCH TEST",WHITE,39);
 }
 static void ending_album(const Game *s){
  int row,col,id,x,y;char tmp[40];
@@ -387,6 +419,7 @@ void ui_draw(const Game *s,const Arcade *a,int view,int selection,
  case 4:finale(s,ending);break;
  case 5:title_screen(s,can_save,message);break;
  case 6:ending_album(s);break;
+ case 7:touch_diagnostic();break;
  }
 }
 int ui_nursery_touch(int x,int y){
@@ -411,4 +444,16 @@ int ui_arcade_touch(int x,int y){
  if(y>=143)return 2;
  if(x<125)return 3;
  return 1;
+}
+
+/* Diaper Dash buttons occupy different zones from generic arrow prompts.
+ * Their displayed labels must correspond to the interactive hitboxes. */
+int ui_diaper_touch(int x,int y){
+ if(y>=88&&y<119&&x>=77&&x<181)return 0; /* TAPE / up */
+ if(y>=119&&y<155){
+  if(x>=8&&x<115)return 3;   /* WIPE / left */
+  if(x>=142&&x<249)return 1; /* NEW / right */
+ }
+ if(y>=155&&y<175&&x>=77&&x<181)return 2; /* FOLD / down */
+ return -1;
 }
