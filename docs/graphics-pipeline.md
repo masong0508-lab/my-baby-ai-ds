@@ -19,3 +19,7 @@ The base DS has about 4 MiB of main RAM and strict polygon/texture/VRAM budgets.
 Tests needed: devkitARM + libnds ROM compile; melonDS rendering/touch, minigames and saves; original DS performance, DLDI/storage and stress test at maximum corruption. `tests/test_ui.c` verifies host-side drawing and touch hitboxes; `tests/test_core.c` checks simulation, endings and recovery.
 
 Still missing for full production: authored mesh/texture assets, unique minigame mechanics, sound/music, refined gameplay animation, tiny neural inference, renderer profiling, actual .nds build verification.
+
+## Geometry-batch correction
+
+Rounded meshes use DS-native `GL_QUAD_STRIP`: 8 angular segments × 3 bands, 24 quadrilateral polygons but only 54 submitted vertices per mesh rather than 96 with independent quads (44% reduction). Boxes use 6 quads/24 submitted vertices. `world_vertex_count()` and `world_polygon_count()` report submitted geometry each frame, making the 6,144-vertex and 2,048-polygon caps auditable. This is a source-level budget improvement, not an emulator FPS benchmark.

@@ -17,6 +17,7 @@ static void face(float a,float b,float c,float d,float e,float f,
                  float g,float i,float j,float k,float l,float m){
  glVertex3f(a,b,c);glVertex3f(d,e,f);glVertex3f(g,i,j);glVertex3f(k,l,m);
 }
+static unsigned frame_vertices,frame_polygons;
 static void block(float x,float y,float z,float width,float height,float depth,
                   int r,int g,int b){
  float l=x-width*.5f,rr=x+width*.5f,bot=y-height*.5f,top=y+height*.5f;
@@ -29,21 +30,31 @@ static void block(float x,float y,float z,float width,float height,float depth,
  color(r,g,b,4);face(l,top,fr,rr,top,fr,rr,top,bk,l,top,bk);
  color(r,g,b,-8);face(l,bot,bk,rr,bot,bk,rr,bot,fr,l,bot,fr);
  glEnd();
+ frame_vertices+=24;
+ frame_polygons+=6;
 }
+/* GL_QUAD_STRIP shares ring vertices between adjacent polygons. This
+ * reduces ellipsoid submissions from 96 to 54 vertices at the SAME 8
+ * angular sides / 24 polygons. Critical for the DS's 6144 vertex cap.
+ */
 static void ellipse(float x,float y,float z,float rx,float ry,float rz,
                     int red,int green,int blue){
  int a,i,j;
- glBegin(GL_QUADS);
- for(a=0;a<3;a++)for(i=0;i<8;i++){
-  j=(i+1)&7;
-  color(red,green,blue,(i<3?2:i<5?-3:0)+(a==2?1:-1));
-  face(x+rx*w[a]*cx[i],y+ry*h[a],z+rz*w[a]*cz[i],
-       x+rx*w[a]*cx[j],y+ry*h[a],z+rz*w[a]*cz[j],
-       x+rx*w[a+1]*cx[j],y+ry*h[a+1],z+rz*w[a+1]*cz[j],
-       x+rx*w[a+1]*cx[i],y+ry*h[a+1],z+rz*w[a+1]*cz[i]);
+ for(a=0;a<3;a++){
+  glBegin(GL_QUAD_STRIP);
+  for(i=0;i<=8;i++){
+   j=i&7;
+   color(red,green,blue,(j<3?2:j<5?-3:0)+(a==2?1:-1));
+   glVertex3f(x+rx*w[a]*cx[j],y+ry*h[a],z+rz*w[a]*cz[j]);
+   glVertex3f(x+rx*w[a+1]*cx[j],y+ry*h[a+1],z+rz*w[a+1]*cz[j]);
+  }
+  glEnd();
  }
- glEnd();
+ frame_vertices+=54;
+ frame_polygons+=24;
 }
+unsigned world_vertex_count(void){return frame_vertices;}
+unsigned world_polygon_count(void){return frame_polygons;}
 static void room(void){
  int i;
  /* Floor/walls/skirting have real thickness and meet at the corners. */
@@ -190,6 +201,7 @@ void world_draw(const Game *s,uint32_t frame,int activity){
  /* This is a room with true depth and perspective, not a flat orthographic collage. */
  gluLookAt(3.30f,2.35f,6.55f,0,.08f,-.25f,0,1,0);
  glPolyFmt(POLY_ALPHA(31)|POLY_CULL_NONE);
+ frame_vertices=0;frame_polygons=0;
  room();
  baby_model(s,frame,activity);
  teddy();
