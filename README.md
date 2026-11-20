@@ -263,3 +263,19 @@ headroom budget, and the automatic DeSmuME workflow still verifies boot
 and native stylus-driven START/FEED controls. Real console FPS remains
 to be measured; the new visual design must not be described as
 photorealistic given the DS's polygon limits.
+
+## Character art direction: unsettlingly cheerful DS-baby nostalgia
+
+The baby has been redesigned after the user-supplied 3D baby-game
+reference: large almost-real facial proportions, small inset dark eyes,
+asymmetrically messy dark hair with a pink clip, pink short-sleeved top,
+dark baggy trousers, reaching hands and an oddly fixed smile. The
+orange teddy now sits between the baby's legs, on a lime-green rug with
+large printed flowers, in a nursery with pink bedding and tulip decals.
+This deliberately preserves the awkward/uncanny visual character of
+a low-budget Nintendo DS game, rather than turning it into a polished
+modern cartoon.
+
+These are **real, original 3D renderer changes** in `source/world.c`,
+not concept imagery. Original DS polygon/vertex budgets and the
+DeSmuME native stylus-to-START/FEED CI checks still apply.
