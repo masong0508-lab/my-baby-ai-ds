@@ -109,3 +109,31 @@ minimal dual-screen color probe. Both receive DS-only compatibility copies.
 
 Without a positive report for at least the first two checks, **do not**
 describe the DraStic white-screen bug as fixed.
+
+## Field report: BlocksDS ROM boots in DraStic
+
+The user supplied DraStic screenshots showing a purple-background title on
+the lower screen and a furnished low-poly nursery on the upper screen after
+START. Thus the BlocksDS runtime solved the previous **observed boot white
+screen** on that emulator configuration. Actual stylus handling remains
+unconfirmed and requires the new diagnostic screen; no FPS measurements
+or physical DS tests have been supplied.
+
+### Touchscreen regression checklist
+
+- [ ] At title press SELECT, and verify `STYLUS SIGNAL TEST` is visible.
+- [ ] Touch upper-left, center, lower-right of bottom screen; the crosshair
+      and X/Y coordinates follow the stylus within original 256x192 bounds.
+- [ ] One short tap produces one increment; holding down does not repeat.
+- [ ] B/START exits touch diagnostics.
+- [ ] FEED/CHAT/PLAY/NAP respond from their drawn hitboxes.
+- [ ] Tapping ARCADE and END DAY on the footer navigates correctly.
+- [ ] Tap a cabinet, then tap again to play; check BUY/BACK regions.
+- [ ] Diaper Dash WIPE, NEW, FOLD and TAPE match their colored buttons.
+- [ ] Bottle Balance responds continuously while holding the stylus
+      on the left/right side and while holding D-pad left/right.
+- [ ] All buttons still work without stylus input.
+- [ ] Recheck DS geometry and FPS on normal, corrupt and animated scenes.
+
+The field report does not establish that the stylus regression is fixed
+until an emulator retest verifies those steps.
