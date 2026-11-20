@@ -101,15 +101,22 @@ const char *game_ending_name(int e){
  default:return "A NORMAL DAY. SUSPICIOUS.";
  }
 }
-/* Cabinet 0 is Bottle Balance: steer an unsteady bottle into the safe zone.
- * Cabinet 1 is Diaper Dash: complete four distinct timed touch tasks.
- * Others retain the generic directional game pending their own implementations.
+/* Cabinets 0, 1 and 7 have independent real-time mechanics.
+ * The other cabinets retain the six-round directional game for now.
+ * Arcade state is intentionally not part of the persistent Game save.
  */
 static const uint8_t diaper_tasks[4]={3,1,2,0}; /* left,right,down,up */
 static void diaper_next(Game *s,Arcade *a){
  a->target=diaper_tasks[a->stage];
+ a->progress=0;a->taped=0;
  a->reverse=(uint8_t)(game_glitch_tier(s)>=2&&a->stage==2);
  a->timer=(uint16_t)(game_glitch_tier(s)>=3?95:140);
+}
+static void rattle_next(Game *s,Arcade *a){
+ a->target=(uint8_t)(next(s)%3u);
+ a->timer=(uint16_t)(game_glitch_tier(s)>=3?108:144);
+ a->hold_frames=a->timer; /* original fall duration for drawing */
+ a->elapsed=0;
 }
 static void round_next(Game *s,Arcade *a){
  a->direction=(uint8_t)(next(s)&3u);
@@ -124,10 +131,12 @@ void game_arcade_start(Game *s,Arcade *a,int id){
   a->timer=600;
   a->reverse=(uint8_t)(game_glitch_tier(s)>=2);
  }else if(id==1)diaper_next(s,a);
+ else if(id==7)rattle_next(s,a);
  else round_next(s,a);
 }
 int game_arcade_expected(const Arcade *a){
  if(a->id==1)return a->target^(a->reverse?2:0);
+ if(a->id==7)return a->target;
  return a->direction^(a->reverse?2:0);
 }
 static void finish(Game *s,Arcade *a,int won){
@@ -150,6 +159,20 @@ void game_arcade_steer(Arcade *a,int direction){
 }
 void game_arcade_input(Game *s,Arcade *a,int dir){
  if(!a->active||a->id==0||dir<0||dir>3)return;
+ if(a->id==7){
+  /* Match the lane only when the falling rattle enters the catch zone.
+   * Tapping immediately on spawn is not a valid catch. */
+  if(dir==a->target&&a->timer<=a->hold_frames/3u&&a->timer>=8){
+   a->round++;
+   if(a->round>=MBAI_ROUNDS)finish(s,a,1);
+   else rattle_next(s,a);
+  }else{
+   a->mistakes++;s->corruption=clamp(s->corruption+3);
+   if(a->mistakes>=3)finish(s,a,0);
+   else rattle_next(s,a);
+  }
+  return;
+ }
  if(dir==game_arcade_expected(a)){
   if(a->id==1){
    a->stage++;a->round=a->stage;
@@ -164,8 +187,66 @@ void game_arcade_input(Game *s,Arcade *a,int dir){
   a->mistakes++;s->corruption=clamp(s->corruption+4);
   if(a->mistakes>=3)finish(s,a,0);
   else if(a->id==1)diaper_next(s,a);
+  else if(a->id==7)rattle_next(s,a);
   else round_next(s,a);
  }
+}
+static int inside(int x,int y,int x0,int y0,int x1,int y1){
+ return x>=x0&&x<x1&&y>=y0&&y<y1;
+}
+static int diaper_advance(Game *s,Arcade *a,int still_touching){
+ a->stage++;a->round=a->stage;
+ if(a->stage>=4)finish(s,a,1);
+ else diaper_next(s,a);
+ a->touch_active=(uint8_t)still_touching;
+ return 1;
+}
+/* Continuous drag/swipe/tap gestures. The four tasks are intentionally
+ * different, rather than four reskinned directional prompts.
+ * Return nonzero only when the visible state needs repainting. */
+int game_arcade_diaper_touch(Game *s,Arcade *a,int touching,int x,int y){
+ int dx,dy,step;
+ if(!a->active||a->id!=1)return 0;
+ if(!touching){
+  int success=0;
+  if(a->touch_active&&a->stage==1)
+   success=inside(a->touch_start_x,a->touch_start_y,12,143,77,175)&&
+           inside(a->touch_last_x,a->touch_last_y,102,113,166,158);
+  else if(a->touch_active&&a->stage==2)
+   success=inside(a->touch_start_x,a->touch_start_y,95,141,164,175)&&
+           inside(a->touch_last_x,a->touch_last_y,95,93,164,125);
+  a->touch_active=0;
+  if(success)return diaper_advance(s,a,0);
+  return 0;
+ }
+ if(x<0||x>=256||y<27||y>=176)return 0;
+ if(!a->touch_active){
+  a->touch_active=1;
+  a->touch_start_x=a->touch_last_x=(int16_t)x;
+  a->touch_start_y=a->touch_last_y=(int16_t)y;
+  if(a->stage==3){
+   if(a->taped==0&&inside(x,y,66,115,113,150)){
+    a->taped=1;return 1;
+   }
+   if(a->taped==1&&inside(x,y,143,115,191,150))
+    return diaper_advance(s,a,1);
+  }
+  return 0;
+ }
+ if(a->stage==0&&inside(x,y,89,103,169,151)){
+  dx=x-a->touch_last_x;dy=y-a->touch_last_y;
+  if(dx<0)dx=-dx;if(dy<0)dy=-dy;
+  step=dx+dy;
+  if(step>=3&&step<=48){
+   int total=a->progress+(step>18?18:step);
+   a->progress=(uint8_t)(total>100?100:total);
+   if(a->progress>=90)return diaper_advance(s,a,1);
+   a->touch_last_x=(int16_t)x;a->touch_last_y=(int16_t)y;
+   return 1;
+  }
+ }
+ a->touch_last_x=(int16_t)x;a->touch_last_y=(int16_t)y;
+ return 0;
 }
 static void bottle_tick(Game *s,Arcade *a){
  int drift;
