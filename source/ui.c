@@ -663,6 +663,7 @@ void ui_draw(const Game *s,const Arcade *a,int view,int selection,
  case 1:arcade_list(s,selection);break;
  case 2:if(a->id==0)bottle_challenge(a);
         else if(a->id==1)diaper_challenge(a);
+        else if(a->id==7)rattle_challenge(a);
         else challenge(s,a);
         break;
  case 3:reset_screen(reset_step);break;
