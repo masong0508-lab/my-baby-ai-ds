@@ -22,7 +22,7 @@
 #define gluLookAt(...) ((void)0)
 #define glPolyFmt(...) ((void)0)
 #define glPushMatrix() ((void)0)
-#define glPopMatrix() ((void)0)
+#define glPopMatrix(n) ((void)(n))
 #define glTranslatef(x,y,z) ((void)(x),(void)(y),(void)(z))
 #define glBegin(mode) ((void)(mode))
 #define glEnd() ((void)0)
