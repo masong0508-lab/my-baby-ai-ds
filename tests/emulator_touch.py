@@ -139,11 +139,40 @@ def test_actual_game(path: Path, output: Path) -> dict:
     emu.input.touch_release()
     frames(emu, 15)
     picture(emu, output, "game_touch_diagnostic_released")
+    # Native touch must also ACTIVATE controls in the real game, not only
+    # update a diagnostic label. Leave the diagnostic via real B first.
+    emu.input.keypad_add_key(keymask(Keys.KEY_B))
+    frames(emu, 6)
+    emu.input.keypad_rm_key(keymask(Keys.KEY_B))
+    frames(emu, 12)
+    ready = picture(emu, output, "game_title_before_touch_start")
+    emu.input.touch_set_pos(128, 115)  # START GAME on lower title screen
+    frames(emu, 15)
+    emu.input.touch_release()
+    frames(emu, 22)
+    nursery = picture(emu, output, "game_nursery_after_touch_start")
+    start_changed = difference(ready, nursery, (0, 192 + 30, 256, 192 + 175))
+    assert start_changed > 500, (
+        f"Stylus could be read, but touching START GAME did not enter nursery "
+        f"({start_changed} changed pixels)"
+    )
+    emu.input.touch_set_pos(67, 132)  # FEED on lower nursery touchscreen
+    frames(emu, 12)
+    emu.input.touch_release()
+    frames(emu, 12)
+    after_feed = picture(emu, output, "game_nursery_after_touch_feed")
+    feed_changed = difference(nursery, after_feed, (0, 192 + 55, 256, 192 + 175))
+    assert feed_changed > 50, (
+        f"Touch FEED did not change needs bars or dialogue UI "
+        f"({feed_changed} pixels)"
+    )
     return {
         "title_to_diagnostic_changed_pixels": new_screen,
         "KEY_TOUCH_status_changed_pixels": status,
         "coordinates_on_press_changed_pixels": xy1,
         "coordinates_on_move_changed_pixels": xy2,
+        "touch_START_changed_pixels": start_changed,
+        "touch_FEED_changed_pixels": feed_changed,
         "result": "PASS",
     }
 
