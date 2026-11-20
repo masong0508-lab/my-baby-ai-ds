@@ -246,3 +246,20 @@ compatibility issue**, not a universally broken game touchscreen. It does
 **not** establish that every DraStic version, melonDS build or original DS
 hardware will behave identically. The **L+SELECT / D-pad / A virtual stylus**
 remains available for DraStic users.
+
+## Naturalistic graphics update
+
+The original, intentionally awkward 3D baby art is being replaced by a
+softer and more recognizable infant design rendered by the **actual
+Nintendo DS 3D hardware**: a smoother face, reduced eye protrusion,
+subtler expression, warm skin and hair, fabric-layer clothing and
+small controlled animations. A closer camera and subdued real-world
+nursery colors improve legibility at 256×192. The room uses warm wood,
+cream walls, natural textiles and staggered floorboard joints.
+
+This is not a pre-rendered image and requires no imported textures or
+extra framebuffers. Geometry is tested against a stricter hardware
+headroom budget, and the automatic DeSmuME workflow still verifies boot
+and native stylus-driven START/FEED controls. Real console FPS remains
+to be measured; the new visual design must not be described as
+photorealistic given the DS's polygon limits.
