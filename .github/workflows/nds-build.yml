@@ -1,30 +1,82 @@
-name: DS hardware-toolchain build
+name: Build Nintendo DS ROM
+
 on:
   push:
+    branches: [main, "ci/**"]
   pull_request:
   workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ds-rom-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test-and-build:
+    name: Compile My Baby A.I. (.nds)
     runs-on: ubuntu-latest
-    container: devkitpro/devkitarm:latest
-    timeout-minutes: 20
+    timeout-minutes: 30
+    container:
+      image: devkitpro/devkitarm:latest
+    env:
+      DEVKITPRO: /opt/devkitpro
+      DEVKITARM: /opt/devkitpro/devkitARM
+
     steps:
-      - uses: actions/checkout@v4
-      - name: Verify toolchain
+      - name: Check out game source
+        uses: actions/checkout@v4
+
+      - name: Install and verify DS SDK
+        shell: bash
         run: |
-          test -x /opt/devkitpro/devkitARM/bin/arm-none-eabi-gcc
-          /opt/devkitpro/devkitARM/bin/arm-none-eabi-gcc --version
-      - name: Portable game and save regression tests
-        run: sh tests/run.sh
-      - name: Cross-compile actual Nintendo DS ROM
+          set -euxo pipefail
+          export PATH="$DEVKITARM/bin:$PATH"
+          dkp-pacman -S --needed --noconfirm nds-dev
+          command -v arm-none-eabi-gcc
+          test -f "$DEVKITARM/ds_rules"
+          test -f "$DEVKITPRO/libnds/include/nds.h"
+          arm-none-eabi-gcc --version
+
+      - name: Run host-side tests before generating ROM
+        shell: bash
         run: |
-          export DEVKITPRO=/opt/devkitpro
-          export DEVKITARM=/opt/devkitpro/devkitARM
+          set -euxo pipefail
+          make --version
+          sh tests/run.sh
+
+      - name: Clean build using repository Makefile
+        shell: bash
+        run: |
+          set -euxo pipefail
+          export PATH="$DEVKITARM/bin:$PATH"
+          make clean
           make -j2
           test -s my-baby-ai.nds
-      - name: Publish testable .nds artifact
+
+      - name: Validate and describe ROM
+        shell: bash
+        run: |
+          set -euxo pipefail
+          export PATH="$DEVKITARM/bin:$PATH"
+          ls -lh my-baby-ai.nds my-baby-ai.elf
+          ndstool -i my-baby-ai.nds
+          python3 - <<'PY'
+          from pathlib import Path
+          rom = Path("my-baby-ai.nds").read_bytes()
+          assert len(rom) >= 0x200, "NDS header is missing"
+          arm9_offset = int.from_bytes(rom[0x20:0x24], "little")
+          arm9_size = int.from_bytes(rom[0x2C:0x30], "little")
+          assert arm9_offset >= 0x200 and arm9_size > 0, "No ARM9 program"
+          assert arm9_offset + arm9_size <= len(rom), "Truncated ARM9 data"
+          print(f"ROM size={len(rom):,} bytes, ARM9 offset={arm9_offset:#x}, ARM9 bytes={arm9_size:,}")
+          PY
+
+      - name: Upload playable Nintendo DS ROM (.nds)
         uses: actions/upload-artifact@v4
         with:
           name: my-baby-ai-nds
           path: my-baby-ai.nds
           if-no-files-found: error
+          retention-days: 30
