@@ -30,6 +30,13 @@ int main(void){
  ui_draw(&g,&a,2,0,0,0,1,"BOTTLE");
  a.id=1;a.timer=140;a.stage=0;a.target=3;
  ui_draw(&g,&a,2,0,0,0,1,"DIAPER");
+ a.id=7;a.timer=70;a.hold_frames=144;a.target=1;a.round=2;
+ ui_draw(&g,&a,2,0,0,0,1,"RATTLE");
+ assert(ui_rattle_touch(40,143)==0);
+ assert(ui_rattle_touch(122,143)==1);
+ assert(ui_rattle_touch(210,143)==2);
+ assert(ui_rattle_touch(90,143)==-1);
+ assert(ui_rattle_touch(210,85)==-1);
  a.id=2;a.timer=110;
  ui_draw(&g,&a,2,0,0,0,1,"DIRECTION");
  assert(ui_arcade_touch(127,100)==0);
