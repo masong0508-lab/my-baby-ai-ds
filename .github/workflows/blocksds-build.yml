@@ -37,12 +37,20 @@ jobs:
           set -euxo pipefail
           make -f Makefile.blocksds -j2 SOURCEDIRS=diagnostics NAME=blocksds-dual-screen-test
           test -s blocksds-dual-screen-test.nds
-      - name: Validate both dual-CPU ROM packages
+      - name: Build independent stylus and KEY_TOUCH probe
+        shell: bash
+        run: |
+          set -euxo pipefail
+          make -f Makefile.blocksds -j2 SOURCEDIRS=diagnostics/touch NAME=blocksds-touch-probe
+          test -s blocksds-touch-probe.nds
+      - name: Validate all three dual-CPU ROM packages
         shell: bash
         run: |
           set -euxo pipefail
           test -s my-baby-ai-blocksds.nds
           test -s blocksds-dual-screen-test.nds
+          test -s blocksds-touch-probe.nds
+          ${BLOCKSDS:-/opt/blocksds/core}/tools/ndstool/ndstool -i blocksds-touch-probe.nds
           ${BLOCKSDS:-/opt/blocksds/core}/tools/ndstool/ndstool -i my-baby-ai-blocksds.nds
           ${BLOCKSDS:-/opt/blocksds/core}/tools/ndstool/ndstool -i blocksds-dual-screen-test.nds
       - name: Upload BlocksDS game and minimal diagnostics
@@ -52,6 +60,7 @@ jobs:
           path: |
             my-baby-ai-blocksds.nds
             blocksds-dual-screen-test.nds
+            blocksds-touch-probe.nds
           if-no-files-found: error
           retention-days: 30
 
@@ -72,12 +81,13 @@ jobs:
           set -euxo pipefail
           python3 tools/nds_legacy_header.py my-baby-ai-blocksds.nds my-baby-ai-blocksds-ds-only.nds
           python3 tools/nds_legacy_header.py blocksds-dual-screen-test.nds blocksds-dual-screen-test-ds-only.nds
+          python3 tools/nds_legacy_header.py blocksds-touch-probe.nds blocksds-touch-probe-ds-only.nds
           python3 - <<'PY'
           from pathlib import Path
           from sys import path
           path.insert(0, "tools")
           from nds_legacy_header import crc16
-          for filename in ("my-baby-ai-blocksds","blocksds-dual-screen-test"):
+          for filename in ("my-baby-ai-blocksds","blocksds-dual-screen-test","blocksds-touch-probe"):
               a=Path(filename+".nds").read_bytes()
               b=Path(filename+"-ds-only.nds").read_bytes()
               assert b[0x12]==0 and a[0x160:]==b[0x160:], filename
@@ -93,5 +103,7 @@ jobs:
             my-baby-ai-blocksds-ds-only.nds
             blocksds-dual-screen-test.nds
             blocksds-dual-screen-test-ds-only.nds
+            blocksds-touch-probe.nds
+            blocksds-touch-probe-ds-only.nds
           if-no-files-found: error
           retention-days: 30

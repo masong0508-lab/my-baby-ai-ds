@@ -159,3 +159,36 @@ details must still pass vertex/polygon budgets and real-device framerate tests.
 The first stylus diagnostic repainted the entire 256x192 16bpp display every frame when touch was held. DraStic players reported noticeable flicker and no button response. The diagnostic now renders the background **once** and only redraws the KEY_TOUCH flag, X/Y, tap count and a small crosshair patch when their values change. This avoids heavy VRAM writes during active screen scanning and needs no second framebuffer.
 
 At the **title screen press SELECT** and press/hold the **lower DS screen**. **KEY_TOUCH: DOWN** confirms the emulator and ARM7 runtime delivered the touch button signal. Changing X/Y means the touch position is arriving. A changing TAPS count means the game's touch gesture logic accepted it. If all remain unchanged, adjust DraStic touchscreen settings / layout or compare a known touch-based DS game; no game-side hitbox can process an event not delivered by the emulator. This instrumented build is still awaiting a user retest.
+
+## Independent DraStic stylus signal test (November 2026)
+
+The BlocksDS game has been confirmed to boot and render on the tester's
+Android DraStic installation. The tester's physical screen touches still
+appear to be ignored. The official BlocksDS documentation says `scanKeys()`
+must be called before `touchRead()`; the game already does this in the
+correct order. This makes a missing touch signal or emulator input mapping
+more plausible than a mistaken gameplay button rectangle.
+
+The CI now packages `blocksds-touch-probe-ds-only.nds`: a **standalone,
+original-DS two-screen input test** linked against the same BlocksDS ARM7
+and ARM9 runtime as the game, but without any game simulation, saving,
+3D, custom fonts shared with the game, or touch-gesture classifier.
+
+On this diagnostic ROM:
+- The upper screen's **TOUCH** indicator is RED/OFF normally and GREEN/ON
+  whenever `keysHeld() & KEY_TOUCH` reports an active stylus press.
+- The adjacent **A KEY** indicator turns YELLOW when the emulator A
+  button is held. This is a control case proving ordinary key input works.
+- The lower screen shows a lilac touch canvas. Dragging a finger there
+  should move the red crosshair, while upper X/Y values and TAPS update.
+- **If A lights up but TOUCH never goes green:** inspect DraStic's quick-menu
+  *Enable/Disable touch input* toggle, display/screen mapping, virtual-button
+  overlap, and any Android fullscreen settings that alter touch coordinates.
+  Confirm the stylus also works in a different DS game known to use touch.
+- **If TOUCH lights up here but not in My Baby A.I.!:** file a game-specific
+  issue with screenshots from both ROMs and the DraStic version.
+- **If the control case (A) doesn't light:** the emulator/controller layout or
+  ROM/runtime is failing more broadly; don't diagnose game-specific hitboxes.
+
+No emulator runtime is considered fixed solely by this CI build. This
+independent probe reduces ambiguity and does not erase game save data.
