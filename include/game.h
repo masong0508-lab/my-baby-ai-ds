@@ -23,6 +23,8 @@ typedef struct {
  uint8_t stage,target;
  /* Diaper stylus gestures: transient state, never written to save files. */
  uint8_t touch_active,progress,taped;
+ /* Beatbox three-note memory pattern and presentation phase. */
+ uint8_t phase,notes[3];
  int16_t touch_start_x,touch_start_y,touch_last_x,touch_last_y;
 } Arcade;
 extern const char *const game_names[MBAI_GAMES];
@@ -42,5 +44,7 @@ void game_arcade_input(Game *s,Arcade *a,int dir);
 void game_arcade_steer(Arcade *a,int direction);
 /* Continuous stylus input for the four-step illustrated diaper activity. */
 int game_arcade_diaper_touch(Game *s,Arcade *a,int touching,int x,int y);
+/* Drag a refund receipt to KEEP or a bogus invoice to SHRED. */
+int game_arcade_teether_touch(Game *s,Arcade *a,int touching,int x,int y);
 void game_arcade_tick(Game *s,Arcade *a);
 #endif
