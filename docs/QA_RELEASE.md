@@ -152,3 +152,33 @@ BlocksDS provides both `arm7_maxmod.elf` (original default used by this project,
 - If input works in the independent probe but not the matching game: investigate game-specific polling, screen modes or overlay behavior.
 
 This is an experiment, not a confirmed fix. Always label the exact ROM and emulator version used in reports.
+
+## Verified full emulator touchscreen integration — DeSmuME (2026-11-20)
+
+A new **blocking GitHub Actions job** `desmume-touch` runs after the
+BlocksDS ROM is built and DS-only packaged. It uses DeSmuME **0.9.12**
+(`py-desmume==0.0.9`) and the `tests/emulator_touch.py` script to exercise
+both ARM processors with **real emulated touchscreen signals**. This is
+not an ARM9 C mock/stub test. The job captures and uploads actual screenshot
+PNGs and per-stage JSON reports as `desmume-native-touch-evidence`.
+
+- [x] Standalone probe boots and shows red when KEY_TOUCH is up.
+- [x] Injected emulator A button changes the probe to yellow.
+- [x] Injected emulator stylus press changes the probe to green.
+- [x] Stylus movement updates X/Y display; stylus release returns to red.
+- [x] Full My Baby A.I. ROM boots to title and SELECT enters touch diagnostics.
+- [x] Full game KEY_TOUCH status changes to DOWN, X/Y update with injected touch.
+- [x] Full game responds to native stylus activation of **START GAME**.
+- [x] Full game responds to native stylus activation of **FEED**.
+
+**Unverified:** DraStic's native stylus path on the reporting user's
+configuration still fails; no successful physical touchscreen report from
+that emulator or real DS yet. DeSmuME verification does not imply save
+persistence, 30-minute stability, performance, or sound are validated.
+
+For traceability, use each successful run's exact ROM SHA and its
+`desmume-native-touch-evidence` artifact rather than simulated screenshots.
+`tests/emulator_touch.py` produces `probe-report.json` and
+`game-report.json` with test measurements and screenshots of idle, active,
+moved and released touches. A failure should block a new ROM release until
+triaged or explicitly classified as an emulator limitation.
