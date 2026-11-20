@@ -452,6 +452,8 @@ static void diaper_challenge(const Arcade *a){
   bar(74,158,108,a->progress,90,PINK);
  }else if(a->stage==1){
   sprite(16,143,2,spr_diaper,11);
+  if(a->touch_active&&a->touch_start_x<77&&a->touch_start_y>=143)
+   sprite(a->touch_last_x-18,a->touch_last_y-12,2,spr_diaper,11);
   sparkle(178,117,LEMON);
   fit(12,135,"DRAG",DEEP_PINK,5);
  }else if(a->stage==2){
@@ -463,7 +465,7 @@ static void diaper_challenge(const Arcade *a){
   fit(163,127,"2",INK,4);
  }
  foot(PURPLE);
- snprintf(text,sizeof(text),"MISS %u/3   %u F   B BACK",a->mistakes,a->timer);
+ snprintf(text,sizeof(text),"MISS %u/3   %u SEC   B BACK",a->mistakes,(a->timer+59)/60);
  fit(11,181,text,WHITE,40);
 }
 static void rattle_challenge(const Arcade *a){
