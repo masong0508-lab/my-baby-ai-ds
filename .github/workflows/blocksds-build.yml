@@ -1,0 +1,63 @@
+name: DraStic alternate-runtime ROM build
+
+on:
+  push:
+    branches: [main, "ci/**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  blocksds:
+    name: Build original DS ROM with BlocksDS
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    container:
+      image: skylyrac/blocksds:slim-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Toolchain and source check
+        shell: bash
+        run: |
+          set -euxo pipefail
+          test -f "${BLOCKSDS:-/opt/blocksds/core}/sys/crts/ds_arm9.specs"
+          make --version
+      - name: Build full game with independent ARM7 and ARM9 runtime
+        shell: bash
+        run: |
+          set -euxo pipefail
+          make -f Makefile.blocksds clean NAME=my-baby-ai-blocksds
+          make -f Makefile.blocksds -j2 NAME=my-baby-ai-blocksds
+          test -s my-baby-ai-blocksds.nds
+      - name: Build independent color-screen boot probe
+        shell: bash
+        run: |
+          set -euxo pipefail
+          make -f Makefile.blocksds -j2 SOURCEDIRS=diagnostics NAME=blocksds-dual-screen-test
+          test -s blocksds-dual-screen-test.nds
+      - name: Validate both ROM headers
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          for path in [Path("my-baby-ai-blocksds.nds"),Path("blocksds-dual-screen-test.nds")]:
+              d=path.read_bytes()
+              assert len(d)>=0x4000, path
+              for start,length in [(0x20,0x2c),(0x30,0x3c)]:
+                  o=int.from_bytes(d[start:start+4],"little")
+                  n=int.from_bytes(d[length:length+4],"little")
+                  assert o>=0x200 and n>0 and o+n<=len(d),(path,start,o,n)
+              print(path, len(d), "bytes; valid ARM9+ARM7 ranges")
+          PY
+      - name: Upload BlocksDS game and minimal diagnostics
+        uses: actions/upload-artifact@v4
+        with:
+          name: my-baby-ai-blocksds-drastic-test
+          path: |
+            my-baby-ai-blocksds.nds
+            blocksds-dual-screen-test.nds
+          if-no-files-found: error
+          retention-days: 30
