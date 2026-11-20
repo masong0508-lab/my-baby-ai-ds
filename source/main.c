@@ -246,7 +246,7 @@ int main(void){
   }
   if(three_d_ready)world_draw(&baby,frame,pose);
   /* Keep bitmap VRAM writes off the hot path unless UI state changed. */
-  if(dirty||previous!=view||(view==2&&frame%((arc.id==0||arc.id==7)?3u:9u)==0u)){
+  if(dirty||previous!=view||(view==2&&frame%((arc.id==0||arc.id==7)?3u:4u)==0u)){
    ui_draw(&baby,&arc,view,selected,last_ending,reset_step,storage_ok,message);
    dirty=0;
   }
