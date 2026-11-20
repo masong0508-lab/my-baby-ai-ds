@@ -44,7 +44,7 @@ def difference(a, b, rectangle) -> int:
     aa = a.crop(rectangle)
     bb = b.crop(rectangle)
     delta = ImageChops.difference(aa, bb)
-    return sum(1 for value in delta.convert("RGB").getdata() if value != (0, 0, 0))
+    return sum(1 for value in delta.convert("RGB").get_flattened_data() if value != (0, 0, 0))
 
 
 def stylus_tap(emu: DeSmuME, x: int, y: int) -> None:
@@ -217,7 +217,14 @@ def test_actual_game(path: Path, output: Path) -> dict:
     assert diaper_changed > 500, (
         f"Diaper Dash did not open from native stylus taps ({diaper_changed})"
     )
-    stylus_tap(emu, 40, 137)  # WIPE: left panel
+    # WIPE is now a genuine continuous scrub gesture, NOT an old tap quiz.
+    emu.input.touch_set_pos(110, 128)
+    frames(emu, 5)
+    for i in range(8):
+        emu.input.touch_set_pos(145 if i % 2 == 0 else 116, 128)
+        frames(emu, 5)
+    emu.input.touch_release()
+    frames(emu, 10)
     diaper_step2 = picture(emu, output, "game_diaper_after_wipe")
     step_changed = difference(
         diaper, diaper_step2, (0, 192 + 48, 256, 192 + 80)
@@ -225,9 +232,22 @@ def test_actual_game(path: Path, output: Path) -> dict:
     assert step_changed > 30, (
         f"Diaper Dash did not advance after WIPE touch ({step_changed})"
     )
-    stylus_tap(emu, 187, 137)  # NEW: right panel
-    stylus_tap(emu, 124, 163)  # FOLD: bottom panel
-    stylus_tap(emu, 125, 100)  # TAPE: top panel
+    # DRAG a clean diaper from the tray onto the baby.
+    emu.input.touch_set_pos(35, 155)
+    frames(emu, 8)
+    emu.input.touch_set_pos(127, 135)
+    frames(emu, 8)
+    emu.input.touch_release()
+    frames(emu, 10)
+    # SWIPE upward to fold; then fasten LEFT and RIGHT tabs in order.
+    emu.input.touch_set_pos(126, 157)
+    frames(emu, 8)
+    emu.input.touch_set_pos(126, 110)
+    frames(emu, 8)
+    emu.input.touch_release()
+    frames(emu, 10)
+    stylus_tap(emu, 83, 128)
+    stylus_tap(emu, 169, 128)
     won = picture(emu, output, "game_arcade_after_diaper_win")
     returned = difference(
         diaper, won, (0, 192 + 30, 256, 192 + 175)
