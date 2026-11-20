@@ -153,3 +153,9 @@ colored irises and pupils, eyebrows, freckles, shirt stripes, and additional
 crib mobile and shelf decorations. These improvements are hardware 3D
 geometry and palette colors, **not AI-generated screenshots**. The extra
 details must still pass vertex/polygon budgets and real-device framerate tests.
+
+### Touch diagnostic flicker fix
+
+The first stylus diagnostic repainted the entire 256x192 16bpp display every frame when touch was held. DraStic players reported noticeable flicker and no button response. The diagnostic now renders the background **once** and only redraws the KEY_TOUCH flag, X/Y, tap count and a small crosshair patch when their values change. This avoids heavy VRAM writes during active screen scanning and needs no second framebuffer.
+
+At the **title screen press SELECT** and press/hold the **lower DS screen**. **KEY_TOUCH: DOWN** confirms the emulator and ARM7 runtime delivered the touch button signal. Changing X/Y means the touch position is arriving. A changing TAPS count means the game's touch gesture logic accepted it. If all remain unchanged, adjust DraStic touchscreen settings / layout or compare a known touch-based DS game; no game-side hitbox can process an event not delivered by the emulator. This instrumented build is still awaiting a user retest.

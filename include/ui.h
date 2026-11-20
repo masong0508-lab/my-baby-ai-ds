@@ -12,5 +12,6 @@ int ui_arcade_select(int x,int y);
 int ui_arcade_touch(int x,int y);
 int ui_diaper_touch(int x,int y);
 void ui_touch_observe(int down,int x,int y,uint32_t count);
+void ui_touch_diag_update(void);
 int ui_arcade_navigation(int x,int y); /* 1 play, 2 buy, 3 back */
 #endif

@@ -330,31 +330,64 @@ static void finale(const Game *s,int ending){
  foot(PURPLE);
  fit(28,181,"A / B CONTINUE PLAYING",WHITE,30);
 }
+/* Redraw diagnostic panel once on entry, then update only tiny regions.
+ * Repainting 256x192 VRAM every stylus-held frame was tearing/flickering
+ * on DraStic. No extra framebuffer or VRAM is needed.
+ */
+static int diag_last_raw=-1,diag_last_x=-1,diag_last_y=-1;
+static int diag_cross_x=-1,diag_cross_y=-1;
+static unsigned long diag_last_count=~0ul;
 static void touch_diagnostic(void){
- char text[50];int x,y;
  solid(0,27,256,149,BLUSH);
  panel(7,32,242,143,WHITE,PURPLE);
- capsule(16,41,224,24,LILAC,PURPLE);
- fit(29,49,"STYLUS SIGNAL TEST",INK,30);
- fit(22,73,test_touch_down?"PEN DOWN: SIGNAL FOUND":"NO TOUCH SIGNAL YET",test_touch_down?GREEN:DEEP_PINK,34);
- snprintf(text,sizeof(text),"X %d   Y %d",test_touch_x,test_touch_y);
- fit(22,89,text,INK,30);
- snprintf(text,sizeof(text),"DETECTED TAPS: %lu",test_touch_count);
- fit(22,103,text,PURPLE,34);
- fit(22,117,"TAP THE LOWER SCREEN",TEAL,34);
- fit(22,132,"CROSS MARKS YOUR PEN",INK,34);
- fit(22,149,"B / START: TITLE",DEEP_PINK,34);
- if(test_touch_down){
-  x=test_touch_x;y=test_touch_y;
-  if(x<5)x=5;
-  if(x>250)x=250;
-  if(y<31)y=31;
-  if(y>172)y=172;
-  solid(x-1,y-6,3,13,DEEP_PINK);
-  solid(x-6,y-1,13,3,DEEP_PINK);
- }
+ capsule(14,39,228,21,LILAC,PURPLE);
+ fit(27,46,"STYLUS SIGNAL TEST",INK,32);
+ fit(17,65,"KEY_TOUCH:",PURPLE,14);
+ fit(17,79,"X/Y:",PURPLE,5);
+ fit(17,93,"TAPS:",PURPLE,5);
+ solid(18,108,220,52,BLUSH);
+ outline(18,108,220,52,TEAL);
+ fit(27,164,"B / START / SELECT: BACK",MUTED,37);
  foot(PURPLE);
- fit(8,181,"NO PEN? CHECK DRASTIC TOUCH",WHITE,39);
+ fit(10,181,"TAP LOWER SCREEN; WATCH SIGNAL",WHITE,39);
+ diag_last_raw=-1;diag_last_x=-1;diag_last_y=-1;
+ diag_cross_x=-1;diag_cross_y=-1;
+ diag_last_count=~0ul;
+}
+void ui_touch_diag_update(void){
+ char tmp[36];
+ int x,y;
+ if(!pixels)return;
+ if(diag_last_raw!=test_touch_down){
+  solid(104,63,132,12,WHITE);
+  fit(108,65,test_touch_down?"DOWN - INPUT SEEN":"UP / NO SIGNAL",
+      test_touch_down?GREEN:DEEP_PINK,21);
+  diag_last_raw=test_touch_down;
+ }
+ if(diag_last_x!=test_touch_x||diag_last_y!=test_touch_y){
+  solid(63,78,169,12,WHITE);
+  snprintf(tmp,sizeof(tmp),"%03d / %03d",test_touch_x,test_touch_y);
+  fit(68,79,tmp,INK,26);
+  diag_last_x=test_touch_x;
+  diag_last_y=test_touch_y;
+ }
+ if(diag_last_count!=test_touch_count){
+  solid(63,92,169,12,WHITE);
+  snprintf(tmp,sizeof(tmp),"%lu",test_touch_count);
+  fit(68,93,tmp,INK,24);
+  diag_last_count=test_touch_count;
+ }
+ /* Only erase/draw a 13x13 patch within the little touch canvas. */
+ if(!test_touch_down||test_touch_x<0||test_touch_y<0||
+    test_touch_x>255||test_touch_y>191)return;
+ x=31+(test_touch_x*194)/255;
+ y=119+(test_touch_y*30)/191;
+ if(x==diag_cross_x&&y==diag_cross_y)return;
+ if(diag_cross_x>=0)
+  solid(diag_cross_x-7,diag_cross_y-7,15,15,BLUSH);
+ solid(x-1,y-6,3,13,DEEP_PINK);
+ solid(x-6,y-1,13,3,DEEP_PINK);
+ diag_cross_x=x;diag_cross_y=y;
 }
 static void title_screen(const Game *s,int storage_ok,const char *status){
  int i;char count[40];

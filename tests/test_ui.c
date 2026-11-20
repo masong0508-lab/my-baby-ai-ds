@@ -49,8 +49,11 @@ int main(void){
  ui_draw(&g,&a,6,0,0,0,1,"ALBUM");
  ui_touch_observe(1,120,130,3);
  ui_draw(&g,&a,7,0,0,0,1,"TOUCH DEBUG");
+ ui_touch_diag_update();
+ ui_touch_diag_update(); /* same state should be a no-op */
  ui_touch_observe(0,0,0,3);
  ui_draw(&g,&a,7,0,0,0,1,"TOUCH DEBUG");
+ ui_touch_diag_update();
  puts("PASS: bitmap UI and touch hitboxes");
  return 0;
 }
