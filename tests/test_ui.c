@@ -26,6 +26,12 @@ int main(void){
  a.timer=110;
  ui_draw(&g,&a,1,0,0,0,1,"ARCADE");
  ui_draw(&g,&a,2,0,0,0,1,"GO!");
+ a.id=0;a.timer=600;a.balance=12;a.hold_frames=45;
+ ui_draw(&g,&a,2,0,0,0,1,"BOTTLE");
+ a.id=1;a.timer=140;a.stage=0;a.target=3;
+ ui_draw(&g,&a,2,0,0,0,1,"DIAPER");
+ a.id=2;a.timer=110;
+ ui_draw(&g,&a,2,0,0,0,1,"DIRECTION");
  assert(ui_arcade_touch(127,100)==0);
  assert(ui_arcade_touch(170,126)==1);
  assert(ui_arcade_touch(127,148)==2);

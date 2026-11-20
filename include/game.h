@@ -16,6 +16,11 @@ typedef struct {
 typedef struct {
  uint8_t active, id, round, mistakes, direction, reverse, finished;
  uint16_t timer;
+ /* Per-session state (not serialized in Game saves). */
+ int16_t balance;
+ int8_t steering;
+ uint16_t hold_frames,elapsed;
+ uint8_t stage,target;
 } Arcade;
 extern const char *const game_names[MBAI_GAMES];
 void game_init(Game *s);
@@ -31,5 +36,6 @@ int game_good_ending_count(const Game *s);
 void game_arcade_start(Game *s,Arcade *a,int id);
 int game_arcade_expected(const Arcade *a);
 void game_arcade_input(Game *s,Arcade *a,int dir);
+void game_arcade_steer(Arcade *a,int direction);
 void game_arcade_tick(Game *s,Arcade *a);
 #endif

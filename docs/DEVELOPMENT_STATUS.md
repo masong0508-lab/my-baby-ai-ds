@@ -10,7 +10,7 @@ This is a source-based inventory of `main` as audited after the first successful
 | Dual-screen rendering | `source/world.c`: perspective-3D nursery with crib, dresser, window, floorboards, toys, teddy and a procedural 3D baby; `source/ui.c`: sub-screen 16-bit bitmap interface | Most art is procedural geometry with fixed camera; limited pose variation; no authored texture/rig pipeline or multiple explorable rooms |
 | Care loop | `source/game.c`: feed, chat, play and nap affect needs, mood, chaos and corruption | No rich touch-manipulation activities, time-of-day routine, meaningful room interaction, or evolving developmental skills |
 | Baby dialogue | `source/dialogue.c`: fixed-weight 6-input → 8-hidden → 6-output integer classifier; six response sets of four lines (24 authored lines) | Not a generative LLM or trained neural model. No durable conversational/event memory, word recognition, typed chat, or long-running relationship |
-| Arcade | 16 named cabinets; eight unlocked initially; a directional/timing activity with corruption-triggered reverse commands | **All 16 currently call the same challenge**. No unique mechanics or dedicated presentation for individual cabinets |
+| Arcade | 16 named cabinets; eight unlocked initially; distinct Bottle Balance steering and four-step Diaper Dash; the remaining 14 use directional/timing challenge | **Only 2 of 16 have distinct mechanics**. The remaining 14 need unique gameplay, controls and testing |
 | Economy | Diaper Dollars, Favors and unlock costs in `game_unlock`; wins award currency | Limited sinks/long-term rewards; no purchasable décor, apparel, talent upgrades, sticker collection, or balanced price curve |
 | Glitches | Five corruption tiers, occasional visual disruption, reverse directions, shorter arcade response windows | Effects are narrow; no per-mode corruption language, glitch frequency controls, or accessibility balancing beyond the visual effect toggle |
 | Endings | Four good, four bad, ending album, continuing play; separately confirmed optional reset | Basic text/bitmap endings rather than bespoke cinematics; needs stress testing around reset and recovery |
@@ -31,7 +31,7 @@ This is a source-based inventory of `main` as audited after the first successful
 
 **Critical before claiming a verified playable build:** boot and frame-by-frame rendering in melonDS, input testing on both screens, 30-minute play session, save/reload, and original-hardware flashcart testing. The GitHub Actions compiler cannot certify those.
 
-**Critical before claiming a complete game:** sixteen distinct minigames; authored baby animation and environment interactions; additional activities and progression; sounds/music; stronger personality memory; accessible settings; an achievable economy; and end-to-end game balance.
+**Critical before claiming a complete game:** finish the other fourteen distinct minigames; authored baby animation and environment interactions; additional activities and progression; sounds/music; stronger personality memory; accessible settings; an achievable economy; and end-to-end game balance.
 
 **Important documentation correction:** The neural classifier is already implemented, but it is a compact hand-tuned integer intent classifier, not a modern language model. The ROM has cross-compiled successfully through GitHub Actions, but its runtime behavior has not been independently confirmed here.
 

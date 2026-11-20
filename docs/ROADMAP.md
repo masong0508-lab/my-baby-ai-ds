@@ -27,6 +27,8 @@ This document is a prioritized plan, not a claim that the listed work already ex
 
 ## M2: make the first eight arcades genuinely different (P1)
 
+**Implementation checkpoint:** source-level designs and runtime tests now exist for cabinet #1 Bottle Balance and #2 Diaper Dash. They are not yet emulator/physical-hardware verified. Cabinets #3–#8 remain to be implemented.
+
 **Work:** replace the shared `Arcade` direction test with a dispatcher and per-game state machines. Build each of the eight **starter** games with its own controls, win condition, fail condition, score, tutorial and balanced reward.
 
 | Starter cabinet | Proposed distinct interaction |

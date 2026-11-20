@@ -4,7 +4,7 @@ An ugly-cute DS-era baby simulator parody with an overeducated baby, 16 arcade g
 
 ## First playable prototype
 
-The ARM9 program renders a furnished perspective-3D nursery and a modeled, animated, intentionally ugly-cute baby, with crib rails, dresser drawers, window, play mat, toys and teddy bear. The lower screen now uses a colored bitmap touchscreen interface, not the old text console. Buttons, arcade cabinets, care meters, prompts and ending cards are drawn directly into the DS sub-engine VRAM. There are 16 catalog entries; the minigames currently share a *temporary* directional/timing challenge. The baby uses a compact, fixed-weight, integer-only neural intent classifier with 24 authored responses—not a modern generative language model.
+The ARM9 program renders a furnished perspective-3D nursery and a modeled, animated, intentionally ugly-cute baby, with crib rails, dresser drawers, window, play mat, toys and teddy bear. The lower screen now uses a colored bitmap touchscreen interface, not the old text console. Buttons, arcade cabinets, care meters, prompts and ending cards are drawn directly into the DS sub-engine VRAM. There are 16 arcade entries: **Bottle Balance** and **Diaper Dash** now have distinct mechanics and touchscreen scenes; the other 14 retain a temporary directional challenge. The baby uses a compact, fixed-weight, integer-only neural intent classifier with 24 authored responses—not a modern generative language model.
 
 ### Controls
 * A feed, B chat, X play, Y nap; the four large touchscreen buttons provide the same actions.
@@ -28,7 +28,7 @@ Discover **Tiny Diploma Ceremony**, **Rattle Arcade Champion**, **Bugs Become Fe
 
 The top screen now runs a multi-object, shaded, original low-poly scene via the DS hardware 3D engine. The lower screen uses 256×192 native pixel art and interactive status displays with a 16-bit BG bitmap in **128 KiB of dedicated VRAM** (not an extra 128 KiB main-RAM framebuffer), plus a small embedded bitmap font. The UI refreshes on changes, with lower-frequency countdown updates. See `docs/graphics-pipeline.md`.
 
-**Verification status:** GitHub Actions has successfully cross-compiled a real `.nds` ROM and run host tests on a CI pull request; emulator boot/screenshots, original-hardware performance, RAM usage and persistent save behavior have **not** yet been independently verified. The sixteen cabinets still share one arcade microgame, not sixteen finished minigames. See [development status](docs/DEVELOPMENT_STATUS.md) and [release QA](docs/QA_RELEASE.md).
+**Verification status:** GitHub Actions has successfully cross-compiled a real `.nds` ROM and run host tests on a CI pull request; emulator boot/screenshots, original-hardware performance, RAM usage and persistent save behavior have **not** yet been independently verified. Two cabinets have distinct minigames, while the other fourteen still share the prototype direction challenge; all sixteen are not yet finished. See [development status](docs/DEVELOPMENT_STATUS.md) and [release QA](docs/QA_RELEASE.md).
 
 ### Title screen, album, settings
 
@@ -50,3 +50,11 @@ These files describe the current codebase and distinguish confirmed implementati
 - **[Graphics pipeline](docs/graphics-pipeline.md)** — hardware 3D and touchscreen rendering approach.
 
 **Recommended next engineering patch:** run the latest ROM in melonDS, record genuine screen captures and performance readings, then fix any boot, input or save issues *before* enlarging the game.
+
+### Arcade gameplay patch: two distinct cabinets
+
+- **Bottle Balance (#1):** keep a bottle centered despite deterministic rocking-table drift. Hold Left/Right on the D-pad or touch/hold the left/right steering panels. Stay within the central safe zone long enough to fill 150 stability frames; three spills or running out of time means defeat. At high corruption, steering is visibly reversed.
+- **Diaper Dash (#2):** use four separate timed tasks in sequence: WIPE (left), NEW DIAPER (right), FOLD (down), TAPE (up). Use D-pad or the corresponding stylus zones. Three mistakes or expired tasks fail the challenge; high corruption may reverse one explicitly signposted task.
+- **Cabinets #3–#16:** still use the original directional-response proof-of-concept until their individual mechanics are implemented.
+
+Both games reuse the existing arcade win/loss economy and **do not change the on-disk save format**. Dedicated automated tests are in `tests/test_minigames.c`, and the existing GitHub Actions workflow continues to produce the `.nds` build. Actual emulator/physical-device behavior still requires validation.

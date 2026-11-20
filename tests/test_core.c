@@ -63,7 +63,7 @@ int main(void){
  g.mood=60;g.corruption=90;g.chaos=75;
  assert(game_end_day(&g)==END_REBOOT);
  assert(g.bad_endings==3&&game_reset_unlocked(&g));
- g.corruption=80;game_arcade_start(&g,&a,0);assert(a.active);
+ g.corruption=80;game_arcade_start(&g,&a,2);assert(a.active);
  for(i=0;i<2;i++)game_arcade_input(&g,&a,game_arcade_expected(&a));
  assert(a.round==2&&a.reverse&&game_arcade_expected(&a)==(a.direction^2));
  for(i=2;i<MBAI_ROUNDS;i++)game_arcade_input(&g,&a,game_arcade_expected(&a));
