@@ -46,5 +46,7 @@ void game_arcade_steer(Arcade *a,int direction);
 int game_arcade_diaper_touch(Game *s,Arcade *a,int touching,int x,int y);
 /* Drag a refund receipt to KEEP or a bogus invoice to SHRED. */
 int game_arcade_teether_touch(Game *s,Arcade *a,int touching,int x,int y);
+int game_arcade_garden_touch(Game *s,Arcade *a,int touching,int x,int y);
+int game_arcade_court_touch(Game *s,Arcade *a,int touching,int x,int y);
 void game_arcade_tick(Game *s,Arcade *a);
 #endif
