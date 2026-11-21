@@ -103,6 +103,12 @@ int main(void){
   raw_touch=(held&KEY_TOUCH)!=0;
   if(raw_touch)touchRead(&touch);
   tap=touch_gate_step(&gesture,raw_touch,touch.px,touch.py);
+  /* Some ARM7 runtimes assert KEY_TOUCH before calibrated coordinates arrive.
+   * Keep raw pen visibility for diagnostics, but do not steer or drag game
+   * objects using an uncalibrated (0,0) or off-screen sample. A real touch
+   * at the top-left corner becomes valid after the gate's three-frame grace. */
+  int pen_ready=raw_touch&&touch.px<=255&&touch.py<=191&&
+      !(touch.px==0&&touch.py==0&&gesture.held_frames<3);
   ui_touch_observe(raw_touch,touch.px,touch.py,gesture.total_presses);
   /* Compare against the proven button-scanning pattern from the user's
    * Mandex DS bare-metal port. This fallback needs no working ARM7 stylus. */
@@ -195,7 +201,7 @@ int main(void){
      int steer=0;
      if(!vpen.enabled && (held&KEY_LEFT))steer=-1;
      else if(!vpen.enabled && (held&KEY_RIGHT))steer=1;
-     else if(raw_touch&&touch.py>=90&&touch.py<173)
+     else if(pen_ready&&touch.py>=90&&touch.py<173)
       steer=touch.px<128?-1:1;
      else if(vpen.enabled&&(held&KEY_A)&&vpen.y>=90&&vpen.y<173)
       steer=vpen.x<128?-1:1;
@@ -206,7 +212,7 @@ int main(void){
      }
     }else{
      if(arc.id==1){
-      int pen_down=vpen.enabled?((held&KEY_A)!=0):raw_touch;
+      int pen_down=vpen.enabled?((held&KEY_A)!=0):pen_ready;
       int pen_x=vpen.enabled?vpen.x:touch.px;
       int pen_y=vpen.enabled?vpen.y:touch.py;
       if(game_arcade_diaper_touch(&baby,&arc,pen_down,pen_x,pen_y))
@@ -219,7 +225,7 @@ int main(void){
        else if(down&KEY_LEFT)direction=3;
       }
      }else if(arc.id==2){
-      int pen_down=vpen.enabled?((held&KEY_A)!=0):raw_touch;
+      int pen_down=vpen.enabled?((held&KEY_A)!=0):pen_ready;
       int pen_x=vpen.enabled?vpen.x:touch.px;
       int pen_y=vpen.enabled?vpen.y:touch.py;
       if(game_arcade_teether_touch(&baby,&arc,pen_down,pen_x,pen_y))
@@ -262,7 +268,7 @@ int main(void){
       else if(down&KEY_RIGHT)direction=1;
       else if(tap)direction=ui_audit_touch(touch.px,touch.py);
      }else if(arc.id==13){
-      int pen_down=vpen.enabled?((held&KEY_A)!=0):raw_touch;
+      int pen_down=vpen.enabled?((held&KEY_A)!=0):pen_ready;
       int pen_x=vpen.enabled?vpen.x:touch.px;
       int pen_y=vpen.enabled?vpen.y:touch.py;
       if(game_arcade_garden_touch(&baby,&arc,pen_down,pen_x,pen_y))
@@ -273,7 +279,7 @@ int main(void){
        else if(down&KEY_RIGHT)direction=2;
       }
      }else if(arc.id==14){
-      int pen_down=vpen.enabled?((held&KEY_A)!=0):raw_touch;
+      int pen_down=vpen.enabled?((held&KEY_A)!=0):pen_ready;
       int pen_x=vpen.enabled?vpen.x:touch.px;
       int pen_y=vpen.enabled?vpen.y:touch.py;
       if(game_arcade_court_touch(&baby,&arc,pen_down,pen_x,pen_y))
