@@ -1101,30 +1101,27 @@ static void challenge(const Game *s,const Arcade *a){
 }
 /* The finale is a collectible illustrated postcard rather than a plain
  * text result, while retaining the same continue-on-any-input behavior. */
+/* The ending is an actual keepsake: clean character art, one dominant
+ * outcome label, one sentence of reward and a single continue affordance. */
 static void finale(const Game *s,int ending){
- int good=game_is_good_ending(ending),i;char tmp[40];
+ int good=game_is_good_ending(ending);
  uint16_t edge=good?GREEN:ROSE;
- solid(0,27,256,149,good?MINT:LILAC);
- for(i=0;i<18;i++){
-  int x=(i*59+7)%250,y=32+(i*43)%135;
-  solid(x,y,3,6,(i&1)?LEMON:PINK);
-  solid(x-2,y+2,7,2,(i&1)?GOLD:WHITE);
- }
- panel(12,35,232,136,WHITE,edge);
- capsule(29,41,198,24,good?MINT:PINK,edge);
- fit(good?77:82,49,good?"GOOD ENDING":"BAD ENDING",INK,20);
- capsule(81,69,94,47,good?SKY:BLUSH,edge);
+ char count[36];
+ solid(0,27,256,149,good?MINT:BLUSH);
+ panel(10,34,236,137,WHITE,edge);
+ capsule(18,40,220,27,good?MINT:PINK,edge);
+ label(good?62:68,46,good?"GOOD ENDING":"BAD ENDING",INK,2,11);
+ capsule(89,72,78,44,IVORY,edge);
  sprite(108,76,2,spr_baby,18);
- insignia(40,78,good?GOLD:ROSE);
- insignia(207,78,good?GOLD:ROSE);
- fit(22,119,game_ending_name(ending),PURPLE,36);
- solid(24,132,208,1,good?GREEN:DEEP_PINK);
- fit(27,137,good?"+$8 AND +1 FAVOR!":"THE BABY GETS ANOTHER DAY",good?GREEN:ROSE,37);
- snprintf(tmp,sizeof(tmp),"%d / 4 GOOD ENDINGS RECORDED",
-          game_good_ending_count(s));
- fit(41,153,tmp,MUTED,32);
+ insignia(41,87,good?GOLD:ROSE);
+ insignia(205,87,good?GOLD:ROSE);
+ fit(20,122,game_ending_name(ending),PURPLE,36);
+ solid(23,133,208,1,edge);
+ fit(24,139,good?"+$8 AND +1 FAVOR":"ANOTHER DAY FOR BABY",good?GREEN:ROSE,34);
+ snprintf(count,sizeof(count),"GOOD MEMORIES %d/4",game_good_ending_count(s));
+ fit(24,154,count,MUTED,28);
  foot(PURPLE);
- fit(26,181,"A / B  CONTINUE THE STORY",WHITE,36);
+ fit(15,182,"A CONTINUE      B CONTINUE",WHITE,37);
 }
 /* Redraw diagnostic panel once on entry, then update only tiny regions.
  * Repainting 256x192 VRAM every stylus-held frame was tearing/flickering
@@ -1133,24 +1130,21 @@ static void finale(const Game *s,int ending){
 static int diag_last_raw=-1,diag_last_x=-1,diag_last_y=-1;
 static int diag_cross_x=-1,diag_cross_y=-1;
 static unsigned long diag_last_count=~0ul;
+/* Clear touchscreen diagnostics, preserving the untouched 220x52
+ * BLUSH test canvas: crosshair erasure relies on that solid background. */
 static void touch_diagnostic(void){
- solid(0,27,256,149,SKY);
- solid(0,27,256,3,screen_accent);
- panel(7,32,242,143,WHITE,PURPLE);
- capsule(14,39,228,21,NIGHT,screen_accent);
- fit(43,46,"STYLUS SIGNAL TEST",WHITE,32);
- insignia(23,45,screen_accent);
+ solid(0,27,256,149,IVORY);
+ panel(7,32,242,143,WHITE,TEAL);
+ capsule(14,39,228,22,NIGHT,TEAL);
+ label(53,43,"STYLUS TEST",WHITE,2,11);
  fit(17,65,"KEY_TOUCH:",PURPLE,14);
  fit(17,79,"X/Y:",PURPLE,5);
  fit(17,93,"TAPS:",PURPLE,5);
- /* Preserve this uniform BLUSH test canvas: partial crosshair updates
-  * erase only 15x15 tiles and must restore exact underlying pixels. */
  solid(18,108,220,52,BLUSH);
  outline(18,108,220,52,TEAL);
- solid(20,110,216,2,WHITE);
- fit(27,164,"B / START / SELECT: BACK",MUTED,37);
+ fit(23,164,"B / START / SELECT: BACK",MUTED,35);
  foot(PURPLE);
- fit(10,181,"LIVE STYLUS: TOUCH THE CANVAS",WHITE,39);
+ fit(10,181,"DRAW IN THE TOUCH AREA",WHITE,39);
  diag_last_raw=-1;diag_last_x=-1;diag_last_y=-1;
  diag_cross_x=-1;diag_cross_y=-1;
  diag_last_count=~0ul;
@@ -1243,26 +1237,21 @@ static void ending_album(const Game *s){
  foot(PURPLE);
  fit(12,181,"B BACK    MEMORY KEPT",WHITE,35);
 }
+/* No touchscreen activation on reset. The only destructive path remains
+ * the deliberately difficult L+R+X hardware gesture after A review. */
 static void reset_screen(int confirm){
- int i;
- solid(0,27,256,149,LILAC);
- for(i=0;i<7;i++){
-  solid(7+i*36,31,17,3,ROSE);
-  solid(7+i*36,168,17,3,ROSE);
- }
+ solid(0,27,256,149,BLUSH);
  panel(10,35,236,136,WHITE,ROSE);
- capsule(22,44,212,28,NIGHT,ROSE);
- insignia(37,54,LEMON);
- fit(57,54,"FACTORY RESET?",WHITE,27);
- fit(28,83,"THIS ERASES MY BABY A.I. SAVE",ROSE,37);
- fit(28,96,"NOT ANY OTHER SD CARD FILES",PURPLE,37);
- solid(27,110,202,1,ROSE);
- capsule(26,116,204,25,confirm?PINK:LEMON,ROSE);
- fit(confirm?35:75,125,confirm?"HOLD L+R, THEN PRESS X":"A  REVIEW RESET",
-     INK,38);
- fit(70,149,"B  CANCEL / GO BACK",PURPLE,31);
+ capsule(22,43,212,31,NIGHT,ROSE);
+ label(57,51,"RESET SAVE?",WHITE,2,11);
+ fit(31,86,"ERASES THIS BABY'S SAVE",ROSE,32);
+ fit(31,99,"OTHER FILES ARE UNTOUCHED",PURPLE,34);
+ solid(28,111,200,2,ROSE);
+ capsule(25,120,206,27,confirm?PINK:LEMON,ROSE);
+ label(confirm?53:66,126,confirm?"L+R THEN X":"A REVIEW",INK,2,12);
+ fit(82,153,"B CANCEL",PURPLE,18);
  foot(PURPLE);
- fit(35,181,"TWO-STEP CONFIRMATION ONLY",WHITE,36);
+ fit(12,181,"SAVE ERASE REQUIRES CONFIRM",WHITE,39);
 }
 int ui_arcade_navigation(int x,int y){
  if(y<176||y>=192||x<0||x>=256)return 0;
