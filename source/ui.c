@@ -219,7 +219,7 @@ static void insignia(int x,int y,uint16_t c){
  solid(x+3,y+6,3,3,c);
  solid(x+3,y+3,3,3,WHITE);
 }
-static void header(const char *title,const Game *s){
+static void header(const char *title,const Game *s,int can_save){
  char tmp[32];int x;
  solid(0,0,W,27,NIGHT);
  solid(0,0,W,2,screen_accent);
@@ -228,6 +228,7 @@ static void header(const char *title,const Game *s){
  for(x=8;x<142;x+=24)solid(x,22,12,1,SILVER);
  insignia(7,9,screen_accent);
  label(20,9,title,WHITE,1,21);
+ fit(122,10,can_save?"SD":"RAM",can_save?MINT:PINK,4);
  snprintf(tmp,sizeof(tmp),"DAY %lu",(unsigned long)s->days);
  capsule(192,4,57,18,LILAC,screen_accent);
  fit(196,10,tmp,INK,9);
@@ -1277,7 +1278,7 @@ void ui_draw(const Game *s,const Arcade *a,int view,int selection,
  /* Every screen paints its own content band (y=27..175), and header/foot
   * repaint the other two bands. The previous blanket 256x192 clear was
   * 49,152 redundant 16-bit VRAM writes on every animation refresh. */
- header(screen_title,s);
+ header(screen_title,s,can_save);
  switch(view){
  case 0:home(s,can_save,message);break;
  case 1:arcade_list(s,selection);break;
