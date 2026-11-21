@@ -293,6 +293,15 @@ static void home(const Game *s,int can_save,const char *message){
  solid(20,38,3,3,PURPLE);
  solid(27,38,3,3,PURPLE);
  fit(42,35,"BABY SAYS...",PURPLE,15);
+ /* Actionable priorities fit the original header's spare pixels:
+  * no overlaid speech, clipped label, new card or changed hitbox. */
+ {
+  int hint=game_care_hint(s);
+  static const char *const names[4]={"TRY FEED","TRY CHAT",
+                                     "TRY PLAY","TRY NAP"};
+  fit(126,35,hint<0?"ALL GOOD":names[hint],
+      hint<0?TEAL:ROSE,10);
+ }
  solid(42,43,145,1,PINK);
  /* Real nursery inspection controls; deliberately outside all existing
   * four care action hitboxes and the bottom Toybox navigation strip. */
@@ -326,21 +335,25 @@ static void home(const Game *s,int can_save,const char *message){
  solid(8,109,116,30,SHADOW);
  capsule(8,108,116,30,SKY,BLUE);
  action_gloss(8,108,116,TEAL);
+ if(game_care_hint(s)==FEED)fit(108,112,"!",ROSE,1);
  icon_bottle(12,110);label(50,111,"FEED",INK,2,4);
  fit(50,128,"HUNGER -30",BLUE,12);
  solid(132,109,116,30,SHADOW);
  capsule(132,108,116,30,LEMON,GOLD);
  action_gloss(132,108,116,GOLD);
+ if(game_care_hint(s)==CHAT)fit(232,112,"!",ROSE,1);
  icon_chat(135,110);label(173,111,"CHAT",INK,2,4);
  fit(172,128,"MOOD +7",PURPLE,10);
  solid(8,144,116,30,SHADOW);
  capsule(8,143,116,30,MINT,GREEN);
  action_gloss(8,143,116,GREEN);
+ if(game_care_hint(s)==PLAY)fit(108,148,"!",ROSE,1);
  icon_play(12,144);label(50,146,"PLAY",INK,2,4);
  fit(50,163,"MOOD +10",GREEN,10);
  solid(132,144,116,30,SHADOW);
  capsule(132,143,116,30,PINK,ROSE);
  action_gloss(132,143,116,ROSE);
+ if(game_care_hint(s)==NAP)fit(232,148,"!",ROSE,1);
  icon_nap(135,145);label(172,146,"NAP",INK,2,3);
  fit(172,163,"ENERGY +25",PURPLE,11);
  /* The center dock remains the hidden Toybox entry; introducing decorative
