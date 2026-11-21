@@ -430,6 +430,30 @@ int main(void){
   assert(e.z>2.5f); /* single intentional jump-scare cut */
   assert(e.look_y<-.09f&&e.look_y>-.15f); /* jaw visible, not cropped */
  }
+ /* Uncanny eye contact: the TWO pupils and catchlights move together,
+  * with subpixel-small motion at distance and one deliberate lock-on
+  * before the scare lunge. No frame-to-frame random saccades. */
+ assert(world_egg_gaze(0u)==0);
+ assert(world_egg_gaze(EGG_PUSH_FRAME)==0);
+ assert(world_egg_gaze(EGG_PUSH_FRAME+12u)==-12);
+ assert(world_egg_gaze(EGG_PUSH_FRAME+48u)==-12);
+ assert(world_egg_gaze(EGG_PUSH_FRAME+72u)==0);
+ assert(world_egg_gaze(EGG_SCARE_FRAME-1u)==7);
+ assert(world_egg_gaze(EGG_SCARE_FRAME)==8);
+ assert(world_egg_gaze(EGG_SCARE_FRAME+9u)==0);
+ {
+  unsigned tick;
+  int old=world_egg_gaze(EGG_PUSH_FRAME);
+  for(tick=EGG_PUSH_FRAME+1u;tick<EGG_TOTAL_FRAMES;tick++){
+   int gaze=world_egg_gaze(tick),diff=gaze-old;
+   assert(gaze>=-12&&gaze<=8);
+   assert(diff>=-1&&diff<=1);
+   old=gaze;
+   world_draw_secret(&s,tick,&r);
+   assert(world_vertex_count()<=5000);
+   assert(world_polygon_count()<=1850);
+  }
+ }
  /* Connected lower jaw: the tongue and fangs open together and settle
   * without strobing, repeat surprise cuts or frame-dependent randomness. */
  assert(world_egg_jaw_angle(EGG_SCARE_FRAME-1u)==0);

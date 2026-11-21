@@ -36,6 +36,8 @@ float world_egg_membrane_pulse(uint32_t frame);
 float world_egg_embryo_retreat(uint32_t frame);
 /* Deterministic anticipation: dim-to-bright eyes and shallow forward lean. */
 int world_egg_eye_glow(uint32_t frame);
+/* Shared, deterministic eye-contact choreography, -12..+8 Q gaze. */
+int world_egg_gaze(uint32_t frame);
 float world_egg_embryo_approach(uint32_t frame);
 float world_egg_shell_open(uint32_t frame);
 int world_egg_head_tilt(uint32_t frame);
