@@ -47,6 +47,8 @@ int world_baby_lid_open(uint32_t frame,int action,uint32_t age);
 int world_baby_speech_open(uint32_t age);
 /* Finite plush reaction and bounded whole-head furniture attention. */
 int world_teddy_bow_angle(uint32_t age);
+/* One-shot, anchored nursery mobile swing during a CRIB interaction. */
+int world_crib_mobile_swing(int focus,uint32_t age);
 int world_baby_attention_angle(int focus,uint32_t age);
 /* Submitted frame-budget counters (geometry, not measured FPS). */
 unsigned world_vertex_count(void);

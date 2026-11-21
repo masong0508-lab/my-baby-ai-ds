@@ -355,6 +355,43 @@ def test_actual_game(path: Path, output: Path) -> dict:
     assert crib_scene_change > 35, (
         f"Crib doesn't animate a nap or change camera ({crib_scene_change})"
     )
+    # The nursery mobile is now made of connected hanging pieces, and
+    # responds ONCE to CRIB, before settling. Inspect both native top
+    # captures to reject perpetually rocking or detached decorations.
+    frames(emu, 7)
+    mobile_sway = picture(emu, output, "game_room_crib_mobile_sway")
+    # At half-closed NAP, the previous compressed eye meshes emitted long
+    # turquoise and black horizontal bars over the baby's face. Do not
+    # allow the restored 3D mesh to regress into those subpixel strips.
+    def longest_eyelid_streak(img, kind):
+        best = 0
+        for yy in range(48, 94):
+            length = 0
+            for xx in range(51, 171):
+                rr, gg, bb = img.getpixel((xx, yy))
+                if kind == "cyan":
+                    bad = (rr < 130 and gg < 160 and bb < 180
+                           and gg > rr + 12 and bb > rr + 20)
+                else:
+                    bad = rr < 72 and gg < 80 and bb < 110
+                length = length + 1 if bad else 0
+                best = max(best, length)
+        return best
+    cyan_streak = longest_eyelid_streak(mobile_sway, "cyan")
+    black_streak = longest_eyelid_streak(mobile_sway, "black")
+    assert cyan_streak < 30 and black_streak < 30, (
+        "NAP eyelids are still emitting long horizontal GL polygon stripes "
+        f"(cyan={cyan_streak}, black={black_streak})"
+    )
+    frames(emu, 24)
+    mobile_rest = picture(emu, output, "game_room_crib_mobile_settled")
+    mobile_motion_pixels = difference(
+        mobile_sway, mobile_rest, (178, 14, 255, 150)
+    )
+    assert mobile_motion_pixels > 12, (
+        "The crib mobile has no visible motion in the actual DS nursery "
+        f"({mobile_motion_pixels} changed pixels)"
+    )
     stylus_tap(emu, 128, 183)  # visible BACK footer, never End Day!
     frames(emu, 20)
     room_return = picture(emu, output, "game_room_tour_back_to_care")
@@ -821,6 +858,9 @@ def test_actual_game(path: Path, output: Path) -> dict:
         "Room_teddy_recovery_changed_pixels": teddy_recovery_change,
         "Room_quiet_crib_status_changed_pixels": quiet_bonus_display,
         "Room_crib_top_changed_pixels": crib_scene_change,
+        "Room_crib_mobile_changed_pixels": mobile_motion_pixels,
+        "Room_NAP_cyan_eye_streak_pixels": cyan_streak,
+        "Room_NAP_black_eye_streak_pixels": black_streak,
         "Room_back_to_care_changed_pixels": room_back_change,
         "3D_care_pose_changed_pixels": pose_changed,
         "3D_nap_upright_romper_pixels": upright_romper_pixels,
