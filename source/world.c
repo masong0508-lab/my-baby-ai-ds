@@ -780,13 +780,36 @@ float world_egg_embryo_breath(uint32_t frame){
  uint32_t phase=frame%64u;
  return (float)(phase<32u?phase:64u-phase)*.0005f;
 }
+/* Stage the fracture as a readable close-to-frontal nursery portrait.
+ * A sixth hit might have flung the ragdoll behind the camera or turned its
+ * hair into an enormous brown disk. That impulse remains in toy physics,
+ * but the FILM itself should not inherit a random off-camera silhouette.
+ * This copy is transient: never modifies the game state, saves or Toybox. */
+Roughhouse world_egg_staged_doll(const Roughhouse *source,uint32_t frame){
+ Roughhouse pose={0};
+ int beat=(int)(frame%24u);
+ if(source)pose=*source;
+ if(beat>12)beat=24-beat;
+ pose.x=0;pose.y=0;pose.z=0;
+ pose.vx=0;pose.vy=0;pose.vz=0;
+ pose.vr=0;pose.vp=0;pose.vyaw=0;
+ pose.roll=(int16_t)((beat-6)*3);
+ pose.pitch=0;pose.yaw=0;
+ pose.moving=0;pose.impact=0;
+ /* The damaged shell must remain open for the story intro even on a
+  * scrapbook replay that has no active physics object. */
+ if(pose.charge<ROUGHHOUSE_CRACK_CHARGE)
+  pose.charge=ROUGHHOUSE_CRACK_CHARGE;
+ return pose;
+}
 void world_draw_secret(const Game *s,uint32_t frame,const Roughhouse *r){
  unsigned phase;
  int i;
  EggCamera camera;
  float opened=0.f;
  if(frame<EGG_CRACK_FRAME){
-  world_draw_roughhouse(s,frame,r);
+  Roughhouse staged=world_egg_staged_doll(r,frame);
+  world_draw_roughhouse(s,frame,&staged);
   return;
  }
  phase=frame<EGG_PUSH_FRAME?1u:frame<EGG_SCARE_FRAME?2u:3u;
