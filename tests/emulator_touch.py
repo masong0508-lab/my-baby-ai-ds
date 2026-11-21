@@ -203,6 +203,49 @@ def test_actual_game(path: Path, output: Path) -> dict:
     assert not full_height_stripes, (
         f"Top-screen full-height black line artifacts at x={full_height_stripes}"
     )
+    # This regression was reported from the actual care/nursery image:
+    # (1) a ruler-straight pale slash across the dresser/infant cheek,
+    # (2) another one across the pink wall, (3) an olive-green sheet
+    # protruding between the synthetic baby's legs. Test native pixels.
+    def longest_pale_run(box, minimum):
+        x0, y0, x1, y1 = box
+        longest = 0
+        for yy in range(y0, y1):
+            start = -1
+            for xx in range(x0, x1 + 1):
+                if xx < x1:
+                    rr, gg, bb = top.getpixel((xx, yy))
+                    lit = (rr >= minimum[0] and gg >= minimum[1]
+                           and bb >= minimum[2])
+                else:
+                    lit = False
+                if lit and start < 0:
+                    start = xx
+                elif not lit and start >= 0:
+                    longest = max(longest, xx - start)
+                    start = -1
+        return longest
+    # At y=75..81 the real dresser TOP is a legitimately continuous 40px
+    # ivory slab. The reported corruption was an isolated 91px ribbon at
+    # y=89, across the drawer, wall and infant cheek. Check the corruption
+    # height only, and tighten the threshold from 40px to 10px.
+    dresser_streak = longest_pale_run((9, 84, 112, 112), (245, 218, 178))
+    wall_streak = longest_pale_run((149, 77, 220, 115), (232, 220, 190))
+    assert dresser_streak < 10, (
+        f"Bright dresser/face surface streak still visible ({dresser_streak}px)"
+    )
+    assert wall_streak < 28, (
+        f"Back-wall wainscot is still a bright ruler line ({wall_streak}px)"
+    )
+    olive_artifact = sum(
+        1 for yy in range(148, 170) for xx in range(101, 145)
+        if (lambda c: c[1] > c[0] + 18 and
+            c[1] > c[2] + 35 and c[0] < 170)(top.getpixel((xx, yy)))
+    )
+    assert olive_artifact < 20, (
+        "Olive-green contact quad is still cutting through the baby's "
+        f"legs ({olive_artifact} green pixels)"
+    )
     start_changed = difference(ready, nursery, (0, 192 + 30, 256, 192 + 175))
     assert start_changed > 500, (
         f"Stylus could be read, but touching START GAME did not enter nursery "
@@ -651,6 +694,9 @@ def test_actual_game(path: Path, output: Path) -> dict:
     return {
         "3D_top_screen_distinct_colors": hero_colors,
         "3D_top_screen_full_height_dark_stripes": len(full_height_stripes),
+        "3D_nursery_dresser_streak_length": dresser_streak,
+        "3D_nursery_wall_streak_length": wall_streak,
+        "3D_nursery_green_shadow_artifact_pixels": olive_artifact,
         "3D_care_pose_changed_pixels": pose_changed,
         "3D_nap_upright_romper_pixels": upright_romper_pixels,
         "3D_chat_reach_changed_pixels": chat_changed,
