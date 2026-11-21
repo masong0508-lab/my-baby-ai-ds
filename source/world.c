@@ -306,24 +306,8 @@ static void room(void){
  block(1.62,1.84,-3.03,.76,.81,.11,21,17,13);
  block(1.62,1.84,-2.96,.60,.64,.02,21,27,23);
  ellipse(1.62,1.85,-2.92,.19,.16,.02,27,24,17);
- /* Dresser, three actual drawers and bottle atop it. */
+ /* DIAGNOSTIC ONLY: isolate dresser as possible source of wall streak. */
  block(-2.55,-.48,-.48,1.20,1.36,.94,27,24,20);
- block(-2.55,.23,-.48,1.36,.16,1.11,29,26,22);
- for(i=0;i<3;i++){
-  const float drawer_y=-.13f-(float)i*.36f;
-  /* Wide, intentionally separated cabinet faces instead of six-faced
-   * shallow cuboids with subpixel side caps. No coplanar drawer edges.
-   * Two FRONT quads at 0.068/0.095 world-Z replace each old 6-face box. */
-  wall_sticker(-2.55f,drawer_y,.068f,1.03f,.305f,21,18,16);
-  wall_sticker(-2.55f,drawer_y,.095f,.970f,.243f,30,27,23);
-  ellipse(-2.55f,drawer_y,.128f,.073f,.054f,.038f,27,13,18);
- }
- block(-2.55,.42,-.48,.14,.28,.14,29,23,21);
- ellipse(-2.55,.65,-.48,.34,.16,.32,31,25,15);
- /* Lamp rim and warm key-light patch: intentional large forms rather than
-  * noisy fake bloom or per-frame translucent screen effects. */
- ellipse(-2.55,.76,-.48,.20,.06,.18,31,30,20);
- wall_sticker(-2.73f,.78f,-.012f,.40f,.03f,31,25,18);
  /* REMOVE 5.6-unit, one-pixel wall ribbons. They z-fought with the
   * color-interpolated back wall and made bright 40+ pixel horizontal
   * cracks through the dresser and crib in real DeSmuME captures.
