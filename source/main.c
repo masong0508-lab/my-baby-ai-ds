@@ -40,7 +40,7 @@ static void end_day(void){
 }
 static void begin_game(void){
  game_arcade_start(&baby,&arc,selected);
- if(arc.active){view=2;message=arc.id==0?"STEADY THE BOTTLE.":arc.id==1?"CHANGE THAT DIAPER!":arc.id==2?"SORT BABY'S TAX BILLS!":arc.id==4?"MEMORIZE THE BEAT!":arc.id==7?"CATCH SIX RATTLES!":"SIX ROUNDS. THREE STRIKES.";}
+ if(arc.active){view=2;message=arc.id==0?"STEADY THE BOTTLE.":arc.id==1?"CHANGE THAT DIAPER!":arc.id==2?"SORT BABY'S TAX BILLS!":arc.id==3?"DODGE CRIB KART CONES!":arc.id==4?"MEMORIZE THE BEAT!":arc.id==5?"MATCH THE BABY SOCKS!":arc.id==6?"TIME THE QUIET LULLABY!":arc.id==7?"CATCH SIX RATTLES!":"SIX ROUNDS. THREE STRIKES.";}
  else message="LOCKED CABINET.";
 }
 static void leave_game(void){
@@ -194,6 +194,16 @@ int main(void){
        if(down&KEY_LEFT)direction=3;
        else if(down&KEY_RIGHT)direction=1;
       }
+     }else if(arc.id==3||arc.id==5){
+      if(down&KEY_LEFT)direction=0;
+      else if(down&KEY_DOWN)direction=1;
+      else if(down&KEY_RIGHT)direction=2;
+      else if(tap)direction=arc.id==3?
+        ui_kart_touch(touch.px,touch.py):
+        ui_sock_touch(touch.px,touch.py);
+     }else if(arc.id==6){
+      if((down&(KEY_A|KEY_UP))||tap)
+       direction=(tap&&ui_nap_touch(touch.px,touch.py)<0)?-1:0;
      }else if(arc.id==4){
       if(down&KEY_UP)direction=0;
       else if(down&KEY_RIGHT)direction=1;
@@ -263,7 +273,7 @@ int main(void){
   }
   if(three_d_ready)world_draw(&baby,frame,pose);
   /* Keep bitmap VRAM writes off the hot path unless UI state changed. */
-  if(dirty||previous!=view||(view==2&&frame%((arc.id==0||arc.id==7)?3u:4u)==0u)){
+  if(dirty||previous!=view||(view==2&&frame%((arc.id==0||arc.id==3||arc.id==6||arc.id==7)?3u:4u)==0u)){
    ui_draw(&baby,&arc,view,selected,last_ending,reset_step,storage_ok,message);
    dirty=0;
   }
