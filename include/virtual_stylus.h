@@ -5,6 +5,7 @@ enum { VS_LEFT=1, VS_RIGHT=2, VS_UP=4, VS_DOWN=8 };
 typedef struct {
  uint8_t enabled;
  uint8_t x,y;
+ uint8_t held_frames,last_direction; /* transient controller acceleration */
 } VirtualStylus;
 void virtual_stylus_init(VirtualStylus *s);
 void virtual_stylus_toggle(VirtualStylus *s);
