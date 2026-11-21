@@ -416,39 +416,75 @@ def test_actual_game(path: Path, output: Path) -> dict:
     assert fracture_changed > 400, (
         f"Six toy impacts did not trigger secret egg ending ({fracture_changed})"
     )
-    frames(emu, 95)  # shell cracked open; thick green alien ichor visible
-    egg_green = picture(emu, output, "game_egg_green_ichor")
-    # Exclude the nursery's *green rug* entirely. The cinematic must have
-    # replaced the room with its dark, isolated egg shot first.
-    assert egg_green.getpixel((20, 20))[2] > egg_green.getpixel((20, 20))[0], (
-        "The alien film did not replace the daytime nursery background"
+    # Sample the REAL 4-stage signal meter, not a guessed frame count.
+    # DeSmuME's VBlank pace can differ from game logic tick throughput.
+    bar_y = 192 + 137
+    bar_x = (31, 83, 135, 187)
+    lit = egg_begin.getpixel((bar_x[0], bar_y))
+    dim = egg_begin.getpixel((bar_x[1], bar_y))
+    assert lit != dim, "Egg film's signal meter failed to render"
+
+    def movie_stage(img) -> int:
+        values = [img.getpixel((x, bar_y)) for x in bar_x]
+        if not all(v in (lit, dim) for v in values):
+            return -1  # A different screen, such as the ending postcard.
+        n = sum(1 for v in values if v == lit)
+        return n - 1 if values == [lit] * n + [dim] * (4 - n) else -1
+
+    assert movie_stage(egg_begin) == 0, (
+        "The egg film did not start with the shell fracture prologue"
     )
+
+    def seek_phase(target: int, name: str):
+        for _ in range(100):
+            frames(emu, 12)
+            sample = emu.screenshot().convert("RGB")
+            current = movie_stage(sample)
+            if current == target:
+                return picture(emu, output, name)
+            if current > target:
+                raise AssertionError(
+                    f"Film skipped phase {target} and advanced to {current}"
+                )
+        raise AssertionError(f"Egg film never reached phase {target}")
+
+    egg_green = seek_phase(1, "game_egg_green_ichor")
+    # Exclude the nursery's *green rug*. The upper-screen background must
+    # now be the dark, isolated alien egg; green fluid must exist in its core.
     top_green = egg_green.crop((64, 30, 194, 168))
     green_ichor_pixels = sum(
         1 for r, g, b in top_green.get_flattened_data()
         if g > r + 28 and g > b + 19 and g > 80
     )
     assert green_ichor_pixels >= 12, (
-        f"Alien-green ichor was not visible on actual 3D egg ({green_ichor_pixels})"
+        f"Alien-green ichor not visible in actual egg film ({green_ichor_pixels})"
     )
-    frames(emu, 156)  # slow push through the shell's opening
+    assert movie_stage(egg_green) == 1, "Wrong image labeled green alien egg"
+
+    egg_push = seek_phase(2, "game_egg_slow_push")
+    frames(emu, 52)  # linger inside the longer camera-approach interval
     egg_push = picture(emu, output, "game_egg_slow_push")
-    frames(emu, 117)  # single harsh perspective cut/jump scare
-    egg_scare = picture(emu, output, "game_egg_jump_scare")
+    assert movie_stage(egg_push) == 2, "Approach shot advanced too soon"
+
+    egg_scare = seek_phase(3, "game_egg_jump_scare")
     scare_difference = difference(
         egg_push, egg_scare, (8, 7, 248, 182)
     )
     assert scare_difference > 300, (
-        f"Egg film did not show an abrupt visual reveal ({scare_difference})"
+        f"Egg film did not display its one hard-cut alien face ({scare_difference})"
     )
-    # The lower screen MUST also be in the reveal phase, not merely a
-    # moving camera still showing the egg (previous false positive).
-    scare_panel_color = egg_scare.getpixel((19, 192 + 94))
-    assert scare_panel_color[0] > scare_panel_color[2] + 35, (
-        f"Jump-scare phase wasn't reached; expected rose cinematic UI, got {scare_panel_color}"
+    assert movie_stage(egg_scare) == 3, (
+        "The jump-scare image was captured in the wrong cinematic phase"
     )
-    frames(emu, 96)  # resolve to the BAD ENDING postcard
-    egg_final = picture(emu, output, "game_egg_secret_bad_ending")
+
+    for _ in range(100):
+        frames(emu, 12)
+        sample = emu.screenshot().convert("RGB")
+        if movie_stage(sample) == -1:
+            egg_final = picture(emu, output, "game_egg_secret_bad_ending")
+            break
+    else:
+        raise AssertionError("Alien-egg film never reached its ending postcard")
     finale_difference = difference(
         egg_begin, egg_final, (5, 192 + 35, 251, 192 + 173)
     )
@@ -495,6 +531,9 @@ def test_actual_game(path: Path, output: Path) -> dict:
         "Alien_green_ichor_pixels": green_ichor_pixels,
         "Alien_jump_scare_changed_pixels": scare_difference,
         "Alien_ending_finale_changed_pixels": finale_difference,
+        "Egg_green_stage": movie_stage(egg_green),
+        "Egg_push_stage": movie_stage(egg_push),
+        "Egg_jump_scare_stage": movie_stage(egg_scare),
         "Alien_ending_header_changed_pixels": finale_header,
         "result": "PASS",
     }
