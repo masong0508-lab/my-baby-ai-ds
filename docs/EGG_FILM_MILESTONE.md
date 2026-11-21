@@ -21,6 +21,7 @@ The camera stops smoothly at the PUSH boundary rather than restarting or telepor
 - No texture sheets, external art assets, heap, framebuffers, save-schema changes, additional GPU layers, random per-frame particle allocations, or new sound streams.
 - All live dialogue/care, Toybox, ending unlocks, stage-pause/skip and replay use the existing paths. The unrelated nursery-audio work remains in its own PR.
 - Pure frame samplers mean pausing, replaying and skipping the film cannot change the animation timing or spawn an orphaned facial piece.
+- Additional deterministic gaze acting is layered onto the existing eyes: tiny movements as the camera approaches, then synchronized lock-on of both irises and catchlights during the final one-shot lunge. No separate pupil textures or additional GPU polygons are introduced.
 - In horror close-ups, eyes, cheeks, tongue and fangs are still connected through a single parent cranium transform; the lower jaw retains its own bounded hinge.
 
 ## Mandatory validation
