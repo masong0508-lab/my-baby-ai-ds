@@ -240,6 +240,25 @@ int main(void){
   assert(world_vertex_count()<=5000);
   assert(world_polygon_count()<=1850);
  }
+ /* Toybox contact has a brief attached facial recoil: the mouth opens
+  * on an actual hit, then closes to its normal relaxed expression.
+  * It costs no additional polygons outside the short hit pulse. */
+ {
+  unsigned relaxed,shocked;
+  roughhouse_init(&r);
+  s.mood=95;
+  world_draw_roughhouse(&s,410u,&r);
+  relaxed=world_polygon_count();
+  r.impact=9;r.moving=1;
+  world_draw_roughhouse(&s,411u,&r);
+  shocked=world_polygon_count();
+  assert(shocked>relaxed && shocked-relaxed<=25u);
+  assert(world_vertex_count()<=5000);
+  assert(world_polygon_count()<=1850);
+  r.impact=0;r.moving=0;
+  world_draw_roughhouse(&s,412u,&r);
+  assert(world_polygon_count()==relaxed);
+ }
  /* Both the new moving doll and the three egg film states MUST fit within
   * hardware command budgets, with no new framebuffer or geometry spike. */
  roughhouse_init(&r);
