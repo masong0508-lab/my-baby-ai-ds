@@ -29,4 +29,6 @@ int roughhouse_strike(Roughhouse *r,int kind);
 int roughhouse_strike_at(Roughhouse *r,int kind,int touch_x,int touch_y);
 void roughhouse_step(Roughhouse *r);
 int roughhouse_cracked(const Roughhouse *r);
+/* A CONTINUE advances to the next cinematic act, never past the finale. */
+uint32_t roughhouse_egg_next_act(uint32_t frame);
 #endif
