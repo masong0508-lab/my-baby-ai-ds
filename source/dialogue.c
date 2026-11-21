@@ -88,6 +88,17 @@ int dialogue_intent(const Game *s,Care action){
   if(i==1&&action==FEED)value+=40;
   if(i==2&&action==NAP)value+=40;
   if(i==3&&action==PLAY)value+=40;
+  /* Care remains a 6->8->6 offline integer classifier, but its original
+   * CHAT-specific play bias drowned out critical biological needs. These
+   * small, bounded output priors keep ALL six authored moods reachable:
+   * urgent hunger, sleep, glitches and chaos must not sound generically
+   * playful when a player talks to a distressed infant. The positive
+   * CHAT baseline keeps an otherwise healthy infant conversational. */
+  if(i==0&&action==CHAT)value+=125;
+  if(i==1&&s->hunger>=65)value+=((int)s->hunger-60)*8;
+  if(i==2&&s->energy<=40)value+=(45-(int)s->energy)*7;
+  if(i==4&&s->corruption>=65)value+=((int)s->corruption-60)*10;
+  if(i==5&&s->chaos>=65)value+=((int)s->chaos-60)*11;
   if(value>score){score=value;best=i;}
  }
  return best;
