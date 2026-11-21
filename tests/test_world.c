@@ -49,16 +49,24 @@ int main(void){
   assert(world_vertex_count()<=5000);
   assert(world_polygon_count()<=1850);
  }
- for(i=0;i<6;i++){
+ for(i=0;i<8;i++){
   static const uint32_t frames[]={0u,EGG_CRACK_FRAME,
              EGG_PUSH_FRAME-1u,EGG_PUSH_FRAME,
-             EGG_SCARE_FRAME-1u,EGG_SCARE_FRAME};
+             EGG_PUSH_FRAME+24u,EGG_SCARE_FRAME-1u,
+             EGG_SCARE_FRAME,EGG_SCARE_FRAME+8u};
   world_draw_secret(&s,frames[i],&r);
   assert(world_vertex_count()<=5000);
   assert(world_polygon_count()<=1850);
   if(frames[i]>=EGG_CRACK_FRAME&&frames[i]<EGG_SCARE_FRAME){
-   /* Two shell plates, green ridges, and no new memory buffers */
-   assert(world_polygon_count()>=120);
+   /* Real recessed cavity, a parasite silhouette, two porcelain halves,
+    * visibly separate inner lips and specular green-ichor ribbons. */
+   assert(world_polygon_count()>=360);
+   assert(world_vertex_count()>=730);
+  }
+  if(frames[i]>=EGG_SCARE_FRAME){
+   /* The creature's eye sockets and actual pointed teeth are a scene
+    * transition, not the old generic low-poly turquoise egg portrait. */
+   assert(world_polygon_count()>=320);
   }
  }
  /* Visual glitch tiers must never summon stray cubes or consume extra
@@ -72,6 +80,6 @@ int main(void){
   assert(world_vertex_count()==base_v);
   assert(world_polygon_count()==base_p);
  }
- printf("PASS: clean 3D portrait, stable glitch mesh, budget (max %u verts, %u polys)\n",worst_v,worst_p);
+ printf("PASS: distinct matte nursery/eye details, staged egg cavity & face, GPU budget (max %u verts, %u polys)\n",worst_v,worst_p);
  return 0;
 }
