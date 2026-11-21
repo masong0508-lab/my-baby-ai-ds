@@ -554,17 +554,18 @@ void world_draw_secret(const Game *s,uint32_t frame,const Roughhouse *r){
  if(phase<3u){
   /* A single intact alien-egg core, with splitting synthetic plates.
    * Fracture marks are drawn IN FRONT of the shell, not as random pixels. */
-  ellipse(0,-.15f,.02f,.70f,.88f,.48f,16,24,21);
-  ellipse(0,-.21f,.35f,.57f,.69f,.22f,24,26,17);
+  soft_head(0,-.15f,.02f,.70f,.88f,.48f,16,24,21);
+  soft_head(0,-.21f,.35f,.57f,.69f,.22f,24,26,17);
   /* Overlapping asymmetric shell plates visibly PART as the lens moves in.
-   * Two 8-sided segments and a few raised green growth ridges replace the
-   * earlier single featureless eggshell with no extra textures or buffers. */
+   * Four inexpensive 12-sided softly lit shells with stepped curvature
+   * replace the original 8-sided origami-like silhouette. No texture VRAM,
+   * framebuffers or new mesh buffers are allocated. */
   {
    float opened=frame>=EGG_PUSH_FRAME?
         (float)(frame-EGG_PUSH_FRAME)/(float)(EGG_SCARE_FRAME-EGG_PUSH_FRAME):0.f;
    if(opened>1.f)opened=1.f;
-   ellipse(-.31f-opened*.11f,-.14f,.482f,.26f,.61f,.072f,22,28,20);
-   ellipse(.31f+opened*.11f,-.11f,.483f,.26f,.58f,.072f,20,26,19);
+   soft_head(-.31f-opened*.11f,-.14f,.482f,.26f,.61f,.072f,22,28,20);
+   soft_head(.31f+opened*.11f,-.11f,.483f,.26f,.58f,.072f,20,26,19);
    soft_mark(-.48f-opened*.10f,-.25f,.558f,.055f,.24f,12,28,9);
    soft_mark(.47f+opened*.09f,.13f,.56f,.048f,.19f,9,26,12);
    soft_mark(-.34f-opened*.08f,.31f,.558f,.058f,.15f,16,30,10);
