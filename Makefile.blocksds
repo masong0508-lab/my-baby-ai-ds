@@ -10,6 +10,13 @@ NAME ?= my-baby-ai-blocksds
 SOURCEDIRS ?= source
 INCLUDEDIRS := include
 ROM := $(NAME).nds
+# The shipped game gets a real cartridge title/code. Keep independent
+# diagnostic probes untouched, so emulator logs distinguish those ROMs.
+ifeq ($(SOURCEDIRS),source)
+ROM_GAMEINFO := -g MBAI 00 "MY BABY A.I."
+else
+ROM_GAMEINFO :=
+endif
 BUILDDIR := build/$(NAME)
 ELF := $(BUILDDIR).elf
 MAP := $(BUILDDIR).map
@@ -33,7 +40,7 @@ DEPS := $(OBJECTS:.o=.d)
 all: $(ROM)
 
 $(ROM): $(ELF)
-	$(NDSTOOL) -c $@ -7 $(ARM7ELF) -9 $<
+	$(NDSTOOL) -c $@ -7 $(ARM7ELF) -9 $< $(ROM_GAMEINFO)
 
 $(ELF): $(OBJECTS)
 	$(CC) -o $@ $^ $(LDFLAGS)

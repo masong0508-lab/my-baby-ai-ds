@@ -1,6 +1,6 @@
 # Development status — My Baby A.I.!
 
-This is a source-based inventory of `main` as audited after the first successful GitHub Actions ROM build (2026-11-20 UTC). **Implemented** means code exists, not that a feature has passed emulator and physical-hardware validation. See [ROADMAP.md](ROADMAP.md) for completion work, [FEATURE_IDEAS.md](FEATURE_IDEAS.md) for design pitches, and [QA_RELEASE.md](QA_RELEASE.md) for the test gates.
+This is a source-based inventory of `main`, updated through November 21, 2026 after the game's DeSmuME and BlocksDS verification milestones. **Implemented** means code exists, not that a feature has passed emulator and physical-hardware validation. See [ROADMAP.md](ROADMAP.md) for completion work, [FEATURE_IDEAS.md](FEATURE_IDEAS.md) for design pitches, and [QA_RELEASE.md](QA_RELEASE.md) for the test gates.
 
 ## What exists in the repository
 
@@ -8,14 +8,14 @@ This is a source-based inventory of `main` as audited after the first successful
 | --- | --- | --- |
 | Nintendo DS ROM | devkitPro `nds-dev` + `libnds` ARM9 `Makefile`, GitHub Actions `nds-build.yml`; PR #1 produced a real `.nds` ROM artifact | A compiled header is **not** proof of a playable, stable emulator/flashcart session. Re-test latest `main` on every release |
 | Dual-screen rendering | `source/world.c`: perspective-3D nursery with crib, dresser, window, floorboards, toys, teddy and a procedural 3D baby; `source/ui.c`: sub-screen 16-bit bitmap interface | Most art is procedural geometry with fixed camera; limited pose variation; no authored texture/rig pipeline or multiple explorable rooms |
-| Care loop | `source/game.c`: feed, chat, play and nap affect needs, mood, chaos and corruption | No rich touch-manipulation activities, time-of-day routine, meaningful room interaction, or evolving developmental skills |
-| Baby dialogue | `source/dialogue.c`: fixed-weight 6-input → 8-hidden → 6-output integer classifier; six response sets of four lines (24 authored lines) | Not a generative LLM or trained neural model. No durable conversational/event memory, word recognition, typed chat, or long-running relationship |
-| Arcade | 16 named cabinets; eight unlocked initially; distinct gameplay and art for all 16 named cabinets; the formerly generic cabinets 8–15 now have jump/duck, steering, counting, timing, audit, watering, path-tracing and management gameplay | **16 of 16 have individual mechanics** on the feature branch. Fresh emulator and DS builds are still required; original hardware and DraStic touch compatibility remain unconfirmed |
+| Care loop | `source/game.c`: feed, chat, play and nap affect needs, mood, chaos and corruption | Room Tour now offers meaningful window, lamp, teddy and crib interactions, including quiet-night rest; long-term developmental skills and broader rooms remain missing |
+| Baby dialogue | `source/dialogue.c`: fixed-weight 6-input → 8-hidden → 6-output integer classifier; six response sets of eight lines (48 authored lines) | Not a generative LLM or trained neural model. No durable conversational/event memory, word recognition, typed chat, or long-running relationship |
+| Arcade | 16 named cabinets; eight unlocked initially; distinct gameplay and art for all 16 named cabinets; the formerly generic cabinets 8–15 now have jump/duck, steering, counting, timing, audit, watering, path-tracing and management gameplay | **16 of 16 have individual mechanics on main**, with host regression and real DeSmuME touchscreen coverage. Extended balance, original hardware and DraStic touch compatibility remain unconfirmed |
 | Economy | Diaper Dollars, Favors and unlock costs in `game_unlock`; wins award currency | Limited sinks/long-term rewards; no purchasable décor, apparel, talent upgrades, sticker collection, or balanced price curve |
 | Glitches | Five corruption tiers, occasional visual disruption, reverse directions, shorter arcade response windows | Effects are narrow; no per-mode corruption language, glitch frequency controls, or accessibility balancing beyond the visual effect toggle |
 | Endings | Four good, four bad, ending album, continuing play; separately confirmed optional reset | Basic text/bitmap endings rather than bespoke cinematics; needs stress testing around reset and recovery |
 | Saves | DLDI/libfat storage, two checksummed alternating save slots, validation and scoped erase | FAT write interruption, filesystem failures, version migration and real-flashcart persistence need testing |
-| Audio | No active sound engine, SFX or music code identified in current `source/` modules | Full audio pipeline missing |
+| Audio | `source/sfx.c`: actual single-voice DS PSG care melodies, room-switch/mobile cues, Toybox impacts and egg film audio; Y mute works in Room Tour and Toybox | No authored multi-track soundtrack, sampled voices or tested original-hardware mixing |
 | Tests | Host-side logic, dialogue, UI and geometry budgets; GitHub Actions cross-compiles the ROM; DeSmuME 0.9.12 emulator CI now injects real touchscreen presses, verifies tap/move/release, START GAME and FEED, and captures screenshots | Still no verified original-DS hardware run, FPS/RAM telemetry, 30-minute soak, save-persistence proof, or working native touch on the reported DraStic installation |
 | Distribution | CI artifact `my-baby-ai-nds` attached to successful workflow run | No tagged release, release notes, license/attribution review or player-facing manual yet |
 
@@ -31,9 +31,9 @@ This is a source-based inventory of `main` as audited after the first successful
 
 **Critical before claiming a verified playable build:** boot and frame-by-frame rendering in melonDS, input testing on both screens, 30-minute play session, save/reload, and original-hardware flashcart testing. The GitHub Actions compiler cannot certify those.
 
-**Critical before claiming a complete game:** balance and validate all sixteen mini-games on real DS hardware; authored baby animation and environment interactions; additional activities and progression; sounds/music; stronger personality memory; accessible settings; an achievable economy; and end-to-end game balance.
+**Critical before claiming a complete game:** balance and validate all sixteen mini-games on real DS hardware; further authored baby acting and environments; longer-term activities and progression; richer original soundtrack; stronger personality memory; accessible settings; an achievable economy; and end-to-end game balance.
 
-**Important documentation correction:** The neural classifier is already implemented, but it is a compact hand-tuned integer intent classifier, not a modern language model. The ROM has cross-compiled successfully through GitHub Actions, but its runtime behavior has not been independently confirmed here.
+**Important documentation correction:** The neural classifier is already implemented, but it is a compact hand-tuned integer intent classifier, not a modern language model. DeSmuME has booted real ROM artifacts and completed native stylus, minigame and secret-cinematic checks. Physical original DS, specific DraStic versions, performance telemetry and actual flashcart save restoration remain to be verified.
 
 ## Non-goals for the baseline DS release
 
@@ -68,7 +68,7 @@ The game save structure and on-disk save format remain unchanged. All new transi
 
 ## Remaining eight arcade cabinets — bespoke mechanic pass
 
-The following implementations are present in the feature branch and must pass host/DS/emulator CI before merging. Every cabinet keeps its existing name and unlock number; the serialized `Game` save format has not changed.
+The following implementations have reached main, with host and DeSmuME automation; physical hardware playtesting and long-run balance still remain. Every cabinet keeps its existing name and unlock number; the serialized `Game` save format has not changed.
 
 | Cabinet | Actual activity | Inputs |
 | --- | --- | --- |

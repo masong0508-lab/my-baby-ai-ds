@@ -66,6 +66,8 @@ jobs:
           from pathlib import Path
           rom = Path("my-baby-ai.nds").read_bytes()
           assert len(rom) >= 0x200, "NDS header is missing"
+          assert rom[:12] == b"MY BABY A.I.", "Wrong cartridge title"
+          assert rom[12:16] == b"MBAI", "Wrong cartridge game code"
           arm9_offset = int.from_bytes(rom[0x20:0x24], "little")
           arm9_size = int.from_bytes(rom[0x2C:0x30], "little")
           assert arm9_offset >= 0x200 and arm9_size > 0, "No ARM9 program"

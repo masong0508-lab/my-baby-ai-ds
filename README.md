@@ -4,7 +4,9 @@ An ugly-cute DS-era baby simulator parody with an overeducated baby, 16 arcade g
 
 ## First playable prototype
 
-The ARM9 program renders a furnished perspective-3D nursery and a modeled, animated, intentionally ugly-cute baby, with crib rails, dresser drawers, window, play mat, toys and teddy bear. The lower screen now uses a colored bitmap touchscreen interface, not the old text console. Buttons, arcade cabinets, care meters, prompts and ending cards are drawn directly into the DS sub-engine VRAM. There are 16 arcade entries: **Bottle Balance** and **Diaper Dash** now have distinct mechanics and touchscreen scenes; the other 14 retain a temporary directional challenge. The baby uses a compact, fixed-weight, integer-only neural intent classifier with 24 authored responses—not a modern generative language model.
+The ARM9 program renders a furnished perspective-3D nursery and a modeled, animated, intentionally ugly-cute baby, with crib rails, dresser drawers, window, play mat, toys and teddy bear. The lower screen now uses a colored bitmap touchscreen interface, not the old text console. Buttons, arcade cabinets, care meters, prompts and ending cards are drawn directly into the DS sub-engine VRAM. There are **16 distinct arcade minigames** with individual win conditions and touch/button controls, including the full eight-cabinet unlock progression. The baby uses an offline integer-only neural intent classifier with **48 original mood-responsive responses**, not a modern generative language model. Nursery care and prop interactions include short single-channel PSG melodies and a Room Tour mute control.
+
+**Cartridge identity:** the game ROMs are packaged with the twelve-byte title `MY BABY A.I.` and game code `MBAI`; diagnostic boot and touch-probe ROMs keep their own identifiers. The header checksum is validated without changing ARM9/ARM7 executables. The game remains native DS software and has no DSi-exclusive memory requirement.
 
 ### Controls
 * A feed, B chat, X play, Y nap; the four large touchscreen buttons provide the same actions.
@@ -28,7 +30,7 @@ Discover **Tiny Diploma Ceremony**, **Rattle Arcade Champion**, **Bugs Become Fe
 
 The top screen now runs a multi-object, shaded, original low-poly scene via the DS hardware 3D engine. The lower screen uses 256×192 native pixel art and interactive status displays with a 16-bit BG bitmap in **128 KiB of dedicated VRAM** (not an extra 128 KiB main-RAM framebuffer), plus a small embedded bitmap font. The UI refreshes on changes, with lower-frequency countdown updates. See `docs/graphics-pipeline.md`.
 
-**Verification status:** GitHub Actions has successfully cross-compiled a real `.nds` ROM and run host tests on a CI pull request; emulator boot/screenshots, original-hardware performance, RAM usage and persistent save behavior have **not** yet been independently verified. Two cabinets have distinct minigames, while the other fourteen still share the prototype direction challenge; all sixteen are not yet finished. See [development status](docs/DEVELOPMENT_STATUS.md) and [release QA](docs/QA_RELEASE.md).
+**Verification status (November 2026):** Standard devkitARM and independent BlocksDS ROMs have passed CI. A real DeSmuME emulator workflow has injected native stylus presses, navigated all core views, played a full arcade minigame and captured the alien-egg cinematic in its original 256×192 screens. **Physical original DS/DraStic operation, sustained FPS/RAM telemetry, long soak tests and real flashcart save persistence remain unverified.** All sixteen minigames have distinct source-level mechanics, but they still need extended play balance and physical-device validation. See [development status](docs/DEVELOPMENT_STATUS.md) and [release QA](docs/QA_RELEASE.md).
 
 ### Title screen, album, settings
 
@@ -49,15 +51,15 @@ These files describe the current codebase and distinguish confirmed implementati
 - **[Glitch endings](docs/glitches.md)** — ending conditions, continuing play and optional reset safety.
 - **[Graphics pipeline](docs/graphics-pipeline.md)** — hardware 3D and touchscreen rendering approach.
 
-**Recommended next engineering patch:** run the latest ROM in melonDS, record genuine screen captures and performance readings, then fix any boot, input or save issues *before* enlarging the game.
+**Recommended next engineering patch:** profile the latest ROM in melonDS and on an original DS/DS Lite, record per-scene FPS and RAM headroom, and test saving across power cycles. Automated DeSmuME touchscreen and cinematic screenshots already exist; they are not substitutes for those additional platforms.
 
-### Arcade gameplay patch: two distinct cabinets
+### Arcade gameplay: sixteen distinct cabinets
 
 - **Bottle Balance (#1):** keep a bottle centered despite deterministic rocking-table drift. Hold Left/Right on the D-pad or touch/hold the left/right steering panels. Stay within the central safe zone long enough to fill 150 stability frames; three spills or running out of time means defeat. At high corruption, steering is visibly reversed.
 - **Diaper Dash (#2):** use four separate timed tasks in sequence: WIPE (left), NEW DIAPER (right), FOLD (down), TAPE (up). Use D-pad or the corresponding stylus zones. Three mistakes or expired tasks fail the challenge; high corruption may reverse one explicitly signposted task.
-- **Cabinets #3–#16:** still use the original directional-response proof-of-concept until their individual mechanics are implemented.
+- **Cabinets #3–#16:** implement their own timed, memory, movement, matching, resource-management, drawing or rhythm mechanics; each has a dedicated native DS screen and touch/button mapping. Full regression scenarios are in `tests/test_minigames.c`.
 
-Both games reuse the existing arcade win/loss economy and **do not change the on-disk save format**. Dedicated automated tests are in `tests/test_minigames.c`, and the existing GitHub Actions workflow continues to produce the `.nds` build. Actual emulator/physical-device behavior still requires validation.
+All sixteen cabinets reuse the established win/loss economy and **do not change the on-disk save format**. Dedicated automated tests are in `tests/test_minigames.c`, and the existing GitHub Actions workflow continues to produce the `.nds` build. Actual emulator/physical-device behavior still requires validation.
 
 ## DraStic / legacy-emulator boot compatibility (test build)
 

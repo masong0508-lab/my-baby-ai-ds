@@ -118,6 +118,10 @@ jobs:
               a=Path(filename+".nds").read_bytes()
               b=Path(filename+"-ds-only.nds").read_bytes()
               assert b[0x12]==0 and a[0x160:]==b[0x160:], filename
+              if filename.startswith("my-baby-ai-"):
+                  assert a[:12]==b"MY BABY A.I.", (filename, "title")
+                  assert a[0x0c:0x10]==b"MBAI", (filename, "gamecode")
+                  assert b[:12]==a[:12] and b[0x0c:0x10]==a[0x0c:0x10]
               assert crc16(b[:0x15e])==int.from_bytes(b[0x15e:0x160],"little")
               print(filename, "DS-only header verified; ARM program untouched")
           PY
