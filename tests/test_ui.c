@@ -44,6 +44,10 @@ int main(void){
  assert(ui_arcade_page_touch(220,44)==1);
  assert(ui_arcade_page_touch(128,44)==0);
  assert(ui_arcade_page_touch(220,72)==0);
+ assert(ui_album_page_touch(35,43)==-1);
+ assert(ui_album_page_touch(221,43)==1);
+ assert(ui_album_page_touch(120,43)==0);
+ assert(ui_album_page_touch(221,79)==0);
  assert(ui_nursery_touch(25,109)==FEED);
  assert(ui_nursery_touch(25,143)==PLAY);
  assert(ui_nursery_touch(25,140)==-1);
@@ -67,6 +71,9 @@ int main(void){
  ui_draw(&g,&a,2,0,0,0,1,"GO!");
  a.id=0;a.timer=600;a.balance=12;a.hold_frames=45;
  ui_draw(&g,&a,2,0,0,0,1,"BOTTLE");
+ /* No more fake vertical-edge glitch strips on each playfield. */
+ assert(screen[45u*256u+2u]==screen[90u*256u+2u]);
+ assert(screen[45u*256u+253u]==screen[90u*256u+253u]);
  a.id=1;a.timer=140;a.stage=0;a.target=3;
  ui_draw(&g,&a,2,0,0,0,1,"DIAPER");
  a.id=2;a.timer=120;a.target=3;a.round=2;
@@ -230,6 +237,12 @@ int main(void){
   }
   /* Both confirmation stages, both outcome types and save indicators must
    * be visually distinct even though all use the same screen geometry. */
+  ui_draw(&g,&a,6,0,0,0,1,"ALBUM");
+  verify_coverage();
+  hashes[0]=fingerprint();
+  ui_draw(&g,&a,6,1,0,0,1,"ALBUM");
+  verify_coverage();
+  assert(hashes[0]!=fingerprint());
   ui_draw(&g,&a,3,0,0,0,1,"RESET");
   verify_coverage();
   hashes[0]=fingerprint();

@@ -141,3 +141,15 @@ This replaces the earlier overly dense, bootleg-looking pixel menus with Nintend
 - Host ROM compilation and DeSmuME checks must pass before merge. Review actual emulator screenshots for text clipping and hierarchy; a compiled program is not proof of aesthetically successful UI.
 
 Reference pages: https://www.nintendo.com/en-gb/Games/Nintendo-DS/Cooking-Mama-2-270341.html ; https://www.nintendo.com/en-gb/Games/Nintendo-DS/Tamagotchi-Connexion-Corner-Shop-273223.html ; https://www.mobygames.com/game/32910/professor-layton-and-the-curious-village/screenshots/nintendo-ds/301323/
+
+## UI polish follow-up: top-screen title, quiet playfields and real menu smoke tests
+
+- Expanded the DS-native 3D title scene from a small floating portrait on the flat clear color to a closer, grounded baby hero with pastel backdrop, stage and two subtle decorations. A tiny whole-baby vertical bob adds life with no new textures, image files, heap allocations or persistent state.
+- Removed the left and right dotted/dashed edge patterns that appeared as vertical lines in the 16 minigame playfields. All cabinet mechanics and touchscreen hitboxes stay at their original coordinates.
+- Rebuilt the result postcard with 2× readable outcome headings, character portrait, a clear reward, and completion progress. Its continue controls are unchanged.
+- Replaced the wall-of-microtext reset view with large two-step hardware confirmation text while explicitly preserving L+R+X as the only destructive input.
+- Reformatted the touch diagnostic title while preserving the 220×52-pixel uniform touch canvas and its partial-crosshair erase logic.
+- Added real DeSmuME tests that enter the ending scrapbook via the L shoulder button, return, and traverse the arcade's PREV/NEXT touch page controls before completing the existing four-stage Diaper Dash test; capture the album and both arcade page images for review.
+- Layout acceptance checks are in CI alongside the existing host tests, 3D vertex/polygon limits, DS build, BlocksDS packaging, and native stylus smoke test. No claims of physical DS/DraStic verification or quantified FPS gains.
+
+**Second scrapbook layout pass:** The eight keepsakes now occupy two large 2×2 pages, with legible numbered stamps, short titles, and explicit GOOD END / BAD END / NOT FOUND indicators. Both hardware L/R and touchscreen PREV/NEXT change pages, while B/Start/A or the footer returns to the nursery. The page index is temporary UI state and never alters the persistent save schema or the arcade's selected cabinet. Added native framebuffer and actual DeSmuME navigation assertions for the two scrapbook pages.

@@ -218,8 +218,39 @@ def test_actual_game(path: Path, output: Path) -> dict:
         f"Touch FEED did not change needs bars or dialogue UI "
         f"({feed_changed} pixels)"
     )
-    # Exercise real arcade hitboxes and a complete multi-step touchscreen
-    # minigame. A successful press indicator alone is not enough.
+    # Reach the ending album on the actual ARM9 program, then return.
+    # The album was previously only covered by a host-side framebuffer test.
+    emu.input.keypad_add_key(keymask(Keys.KEY_L))
+    frames(emu, 6)
+    emu.input.keypad_rm_key(keymask(Keys.KEY_L))
+    frames(emu, 12)
+    album = picture(emu, output, "game_ending_album")
+    album_diff = difference(after_feed, album, (0, 192 + 30, 256, 192 + 176))
+    assert album_diff > 400, (
+        f"Shoulder shortcut failed to open ending scrapbook ({album_diff})"
+    )
+    stylus_tap(emu, 221, 43)
+    album_second_page = picture(emu, output, "game_album_page_2")
+    album_next_diff = difference(
+        album, album_second_page, (0, 192 + 32, 256, 192 + 171)
+    )
+    assert album_next_diff > 200, (
+        f"Scrapbook NEXT failed to show second four memories ({album_next_diff})"
+    )
+    stylus_tap(emu, 34, 43)
+    album_first_page = picture(emu, output, "game_album_page_1_returned")
+    album_previous_diff = difference(
+        album_second_page, album_first_page, (0, 192 + 32, 256, 192 + 171)
+    )
+    assert album_previous_diff > 200, (
+        f"Scrapbook PREV failed to show first four memories ({album_previous_diff})"
+    )
+    emu.input.keypad_add_key(keymask(Keys.KEY_B))
+    frames(emu, 6)
+    emu.input.keypad_rm_key(keymask(Keys.KEY_B))
+    frames(emu, 12)
+    # Exercise real arcade hitboxes, four-page navigation, and a complete
+    # multi-step touchscreen minigame.
     stylus_tap(emu, 35, 183)  # ARCADE footer on nursery screen
     arcade = picture(emu, output, "game_arcade_via_touch")
     arcade_changed = difference(
@@ -227,6 +258,22 @@ def test_actual_game(path: Path, output: Path) -> dict:
     )
     assert arcade_changed > 500, (
         f"Touch ARCADE footer did not open cabinet grid ({arcade_changed})"
+    )
+    stylus_tap(emu, 220, 44)  # tap NEXT: second page of four cabinets
+    arcade_second_page = picture(emu, output, "game_arcade_page_2")
+    page_changed = difference(
+        arcade, arcade_second_page, (0, 192 + 32, 256, 192 + 172)
+    )
+    assert page_changed > 300, (
+        f"Arcade NEXT page did not replace cabinet cards ({page_changed})"
+    )
+    stylus_tap(emu, 34, 44)  # tap PREV to restore first four cabinets
+    arcade_first_page = picture(emu, output, "game_arcade_page_1_returned")
+    page_returned = difference(
+        arcade_second_page, arcade_first_page, (0, 192 + 32, 256, 192 + 172)
+    )
+    assert page_returned > 300, (
+        f"Arcade PREV failed to restore cabinet cards ({page_returned})"
     )
     stylus_tap(emu, 35, 76)  # Bottle Balance is preselected
     bottle = picture(emu, output, "game_bottle_via_touch")
@@ -242,7 +289,18 @@ def test_actual_game(path: Path, output: Path) -> dict:
     frames(emu, 8)
     stylus_tap(emu, 176, 91)  # select Diaper Dash, large second card
     stylus_tap(emu, 176, 91)  # enter selected cabinet
+    frames(emu, 12)  # capture a settled frame, not an intermediate VRAM write
     diaper = picture(emu, output, "game_diaper_start")
+    # The first frame used to photograph a blank panel while UI drew into
+    # VRAM. Enforce the presence of the actual 2x "DIAPER DASH" heading.
+    title_crop = diaper.crop((14, 192 + 35, 162, 192 + 51))
+    dark_ink = sum(
+        1 for r, g, b in title_crop.get_flattened_data()
+        if r < 185 and g < 160
+    )
+    assert dark_ink > 45, (
+        f"Diaper game heading was missing/partially cleared ({dark_ink} pixels)"
+    )
     diaper_changed = difference(
         arcade, diaper, (0, 192 + 30, 256, 192 + 175)
     )
@@ -295,6 +353,12 @@ def test_actual_game(path: Path, output: Path) -> dict:
         "3D_top_screen_distinct_colors": hero_colors,
         "3D_top_screen_full_height_dark_stripes": len(full_height_stripes),
         "3D_title_top_screen_colors": title_colors,
+        "album_screen_changed_pixels": album_diff,
+        "album_next_page_changed_pixels": album_next_diff,
+        "album_previous_page_changed_pixels": album_previous_diff,
+        "arcade_next_page_changed_pixels": page_changed,
+        "arcade_previous_page_changed_pixels": page_returned,
+        "diaper_heading_ink_pixels": dark_ink,
         "title_to_diagnostic_changed_pixels": new_screen,
         "KEY_TOUCH_status_changed_pixels": status,
         "coordinates_on_press_changed_pixels": xy1,

@@ -10,6 +10,7 @@ int ui_nursery_touch(int x,int y);
 int ui_home_navigation(int x,int y);
 int ui_arcade_select_page(int x,int y,int selected);
 int ui_arcade_page_touch(int x,int y); /* -1 previous, +1 next */
+int ui_album_page_touch(int x,int y); /* -1 previous, +1 next */
 int ui_arcade_touch(int x,int y);
 int ui_diaper_touch(int x,int y); /* legacy button accessibility */
 int ui_rattle_touch(int x,int y);
