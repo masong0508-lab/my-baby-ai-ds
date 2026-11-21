@@ -545,33 +545,53 @@ static void fang(float x,float y,float z,float width,float height,int upper){
  *   clearly silhouetted parasite / thin luminous green ichor.
  * All surfaces are hardware vertices (no extra textures, heap, framebuffer,
  * animation buffers or random particles). This is synthetic alien material. */
+/* During the slow approach, the same nursery walls, window, crib and
+ * floor retain their positions. A continuous lateral dolly creates real
+ * parallax; only the final scare intentionally hard-cuts. Camera arithmetic
+ * is constant-time and never allocates a new scene or framebuffer. */
+EggCamera world_secret_camera(uint32_t frame){
+ EggCamera c;
+ float travel,settle;
+ if(frame<EGG_CRACK_FRAME)frame=EGG_CRACK_FRAME;
+ if(frame>=EGG_SCARE_FRAME){
+  c.x=0.f;c.y=.05f;c.z=2.63f;
+  c.look_x=0.f;c.look_y=.03f;c.look_z=.40f;
+  return c;
+ }
+ travel=(float)(frame-EGG_CRACK_FRAME)/
+        (float)(EGG_SCARE_FRAME-EGG_CRACK_FRAME);
+ /* Hold the wide shot long enough to identify the original nursery;
+  * start a slow continuous lateral track through the shell opening. */
+ settle=travel*travel*(3.f-2.f*travel);
+ c.x=.94f-.90f*settle;
+ c.y=.93f-.83f*settle;
+ c.z=3.46f-2.06f*settle;
+ c.look_x=-.12f+.12f*settle;
+ c.look_y=.035f-.12f*settle;
+ c.look_z=.17f+.25f*settle;
+ return c;
+}
 void world_draw_secret(const Game *s,uint32_t frame,const Roughhouse *r){
  unsigned phase;
  int i;
+ EggCamera camera;
  float opened=0.f;
  if(frame<EGG_CRACK_FRAME){
   world_draw_roughhouse(s,frame,r);
   return;
  }
  phase=frame<EGG_PUSH_FRAME?1u:frame<EGG_SCARE_FRAME?2u:3u;
+ camera=world_secret_camera(frame);
  glMatrixMode(GL_MODELVIEW);glLoadIdentity();
- if(phase==1u){
-  gluLookAt(0,.13f,3.06f,0,-.12f,.12f,0,1,0);
- }else if(phase==2u){
-  float camera=3.06f-
-   (float)(frame-EGG_PUSH_FRAME)*1.74f/
-   (float)(EGG_SCARE_FRAME-EGG_PUSH_FRAME);
-  if(camera<1.32f)camera=1.32f;
-  gluLookAt(0,.07f,camera,0,-.12f,.43f,0,1,0);
- }else{
-  /* No cut into the mesh. A legible face fills the field of view. */
-  gluLookAt(0,.05f,2.63f,0,.03f,.40f,0,1,0);
- }
+ gluLookAt(camera.x,camera.y,camera.z,
+           camera.look_x,camera.look_y,camera.look_z,0,1,0);
  glPolyFmt(POLY_ALPHA(31)|POLY_CULL_NONE);
  frame_vertices=0;frame_polygons=0;
- /* A dark, still photographic set with grounded plinth, no full-height
-  * noisy stripes or distracting colored dots. */
- block(0,0,-2.8f,11,8,.08f,3,5,9);
+ /* Keep the real nursery where the player last saw it: the patterned
+  * rug, window and crib provide persistent parallax behind the synthetic
+  * shell. Final scare still cuts to a stark silhouette for contrast. */
+ if(phase<3u)room();
+ else block(0,0,-2.8f,11,8,.08f,3,5,9);
  if(phase<3u){
   if(phase==2u){
    opened=(float)(frame-EGG_PUSH_FRAME)/
