@@ -15,6 +15,9 @@ typedef struct {
 EggCamera world_secret_camera(uint32_t frame);
 /* 0 normal light, -5 darkest; computed without modifying the nursery mesh. */
 int world_egg_nursery_ambient(uint32_t frame);
+/* Coherent, bounded 3D animation; pure frame samplers for film replay. */
+float world_egg_creature_depth(uint32_t frame);
+float world_egg_embryo_breath(uint32_t frame);
 /* Submitted frame-budget counters (geometry, not measured FPS). */
 unsigned world_vertex_count(void);
 unsigned world_polygon_count(void);

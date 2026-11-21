@@ -98,6 +98,33 @@ int main(void){
   assert(d.z>1.35f && d.z<1.45f);
   assert(e.z>2.5f); /* single intentional jump-scare cut */
  }
+ /* The creature lunges ONCE after the final hard camera cut, then settles
+  * into extremely small movement. All features use the SAME matrix. */
+ {
+  float peak=world_egg_creature_depth(EGG_SCARE_FRAME+7u);
+  float start=world_egg_creature_depth(EGG_SCARE_FRAME);
+  float settle=world_egg_creature_depth(EGG_SCARE_FRAME+15u);
+  unsigned f;
+  assert(world_egg_creature_depth(EGG_SCARE_FRAME-1u)==0.f);
+  assert(start==0.f);
+  assert(peak>.17f&&peak<.18f);
+  assert(settle>.12f&&settle<.13f);
+  for(f=EGG_SCARE_FRAME;f<EGG_TOTAL_FRAMES;f++){
+   float motion=world_egg_creature_depth(f);
+   assert(motion>=0.f&&motion<=.18f);
+   if(f>EGG_SCARE_FRAME+15u)assert(motion>=.127f&&motion<.14f);
+   world_draw_secret(&s,f,&r);
+   assert(world_vertex_count()<=5000);
+   assert(world_polygon_count()<=1850);
+  }
+  for(f=EGG_CRACK_FRAME;f<EGG_SCARE_FRAME;f++){
+   float breath=world_egg_embryo_breath(f);
+   assert(breath>=0.f&&breath<=.016f);
+  }
+  assert(world_egg_embryo_breath(0u)==0.f);
+  assert(world_egg_embryo_breath(32u)>.015f);
+  assert(world_egg_embryo_breath(64u)==0.f);
+ }
  /* Visual glitch tiers must never summon stray cubes or consume extra
   * polygons; corrupted/safe visual modes alter only existing colors. */
  s.corruption=99;s.mood=75;s.safe_visuals=0;

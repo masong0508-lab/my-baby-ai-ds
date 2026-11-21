@@ -585,6 +585,25 @@ EggCamera world_secret_camera(uint32_t frame){
  c.look_z=.17f+.25f*settle;
  return c;
 }
+/* A deliberate single lunge on the surprise cut, followed by subtle
+ * settling/breathing. Rigidly moves the ENTIRE head with its eyes and fangs,
+ * rather than scaling detached facial components or flashing the screen.
+ * Pure bounded frame math allows native regression tests and pause/replay. */
+float world_egg_creature_depth(uint32_t frame){
+ uint32_t elapsed,beat;
+ if(frame<EGG_SCARE_FRAME)return 0.f;
+ elapsed=frame-EGG_SCARE_FRAME;
+ if(elapsed<=7u)return (float)elapsed*.025f;
+ if(elapsed<=15u)return .175f-(float)(elapsed-7u)*.006f;
+ beat=(elapsed-15u)%40u;
+ return .127f+(float)(beat<20u?beat:40u-beat)*.00055f;
+}
+/* A barely perceptible pulse inside the shell; the embryonic eyes and
+ * mouth share one pivot so nothing floats away from the skull. */
+float world_egg_embryo_breath(uint32_t frame){
+ uint32_t phase=frame%64u;
+ return (float)(phase<32u?phase:64u-phase)*.0005f;
+}
 void world_draw_secret(const Game *s,uint32_t frame,const Roughhouse *r){
  unsigned phase;
  int i;
@@ -627,6 +646,8 @@ void world_draw_secret(const Game *s,uint32_t frame,const Roughhouse *r){
   /* A subtle moving silhouette inside makes the chamber feel inhabited. */
   {
    float sway=phase==2u?opened*.032f:0.f;
+   glPushMatrix();
+   glTranslatef(0.f,world_egg_embryo_breath(frame),0.f);
    soft_head(sway,-.17f,.54f,.23f,.42f,.10f,5,11,12);
    /* Two intentionally placed eyes and a dark breathing aperture.
     * Nothing floats outside the chamber's silhouette. */
@@ -635,6 +656,7 @@ void world_draw_secret(const Game *s,uint32_t frame,const Roughhouse *r){
    soft_mark(-.086f+sway,-.066f,.667f,.025f,.042f,3,6,7);
    soft_mark(.099f+sway,-.066f,.667f,.025f,.042f,3,6,7);
    soft_mark(sway,-.36f,.650f,.083f,.15f,0,1,3);
+   glPopMatrix(1);
   }
   /* TWO SEPARATE porcelain halves. The inner seam is open from the
    * first shot and widens during the dolly; both halves have physical
@@ -670,7 +692,10 @@ void world_draw_secret(const Game *s,uint32_t frame,const Roughhouse *r){
   }
  }else{
   /* The reveal is a DESIGNED creature portrait rather than overlapping
-   * random ellipsoids: cranium, socketed eyes, slit pupils, jaw and teeth. */
+   * random ellipsoids: cranium, socketed eyes, slit pupils, jaw and teeth.
+   * A single parent transform lunges ALL facial components together. */
+  glPushMatrix();
+  glTranslatef(0.f,0.f,world_egg_creature_depth(frame));
   soft_head(0,.085f,.34f,1.00f,1.08f,.51f,5,10,12);
   soft_head(0,.68f,.36f,.66f,.29f,.28f,7,15,14);
   /* Raised brow masses visually lock the sockets to the head. */
@@ -711,6 +736,7 @@ void world_draw_secret(const Game *s,uint32_t frame,const Roughhouse *r){
   /* A single reveal glint, never an eye-burning strobe loop. */
   if(frame<EGG_SCARE_FRAME+4u)
    soft_mark(0,.78f,.840f,.65f,.033f,30,31,26);
+  glPopMatrix(1);
  }
  glFlush(0);
 }
