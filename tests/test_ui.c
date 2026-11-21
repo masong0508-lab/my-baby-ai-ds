@@ -67,6 +67,22 @@ int main(void){
  assert(ui_roughhouse_touch(38,110)==0);
  assert(ui_roughhouse_touch(128,182)==3); /* back */
  assert(ui_roughhouse_touch(128,67)==0);
+ /* Footer hitboxes support real and virtual pen even with KEY_A masked.
+  * Center readout acts as a deliberate NEXT, not an accidental SKIP. */
+ assert(ui_egg_cinematic_touch(41,183)==1);
+ assert(ui_egg_cinematic_touch(83,176)==1);
+ assert(ui_egg_cinematic_touch(84,176)==2);
+ assert(ui_egg_cinematic_touch(150,182)==2);
+ assert(ui_egg_cinematic_touch(171,190)==2);
+ assert(ui_egg_cinematic_touch(172,181)==3);
+ assert(ui_egg_cinematic_touch(241,180)==3);
+ assert(ui_egg_cinematic_touch(128,100)==3);
+ assert(ui_egg_cinematic_touch(15,35)==3);
+ assert(ui_egg_cinematic_touch(128,165)==0);
+ assert(ui_egg_cinematic_touch(128,23)==0);
+ assert(ui_egg_cinematic_touch(-1,180)==0);
+ assert(ui_egg_cinematic_touch(256,180)==0);
+ assert(ui_egg_cinematic_touch(100,192)==0);
  assert(ui_arcade_select_page(35,92,0)==0);
  assert(ui_arcade_select_page(173,92,0)==1);
  assert(ui_arcade_select_page(35,145,0)==2);
@@ -112,6 +128,12 @@ int main(void){
   assert(foot!=fingerprint());
   ui_draw(&g,&a,9,EGG_PUSH_FRAME,0,0,1,"EGG");
   verify_coverage();
+  {
+   uint32_t playing=fingerprint();
+   ui_draw(&g,&a,9,EGG_PUSH_FRAME|EGG_FILM_PAUSED_FLAG,0,0,1,"EGG");
+   verify_coverage();
+   assert(playing!=fingerprint()); /* visible PAUSED/RESUME state */
+  }
   ui_draw(&g,&a,9,EGG_SCARE_FRAME,0,0,1,"EGG");
   verify_coverage();
   ui_draw(&g,&a,6,2,0,0,1,"ALBUM");
