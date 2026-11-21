@@ -69,6 +69,20 @@ int main(void){
    assert(world_polygon_count()>=320);
   }
  }
+ /* A coherent 3D camera crosses film phase boundaries without a jump.
+  * Framing retains room landmarks as the lens moves toward the cavity. */
+ {
+  EggCamera a=world_secret_camera(EGG_CRACK_FRAME);
+  EggCamera b=world_secret_camera(EGG_PUSH_FRAME-1u);
+  EggCamera c=world_secret_camera(EGG_PUSH_FRAME);
+  EggCamera d=world_secret_camera(EGG_SCARE_FRAME-1u);
+  EggCamera e=world_secret_camera(EGG_SCARE_FRAME);
+  assert(a.x>.85f && a.y>.85f && a.z>3.4f);
+  assert(a.z>b.z && b.z>c.z && c.z>d.z);
+  assert(b.z-c.z<.05f); /* no teleport at push transition */
+  assert(d.z>1.35f && d.z<1.45f);
+  assert(e.z>2.5f); /* single intentional jump-scare cut */
+ }
  /* Visual glitch tiers must never summon stray cubes or consume extra
   * polygons; corrupted/safe visual modes alter only existing colors. */
  s.corruption=99;s.mood=75;s.safe_visuals=0;
