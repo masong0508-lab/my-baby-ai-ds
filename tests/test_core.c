@@ -64,6 +64,79 @@ static void test_room_quiet_rest(void){
  assert(!game_room_quiet_rest(&s,0,1));
  assert(memcmp(&s,&original,sizeof(s))==0);
 }
+/* End Day is now a real life-sim clock tick. Without care, the baby
+ * becomes hungry, sleepy, less cheerful and slightly restless.
+ * Ending selection is based on the day JUST COMPLETED, so a threshold
+ * crossed overnight applies on the next review rather than causing a
+ * surprise ending one frame after the player presses the button. */
+static void test_day_need_cycle(void){
+ Game s;
+ uint32_t day;
+ int i;
+ game_init(&s);
+ day=s.days;
+ for(i=0;i<6;i++){
+  assert(game_end_day(&s)==END_OK);
+  assert(s.days==day+(uint32_t)i+1u);
+  assert(s.hunger==(uint8_t)(35+8*(i+1)));
+  assert(s.energy==(uint8_t)(75-6*(i+1)));
+  assert(s.mood==(uint8_t)(75-2*(i+1)));
+  assert(s.chaos==(uint8_t)(12+2*(i+1)));
+ }
+ assert(s.hunger>=78&&game_care_hint(&s)==FEED);
+ assert(game_end_day(&s)==END_BOTTLE);
+ assert(s.bad_endings==1u);
+ assert(s.hunger<78); /* recovery ends the feedback loop */
+ assert(s.days==day+7u);
+ /* The existing care actions can reverse the daily deterioration. */
+ s.hunger=75;s.energy=50;
+ (void)game_care(&s,FEED);
+ (void)game_care(&s,NAP);
+ assert(s.hunger==53&&s.energy==75);
+ /* Exhaustive 101x101 boundary matrix: no softlock, negative energy,
+  * overflow or instant ending just because a threshold crossed overnight.
+  * Original bad-ending recovery happens before the new-day depletion. */
+ {
+  int h,e;
+  for(h=0;h<=100;h++)for(e=0;e<=100;e++){
+   int ending,expected_energy;
+   game_init(&s);
+   s.hunger=(uint8_t)h;s.energy=(uint8_t)e;
+   s.mood=50;s.chaos=10;
+   ending=game_end_day(&s);
+   assert(s.days==2u);
+   if(h<78){
+    expected_energy=e>6?e-6:0;
+    assert(ending==END_OK);
+    assert(s.hunger==(uint8_t)(h+8>100?100:h+8));
+    assert(s.energy==(uint8_t)expected_energy);
+    assert(s.mood==48&&s.chaos==12);
+   }else{
+    /* A bad bottle ending reduces hunger then starts a fresh night.
+     * This recovery must survive both zero and full energy values. */
+    expected_energy=(e+30>100?100:e+30)-6;
+    assert(ending==END_BOTTLE);
+    assert(s.hunger==(uint8_t)(h-35+8));
+    assert(s.energy==(uint8_t)expected_energy);
+    assert(s.mood==78&&s.chaos==2);
+   }
+  }
+ }
+ /* Valid save numbers saturate rather than wrap to forbidden day zero.
+  * Exercise the REAL two-slot serializer, not only the in-memory count. */
+ {
+  const char *base="/tmp/my_baby_ai_max_day";
+  Game loaded;
+  assert(save_erase(base));
+  game_init(&s);s.days=UINT32_MAX;
+  assert(game_end_day(&s)==END_OK);
+  assert(s.days==UINT32_MAX);
+  assert(save_write(base,&s));
+  assert(save_load(base,&loaded));
+  assert(loaded.days==UINT32_MAX);
+  assert(save_erase(base));
+ }
+}
 static void test_good_endings(void){
  Game s,loaded;unsigned day, dollars, favors;
  const char *base="/tmp/my_baby_ai_good_endings";
@@ -204,6 +277,13 @@ static void test_save_integrity(void){
  assert(!save_write(base,&s)); /* Do not persist invalid states. */
  s.safe_visuals=0;
  assert(save_write(base,&s));
+ /* An inaccessible save target cannot falsely claim a successful write,
+  * nor advance the in-memory sequence used by the two-slot recovery logic. */
+ {
+  Game original=s;
+  assert(!save_write(NULL,&s));
+  assert(memcmp(&s,&original,sizeof(s))==0);
+ }
  /* Reject appended garbage instead of treating an oversized file as valid. */
  f=fopen("/tmp/my_baby_ai_integrity.0","ab");
  assert(f);assert(fputs("extra",f)>=0);assert(fclose(f)==0);
@@ -216,6 +296,7 @@ int main(void){
  const char *base="/tmp/my_baby_ai_testslot";
  test_room_quiet_rest();
  test_care_hint();
+ test_day_need_cycle();
  test_good_endings();
  test_arcade_economy_recovery();
  test_save_integrity();
