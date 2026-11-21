@@ -601,15 +601,16 @@ static void arcade_wall(uint16_t background){
  }
  solid(0,174,256,2,screen_accent);
 }
+/* A quiet status rule instead of an extra dense row of pixel badges. */
 static void cabinet_chrome(const Arcade *a){
  int i;
  int goal=a->id==4?3:a->id==1||a->id==6||a->id==13||
           a->id==14?4:a->id==9?5:6;
- solid(6,72,244,3,NIGHT);
+ solid(9,73,238,2,GRAY);
  for(i=0;i<goal;i++)
-  solid(11+i*11,73,8,2,i<a->round?LEMON:screen_accent);
+  solid(12+i*12,73,9,2,i<a->round?GREEN:TEAL);
  for(i=0;i<3;i++)
-  solid(214+i*10,73,6,2,i<a->mistakes?ROSE:SILVER);
+  solid(210+i*11,73,8,2,i<a->mistakes?ROSE:SILVER);
 }
 static void bar(int x,int y,int width,int value,int total,uint16_t color){
  int fill=total>0?value*(width-4)/total:0;
@@ -1176,61 +1177,50 @@ void ui_touch_diag_update(void){
  solid(x-6,y-1,13,3,DEEP_PINK);
  diag_cross_x=x;diag_cross_y=y;
 }
+/* The top screen provides the character portrait, while the bottom
+ * presents one unmistakable action and a comfortable 2x wordmark. */
 static void title_screen(const Game *s,int storage_ok,const char *status){
- int i;char count[40];
- solid(0,27,256,149,LILAC);
- for(i=0;i<15;i++){
-  int x=(i*53+17)%247,y=30+(i*41)%132;
-  solid(x,y,4,4,(i&1)?LEMON:SKY);
-  solid(x+1,y-2,2,8,(i&1)?WHITE:PINK);
- }
- panel(11,34,234,137,WHITE,DEEP_PINK);
- capsule(22,39,212,29,NIGHT,PINK);
- insignia(36,49,LEMON);
- label(65,49,"MY BABY A.I.!",WHITE,1,21);
- capsule(90,70,76,49,LEMON,GOLD);
- sprite(108,76,2,spr_baby,18);
- insignia(181,77,PINK);
- snprintf(count,sizeof(count),"DAY %lu",(unsigned long)s->days);
- fit(25,83,count,PURPLE,10);
- snprintf(count,sizeof(count),"$%u",s->dollars);
- fit(25,97,count,TEAL,9);
- fit(171,107,storage_ok?"SAVE READY":"RAM MODE",TEAL,13);
- fit(45,121,"SMALL BABY. BIG CHAOS.",PURPLE,31);
- capsule(48,133,160,27,MINT,TEAL);
- insignia(59,141,GREEN);
- label(94,143,"START",INK,1,10);
- fit(22,162,status,DEEP_PINK,36);
+ (void)s;
+ solid(0,27,256,149,IVORY);
+ panel(9,33,238,137,WHITE,TEAL);
+ capsule(16,39,224,27,LILAC,PURPLE);
+ label(48,45,"MY BABY A.I.!",INK,2,13);
+ capsule(85,70,86,57,MINT,TEAL);
+ sprite(98,72,3,spr_baby,18);
+ fit(18,129,status?status:"WELCOME!",TEAL,36);
+ capsule(19,140,218,28,LEMON,GOLD);
+ label(99,147,"START",INK,2,5);
  foot(PURPLE);
- fit(9,181,"A START   X SAVE   SELECT TOUCH",WHITE,40);
+ fit(10,181,"A START   X SAVE   SELECT TEST",WHITE,39);
+ (void)storage_ok;
 }
+/* Collection stamps carry ONE readable label apiece instead of two
+ * crowded microtext lines. Color indicates discovered good/bad endings. */
 static void ending_album(const Game *s){
  static const char *const names[8]={
   "BOTTLE TAX","BABY CEO","REBOOT","INTERN STRIKE",
   "GRADUATION","ARCADE CHAMP","GLITCH TAMER","SECOND CHANCE"
  };
- int row,col,id,x,y;char tmp[40];
- solid(0,27,256,149,BLUSH);
- solid(0,28,256,3,screen_accent);
- panel(6,32,244,27,WHITE,PURPLE);
- fit(15,40,"ENDING SCRAPBOOK",PURPLE,24);
- snprintf(tmp,sizeof(tmp),"%d/4 GOOD",game_good_ending_count(s));
- fit(185,47,tmp,TEAL,11);
+ int row,col,id,x,y,seen=0;char tmp[40];
+ solid(0,27,256,149,IVORY);
+ for(id=1;id<=8;id++)if(s->ending_mask&(1u<<id))seen++;
+ panel(8,32,240,26,WHITE,PURPLE);
+ fit(17,42,"ENDING SCRAPBOOK",PURPLE,25);
+ snprintf(tmp,sizeof(tmp),"%d / 8",seen);
+ fit(200,42,tmp,TEAL,8);
  for(row=0;row<4;row++)for(col=0;col<2;col++){
   int saved,good;
-  id=1+row+col*4;x=8+col*124;y=64+row*24;
+  id=1+row+col*4;x=9+col*123;y=65+row*25;
   saved=(s->ending_mask&(1u<<id))!=0;good=id>=5;
-  capsule(x,y,116,21,saved?(good?MINT:LEMON):GRAY,
+  capsule(x,y,114,22,saved?(good?MINT:LEMON):GRAY,
           saved?(good?GREEN:GOLD):PURPLE);
-  solid(x+3,y+5,2,10,saved?(good?GREEN:ROSE):SILVER);
   snprintf(tmp,sizeof(tmp),"%02d",id);
-  fit(x+9,y+5,tmp,PURPLE,2);
-  fit(x+27,y+4,saved?names[id-1]:"???",INK,14);
-  fit(x+27,y+13,saved?(good?"GOOD MEMORY":"BAD MEMORY"):
-      "NOT DISCOVERED",saved?TEAL:MUTED,14);
+  fit(x+7,y+8,tmp,PURPLE,2);
+  fit(x+28,y+8,saved?names[id-1]:"UNDISCOVERED",INK,14);
+  solid(x+4,y+4,2,4,saved?TEAL:MUTED);
  }
  foot(PURPLE);
- fit(11,181,"B BACK   YOUR SAVES ARE SAFE",WHITE,39);
+ fit(12,181,"B BACK    MEMORY KEPT",WHITE,35);
 }
 static void reset_screen(int confirm){
  int i;
@@ -1263,7 +1253,6 @@ void ui_draw(const Game *s,const Arcade *a,int view,int selection,
   SKY,PINK,MINT,LEMON,LILAC,AQUA,SKY,LEMON,
   MINT,TEAL,GOLD,PINK,LEMON,GREEN,SKY,AQUA
  };
- char cabinet_title[24];
  const char *screen_title;
  if(!pixels||!s)return;
  /* Full redraw intentionally invalidates the old virtual-cursor backing. */
@@ -1276,11 +1265,8 @@ void ui_draw(const Game *s,const Arcade *a,int view,int selection,
  else if(view==5)screen_accent=PINK;
  else if(view==6)screen_accent=SKY;
  else screen_accent=TEAL;
- if(view==2&&a){
-  snprintf(cabinet_title,sizeof(cabinet_title),"CABINET %02u/16",
-           (unsigned)a->id+1u);
-  screen_title="MINIGAME";
- }else screen_title=view==0?"CARE":view==1?"ARCADE":
+ if(view==2&&a)screen_title="MINIGAME";
+ else screen_title=view==0?"CARE":view==1?"ARCADE":
          view==3?"RESET":view==4?"ENDING":view==5?"WELCOME":
          view==6?"ALBUM":"TOUCH TEST";
  /* Every screen paints its own content band (y=27..175), and header/foot
