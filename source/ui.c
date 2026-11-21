@@ -770,8 +770,8 @@ static void bottle_challenge(const Arcade *a){
  fit(83,115,text,PURPLE,27);
  capsule(8,144,110,29,SKY,BLUE);
  capsule(138,144,110,29,LEMON,GOLD);
- label(29,153,"< LEFT",INK,1,11);
- label(163,153,"RIGHT >",INK,1,11);
+ label(33,151,"LEFT",INK,2,4);
+ label(160,151,"RIGHT",INK,2,5);
  foot(PURPLE);
  snprintf(text,sizeof(text),"SPILLS %u/3   %u SEC",a->mistakes,(a->timer+59)/60);
  fit(19,181,text,WHITE,36);
@@ -799,8 +799,8 @@ static void teether_challenge(const Arcade *a){
   solid(18+i*18,135,8,3,INK);
   solid(171+i*16,137,6,3,PURPLE);
  }
- fit(26,150,"KEEP",INK,9);
- fit(174,150,"SHRED",INK,9);
+ label(29,145,"KEEP",INK,2,4);
+ label(173,145,"SHRED",INK,2,5);
  sparkle(11,96,LEMON);sparkle(236,100,PINK);
  fit(10,77,a->target==3?"REFUND: SAVE IT!":"JUNK BILL: SHRED!",PURPLE,35);
  foot(PURPLE);
@@ -1004,8 +1004,8 @@ static void crawl_challenge(const Arcade *a){
  }
  capsule(10,141,109,31,a->stage==0?LEMON:MINT,TEAL);
  capsule(137,141,109,31,a->stage==2?LEMON:PINK,DEEP_PINK);
- fit(26,153,"JUMP UP",INK,15);
- fit(154,153,"DUCK DOWN",INK,15);
+ label(41,149,"JUMP",INK,2,4);
+ label(168,149,"DUCK",INK,2,4);
  foot(PURPLE);
  fit(10,181,a->target==0?"JUMP OVER THE CRATE!":"DUCK UNDER THE SCANNER!",WHITE,40);
 }
@@ -1102,8 +1102,8 @@ static void audit_challenge(const Arcade *a){
  solid(127,89,2,34,LILAC);
  capsule(11,137,109,35,LEMON,GOLD);
  capsule(136,137,109,35,PINK,DEEP_PINK);
- fit(25,152,"APPROVE",INK,12);
- fit(166,152,"FLAG",INK,9);
+ label(25,147,"APPROVE",INK,2,7);
+ label(161,147,"FLAG",INK,2,4);
  sparkle(12,92,LEMON);sparkle(241,110,PINK);
  foot(PURPLE);
  fit(10,181,"MATCHING TOTALS? APPROVE OR FLAG",WHITE,40);
@@ -1162,7 +1162,7 @@ static void court_challenge(const Arcade *a){
  fit(9,181,"TRACE 1 TO 2 TO 3   (L UP R)",WHITE,40);
 }
 static void ceo_challenge(const Arcade *a){
- static const char *const actions[3]={"INVEST","PLAY","NAP"};
+ static const char *const actions[3]={"BANK","PLAY","NAP"};
  char text[40];int i;
  arcade_wall(BLUSH);
  panel(6,31,244,41,WHITE,PURPLE);
@@ -1181,7 +1181,7 @@ static void ceo_challenge(const Arcade *a){
   int x=13+i*82;
   capsule(x,121,66,51,i==0?MINT:i==1?PINK:SKY,PURPLE);
   solid(x+24,130,18,15,i==0?GOLD:i==1?LEMON:WHITE);
-  fit(x+12,153,actions[i],INK,10);
+  label(x+12,149,actions[i],INK,2,4);
  }
  foot(PURPLE);
  fit(9,181,"BALANCE THE BOOKS AND BABY!",WHITE,40);
