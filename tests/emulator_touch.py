@@ -247,6 +247,18 @@ def test_actual_game(path: Path, output: Path) -> dict:
     assert pose_changed > 35, (
         f"3D nursery baby did not respond visibly to care pose ({pose_changed})"
     )
+    # A signed-angle bug previously flipped the entire infant during NAP,
+    # leaving only a giant upside-down floating face. Require the actual
+    # cyan romper in the LOWER half of the scene at native 256x192.
+    nap_torso = after_nap.crop((78, 84, 176, 179))
+    upright_romper_pixels = sum(
+        1 for r, g, b in nap_torso.get_flattened_data()
+        if g > r + 25 and b > r + 35 and b > 125
+    )
+    assert upright_romper_pixels > 600, (
+        "NAP flipped the body out of frame or detached the head from the "
+        f"upright romper ({upright_romper_pixels} cyan torso pixels)"
+    )
     # Reach the ending album on the actual ARM9 program, then return.
     # The album was previously only covered by a host-side framebuffer test.
     emu.input.keypad_add_key(keymask(Keys.KEY_L))
@@ -614,6 +626,7 @@ def test_actual_game(path: Path, output: Path) -> dict:
         "3D_top_screen_distinct_colors": hero_colors,
         "3D_top_screen_full_height_dark_stripes": len(full_height_stripes),
         "3D_care_pose_changed_pixels": pose_changed,
+        "3D_nap_upright_romper_pixels": upright_romper_pixels,
         "3D_chat_reach_changed_pixels": chat_changed,
         "3D_chat_recovery_changed_pixels": recovered_change,
         "3D_title_top_screen_colors": title_colors,
