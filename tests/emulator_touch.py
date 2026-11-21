@@ -418,7 +418,12 @@ def test_actual_game(path: Path, output: Path) -> dict:
     )
     frames(emu, 95)  # shell cracked open; thick green alien ichor visible
     egg_green = picture(emu, output, "game_egg_green_ichor")
-    top_green = egg_green.crop((0, 0, 256, 192))
+    # Exclude the nursery's *green rug* entirely. The cinematic must have
+    # replaced the room with its dark, isolated egg shot first.
+    assert egg_green.getpixel((20, 20))[2] > egg_green.getpixel((20, 20))[0], (
+        "The alien film did not replace the daytime nursery background"
+    )
+    top_green = egg_green.crop((64, 30, 194, 168))
     green_ichor_pixels = sum(
         1 for r, g, b in top_green.get_flattened_data()
         if g > r + 28 and g > b + 19 and g > 80
@@ -436,6 +441,12 @@ def test_actual_game(path: Path, output: Path) -> dict:
     assert scare_difference > 300, (
         f"Egg film did not show an abrupt visual reveal ({scare_difference})"
     )
+    # The lower screen MUST also be in the reveal phase, not merely a
+    # moving camera still showing the egg (previous false positive).
+    scare_panel_color = egg_scare.getpixel((19, 192 + 94))
+    assert scare_panel_color[0] > scare_panel_color[2] + 35, (
+        f"Jump-scare phase wasn't reached; expected rose cinematic UI, got {scare_panel_color}"
+    )
     frames(emu, 96)  # resolve to the BAD ENDING postcard
     egg_final = picture(emu, output, "game_egg_secret_bad_ending")
     finale_difference = difference(
@@ -443,6 +454,14 @@ def test_actual_game(path: Path, output: Path) -> dict:
     )
     assert finale_difference > 350, (
         f"Alien-egg cutscene did not resolve to final ending ({finale_difference})"
+    )
+    # Do not allow a screenshot labeled "ending" that is still a film
+    # frame; the real bad-ending postcard uses a fresh ending UI layout.
+    finale_header = difference(
+        egg_scare, egg_final, (0, 192 + 3, 256, 192 + 26)
+    )
+    assert finale_header > 75, (
+        f"Egg cutscene did not exit into collectible BAD ENDING ({finale_header})"
     )
     return {
         "3D_top_screen_distinct_colors": hero_colors,
@@ -476,6 +495,7 @@ def test_actual_game(path: Path, output: Path) -> dict:
         "Alien_green_ichor_pixels": green_ichor_pixels,
         "Alien_jump_scare_changed_pixels": scare_difference,
         "Alien_ending_finale_changed_pixels": finale_difference,
+        "Alien_ending_header_changed_pixels": finale_header,
         "result": "PASS",
     }
 
