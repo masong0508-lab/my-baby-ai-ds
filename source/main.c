@@ -43,6 +43,18 @@ static void begin_game(void){
  if(arc.active){view=2;message=arc.id==0?"STEADY THE BOTTLE.":arc.id==1?"CHANGE THAT DIAPER!":arc.id==2?"SORT BABY'S TAX BILLS!":arc.id==3?"DODGE CRIB KART CONES!":arc.id==4?"MEMORIZE THE BEAT!":arc.id==5?"MATCH THE BABY SOCKS!":arc.id==6?"TIME THE QUIET LULLABY!":arc.id==7?"CATCH SIX RATTLES!":arc.id==8?"JUMP OR DUCK AT WORK!":arc.id==9?"DRIFT THE STROLLER!":arc.id==10?"SOLVE CEREAL MATH!":arc.id==11?"STACK THOSE BLOCKS!":arc.id==12?"CHECK THE AUDIT NUMBERS!":arc.id==13?"WATER THE RIGHT FLOWER!":arc.id==14?"TRACE THE EVIDENCE!":arc.id==15?"BALANCE THE DAYCARE!":"SIX ROUNDS. THREE STRIKES.";}
  else message="LOCKED CABINET.";
 }
+/* Scene-specific bitmap refresh. Interactive screens retain fluid redraws;
+  * still screens repaint only when state changes or the clock ticks, avoiding
+  * needless 256x192 VRAM uploads beside the continuously rendered 3D nursery. */
+static unsigned arcade_redraw_period(const Arcade *a){
+ switch(a->id){
+ case 0:case 3:case 6:case 7:case 8:case 9:case 11:return 3u;
+ case 1:case 4:return 4u;
+ case 2:return a->touch_active?4u:60u;
+ case 5:case 10:case 12:case 13:case 14:case 15:return 60u;
+ default:return 4u;
+ }
+}
 static void leave_game(void){
  if(arc.finished){
   message=arc.finished==1?"DIAPER DOLLARS EARNED!":"THE GLITCHES WON.";
@@ -316,7 +328,8 @@ int main(void){
   }
   if(three_d_ready)world_draw(&baby,frame,pose);
   /* Keep bitmap VRAM writes off the hot path unless UI state changed. */
-  if(dirty||previous!=view||(view==2&&frame%((arc.id==0||arc.id==3||arc.id==6||arc.id==7||arc.id==8||arc.id==9||arc.id==11||arc.id==13||arc.id==14)?3u:4u)==0u)){
+  if(dirty||previous!=view||
+     (view==2&&frame%arcade_redraw_period(&arc)==0u)){
    ui_draw(&baby,&arc,view,selected,last_ending,reset_step,storage_ok,message);
    dirty=0;
   }

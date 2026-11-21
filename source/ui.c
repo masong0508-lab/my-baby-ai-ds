@@ -27,6 +27,11 @@
 #define BLUE RGB(9,17,27)
 #define SHADOW RGB(22,19,24)
 #define GRAY RGB(26,25,27)
+#define NIGHT RGB(8,9,18)
+#define SILVER RGB(23,25,30)
+#define ROSE RGB(30,13,22)
+#define AQUA RGB(16,29,29)
+static uint16_t screen_accent=TEAL;
 static volatile uint16_t *pixels;
 /* 11x11 cursor backup: 242 bytes. Restores exactly the underlying UI.
  * No additional framebuffers or per-frame allocations. */
@@ -148,27 +153,43 @@ static void outline(int x,int y,int width,int height,uint16_t color){
  solid(x,y,width,1,color);solid(x,y+height-1,width,1,color);
  solid(x,y,1,height,color);solid(x+width-1,y,1,height,color);
 }
+/* Shared dimensional cards and buttons: no textures, allocations or
+ * secondary buffer. All geometry is clipped by solid() to DS bitmap VRAM. */
 static void panel(int x,int y,int width,int height,uint16_t fill,uint16_t border){
  solid(x+2,y+3,width,height,SHADOW);
  solid(x,y,width,height,fill);
  outline(x,y,width,height,border);
- solid(x+1,y+1,width-2,2,WHITE);
+ if(width>=9&&height>=9){
+  solid(x+2,y+2,width-4,2,WHITE);
+  solid(x+2,y+4,2,height-7,WHITE);
+  solid(x+3,y+height-3,width-6,1,border);
+ }
 }
+/* Draw horizontal font runs as single rectangles. The output matches the
+ * old bit-per-pixel rasterizer while avoiding redundant VRAM write setup. */
 static void char_at(int x,int y,char value,uint16_t color,int scale){
- int i,j,dx,dy;unsigned ch=(unsigned char)value;
+ int i,j;unsigned ch=(unsigned char)value;
  const uint8_t *bits;
  if(ch>='a'&&ch<='z')ch-=32;
- if(ch<32||ch>=128)return;
+ if(ch<32||ch>=128||scale<=0)return;
  bits=glyph[ch-32];
- for(j=0;j<7;j++)for(i=0;i<5;i++)
-  if(bits[j]&(1u<<(4-i)))
-   for(dy=0;dy<scale;dy++)for(dx=0;dx<scale;dx++)
-    solid(x+i*scale+dx,y+j*scale+dy,1,1,color);
+ for(j=0;j<7;j++){
+  uint8_t row=bits[j];
+  i=0;
+  while(i<5){
+   int start;
+   if(!(row&(1u<<(4-i)))){i++;continue;}
+   start=i++;
+   while(i<5&&(row&(1u<<(4-i))))i++;
+   solid(x+start*scale,y+j*scale,(i-start)*scale,scale,color);
+  }
+ }
 }
 static void label(int x,int y,const char *s,uint16_t color,int size,int max){
  int i;
- if(!s)return;
- for(i=0;s[i]&&i<max;i++)char_at(x+i*6*size,y,s[i],color,size);
+ if(!s||size<=0)return;
+ for(i=0;s[i]&&i<max&&x+i*6*size<W;i++)
+  char_at(x+i*6*size,y,s[i],color,size);
 }
 static void fit(int x,int y,const char *s,uint16_t color,int max){
  label(x,y,s,color,1,max);
@@ -178,29 +199,49 @@ static void capsule(int x,int y,int width,int height,uint16_t fill,uint16_t edge
  solid(x,y+3,width,height-6,fill);
  solid(x+3,y,width-6,1,edge);solid(x+3,y+height-1,width-6,1,edge);
  solid(x,y+3,1,height-6,edge);solid(x+width-1,y+3,1,height-6,edge);
+ if(width>=15&&height>=13){
+  solid(x+5,y+2,width-10,2,WHITE);
+  solid(x+5,y+height-3,width-10,1,edge);
+ }
 }
 static void meter(int x,int y,int value,uint16_t fill){
  int v=value;
  if(v<0)v=0;
  if(v>100)v=100;
- solid(x,y,71,8,WHITE);outline(x,y,71,8,INK);
+ solid(x,y,71,8,WHITE);
+ outline(x,y,71,8,PURPLE);
  solid(x+2,y+2,(v*67)/100,4,fill);
+ solid(x+2,y+2,(v*67)/100,1,WHITE);
 }
-static void header(const char *title,const Game *s){
+static void insignia(int x,int y,uint16_t c){
+ solid(x+3,y,3,3,c);
+ solid(x,y+3,9,3,c);
+ solid(x+3,y+6,3,3,c);
+ solid(x+3,y+3,3,3,WHITE);
+}
+static void header(const char *title,const Game *s,int can_save){
  char tmp[32];int x;
- solid(0,0,W,27,PURPLE);
- solid(0,24,W,3,DEEP_PINK);
- for(x=0;x<256;x+=18)solid(x+4,22,9,2,LEMON);
- label(9,7,title,WHITE,1,24);
+ solid(0,0,W,27,NIGHT);
+ solid(0,0,W,2,screen_accent);
+ solid(0,3,3,21,screen_accent);
+ solid(0,24,W,3,screen_accent);
+ for(x=8;x<142;x+=24)solid(x,22,12,1,SILVER);
+ insignia(7,9,screen_accent);
+ label(20,9,title,WHITE,1,21);
+ fit(122,10,can_save?"SD":"RAM",can_save?MINT:PINK,4);
  snprintf(tmp,sizeof(tmp),"DAY %lu",(unsigned long)s->days);
- capsule(191,5,58,17,PINK,WHITE);
- label(196,10,tmp,INK,1,9);
+ capsule(192,4,57,18,LILAC,screen_accent);
+ fit(196,10,tmp,INK,9);
  snprintf(tmp,sizeof(tmp),"$%u",s->dollars);
- fit(153,10,tmp,LEMON,6);
+ fit(151,10,tmp,LEMON,6);
 }
 static void foot(uint16_t color){
- solid(0,176,256,16,color);
- for(int x=0;x<256;x+=16)solid(x,176,8,1,WHITE);
+ solid(0,176,256,16,NIGHT);
+ solid(0,176,256,2,screen_accent);
+ solid(0,178,256,1,SILVER);
+ solid(0,179,3,13,screen_accent);
+ solid(253,179,3,13,screen_accent);
+ (void)color;
 }
 static void icon_bottle(int x,int y){
  solid(x+8,y+3,9,5,BLUE);solid(x+10,y,5,3,WHITE);
@@ -223,57 +264,80 @@ static void icon_nap(int x,int y){
  solid(x+6,y+18,22,3,DEEP_PINK);
  label(x+11,y+1,"Z",PURPLE,1,1);
 }
+/* Nursery dashboard preserves all touch hitboxes while giving the four
+ * actions a single readable visual hierarchy and real progress indicators. */
 static void home(const Game *s,int can_save,const char *message){
- char line[48];
  solid(0,27,W,149,BLUSH);
- solid(0,28,W,2,PINK);
- panel(6,34,244,52,WHITE,LILAC);
- fit(13,41,"HUNGER",PURPLE,7);meter(63,40,s->hunger,DEEP_PINK);
- fit(139,41,"MOOD",PURPLE,4);meter(178,40,s->mood,GREEN);
- fit(13,58,"ENERGY",PURPLE,7);meter(63,57,s->energy,TEAL);
- fit(139,58,"CHAOS",PURPLE,5);meter(178,57,s->chaos,GOLD);
+ solid(0,28,W,3,screen_accent);
+ panel(6,32,244,55,WHITE,PURPLE);
+ fit(13,40,"HUNGER",PURPLE,7);meter(63,39,s->hunger,ROSE);
+ fit(139,40,"MOOD",PURPLE,4);meter(178,39,s->mood,GREEN);
+ fit(13,57,"ENERGY",PURPLE,7);meter(63,56,s->energy,TEAL);
+ fit(139,57,"CHAOS",PURPLE,5);meter(178,56,s->chaos,GOLD);
  fit(13,75,"GLITCH",PURPLE,6);
- solid(66,75,169,5,LILAC);solid(66,75,s->corruption*169/100,5,DEEP_PINK);
- panel(6,90,244,25,IVORY,PINK);
- solid(12,96,5,13,DEEP_PINK);
- label(21,98,message,INK,1,36);
- capsule(7,121,117,23,SKY,BLUE);icon_bottle(9,119);label(43,128,"FEED",INK,1,11);
- capsule(132,121,117,23,LEMON,GOLD);icon_chat(133,119);label(168,128,"CHAT",INK,1,11);
- capsule(7,148,117,23,MINT,GREEN);icon_play(9,146);label(43,155,"PLAY",INK,1,11);
- capsule(132,148,117,23,PINK,DEEP_PINK);icon_nap(133,146);label(168,155,"NAP",INK,1,11);
+ solid(66,75,171,7,GRAY);
+ solid(68,77,(s->corruption*167)/100,3,DEEP_PINK);
+ solid(68,77,(s->corruption*167)/100,1,PINK);
+ for(int i=1;i<5;i++)solid(68+i*33,75,1,7,WHITE);
+ panel(6,89,244,27,IVORY,screen_accent);
+ solid(12,94,4,17,screen_accent);
+ fit(21,98,message,INK,36);
+ capsule(7,121,117,23,SKY,BLUE);
+ solid(14,141,100,1,BLUE);icon_bottle(9,119);label(43,128,"FEED",INK,1,11);
+ capsule(132,121,117,23,LEMON,GOLD);
+ solid(139,141,100,1,GOLD);icon_chat(133,119);label(168,128,"CHAT",INK,1,11);
+ capsule(7,148,117,23,MINT,GREEN);
+ solid(14,168,100,1,GREEN);icon_play(9,146);label(43,155,"PLAY",INK,1,11);
+ capsule(132,148,117,23,PINK,DEEP_PINK);
+ solid(139,168,100,1,DEEP_PINK);icon_nap(133,146);label(168,155,"NAP",INK,1,11);
  foot(PURPLE);
- fit(12,181,"ARCADE",WHITE,14);
- fit(149,181,"END DAY",WHITE,14);
- (void)line;
+ fit(12,181,"START ARCADE",WHITE,19);
+ fit(152,181,"END DAY",WHITE,14);
  (void)can_save;
 }
 static const char *const nick[16]={
  "BOTTLE","DIAPER","TAX","KART","BEATS","SOCKS","NAP","RATTLE",
  "CRAWL","DRIFT","CIPHER","BLOCKS","AUDIT","GARDEN","COURT","CEO"
 };
+/* The 4x4 cabinet bank intentionally keeps its original coordinates:
+ * selecting, purchasing and returning still use the same touch targets. */
 static void arcade_list(const Game *s,int selection){
  int row,col,i,x,y;
  char tmp[40];
- solid(0,27,256,149,BLUSH);
- panel(5,32,246,29,WHITE,LILAC);
- label(12,39,"DIAPER DOLLAR ARCADE",PURPLE,1,27);
- snprintf(tmp,sizeof(tmp),"$%u  FAV %u",s->dollars,s->favors);
- fit(13,51,tmp,DEEP_PINK,26);
+ solid(0,27,256,149,LILAC);
+ solid(0,28,256,3,screen_accent);
+ for(i=0;i<4;i++)solid(0,66+i*25,4,17,screen_accent);
+ panel(5,32,246,29,WHITE,PURPLE);
+ label(12,38,"DIAPER DOLLAR ARCADE",PURPLE,1,27);
+ snprintf(tmp,sizeof(tmp),"$%u   FAVOR %u",s->dollars,s->favors);
+ fit(13,50,tmp,TEAL,28);
  for(row=0;row<4;row++)for(col=0;col<4;col++){
+  uint16_t fill,border;
+  int unlocked;
   i=row*4+col;x=7+col*62;y=65+row*25;
-  capsule(x,y,57,22,i==selection?LEMON:(game_unlocked(s,i)?MINT:GRAY),i==selection?DEEP_PINK:PURPLE);
+  unlocked=game_unlocked(s,i);
+  fill=i==selection?LEMON:(unlocked?IVORY:GRAY);
+  border=i==selection?DEEP_PINK:(unlocked?TEAL:PURPLE);
+  capsule(x,y,57,22,fill,border);
+  if(i==selection){
+   outline(x+1,y+1,55,20,PURPLE);
+   solid(x+2,y+7,3,8,DEEP_PINK);
+  }else solid(x+2,y+7,2,8,unlocked?TEAL:SILVER);
   snprintf(tmp,sizeof(tmp),"%02d",i+1);
-  label(x+4,y+4,tmp,INK,1,2);
-  fit(x+22,y+4,nick[i],INK,5);
-  if(!game_unlocked(s,i))solid(x+44,y+15,7,2,DEEP_PINK);
+  fit(x+7,y+8,tmp,unlocked?PURPLE:MUTED,2);
+  fit(x+23,y+8,nick[i],unlocked?INK:MUTED,5);
+  if(!unlocked){
+   solid(x+43,y+17,9,2,ROSE);
+   solid(x+46,y+13,3,4,ROSE);
+  }
  }
- panel(6,165,244,11,WHITE,PURPLE);
+ panel(6,165,244,11,WHITE,screen_accent);
  snprintf(tmp,sizeof(tmp),"%s",game_names[selection]);
- fit(12,167,tmp,INK,38);
+ fit(12,167,tmp,PURPLE,38);
  foot(PURPLE);
- fit(10,181,"PLAY",WHITE,8);
- fit(98,181,"BUY",WHITE,8);
- fit(191,181,"BACK",WHITE,8);
+ fit(10,181,"A PLAY",WHITE,12);
+ fit(96,181,"X BUY",WHITE,11);
+ fit(184,181,"B BACK",WHITE,12);
 }
 static void arrow(int x,int y,int dir,uint16_t fill){
  int i;
@@ -515,11 +579,29 @@ static void sparkle(int x,int y,uint16_t color){
  solid(x+3,y,2,9,color);solid(x,y+3,9,2,color);
  solid(x+2,y+2,4,4,WHITE);
 }
+/* Every cabinet inherits a unified theatrical frame. Previously each
+ * redraw emitted ~140 dot primitives; this lightweight motif costs fewer
+ * bitmap writes and gives every activity the same visual structure. */
 static void arcade_wall(uint16_t background){
  int x,y;
  solid(0,27,256,149,background);
- for(y=31;y<173;y+=16)for(x=(y&16)?8:0;x<256;x+=16)
-  solid(x,y,2,2,WHITE);
+ solid(0,27,256,3,screen_accent);
+ for(x=10;x<251;x+=32)solid(x,29,15,1,WHITE);
+ for(y=35;y<170;y+=22){
+  solid(2,y,3,13,screen_accent);
+  solid(251,y,3,13,screen_accent);
+ }
+ solid(0,174,256,2,screen_accent);
+}
+static void cabinet_chrome(const Arcade *a){
+ int i;
+ int goal=a->id==4?3:a->id==1||a->id==6||a->id==13||
+          a->id==14?4:a->id==9?5:6;
+ solid(6,72,244,3,NIGHT);
+ for(i=0;i<goal;i++)
+  solid(11+i*11,73,8,2,i<a->round?LEMON:screen_accent);
+ for(i=0;i<3;i++)
+  solid(214+i*10,73,6,2,i<a->mistakes?ROSE:SILVER);
 }
 static void bar(int x,int y,int width,int value,int total,uint16_t color){
  int fill=total>0?value*(width-4)/total:0;
@@ -987,23 +1069,32 @@ static void challenge(const Game *s,const Arcade *a){
  fit(30,181,tmp,WHITE,30);
  (void)s;
 }
+/* The finale is a collectible illustrated postcard rather than a plain
+ * text result, while retaining the same continue-on-any-input behavior. */
 static void finale(const Game *s,int ending){
- int good=game_is_good_ending(ending);char tmp[40];int i;
+ int good=game_is_good_ending(ending),i;char tmp[40];
+ uint16_t edge=good?GREEN:ROSE;
  solid(0,27,256,149,good?MINT:LILAC);
- for(i=0;i<15;i++)solid((i*53)%255,30+(i*29)%136,3,6,(i&1)?LEMON:PINK);
- panel(12,43,232,124,WHITE,good?GREEN:DEEP_PINK);
- capsule(39,49,178,21,good?MINT:PINK,good?GREEN:DEEP_PINK);
- label(69,55,good?"GOOD ENDING!":"BAD ENDING!",INK,1,18);
- for(i=0;i<5;i++){
-  solid(45+i*7,83-i*2,4,4,LEMON);
-  solid(203-i*7,83-i*2,4,4,LEMON);
+ for(i=0;i<18;i++){
+  int x=(i*59+7)%250,y=32+(i*43)%135;
+  solid(x,y,3,6,(i&1)?LEMON:PINK);
+  solid(x-2,y+2,7,2,(i&1)?GOLD:WHITE);
  }
- fit(24,97,game_ending_name(ending),INK,36);
- fit(27,122,good?"+$8 AND +1 FAVOR!":"THE BABY GETS ANOTHER DAY.",PURPLE,36);
- snprintf(tmp,sizeof(tmp),"FOUND %d GOOD ENDINGS",game_good_ending_count(s));
- fit(65,139,tmp,MUTED,29);
+ panel(12,35,232,136,WHITE,edge);
+ capsule(29,41,198,24,good?MINT:PINK,edge);
+ fit(good?77:82,49,good?"GOOD ENDING":"BAD ENDING",INK,20);
+ capsule(81,69,94,47,good?SKY:BLUSH,edge);
+ sprite(108,76,2,spr_baby,18);
+ insignia(40,78,good?GOLD:ROSE);
+ insignia(207,78,good?GOLD:ROSE);
+ fit(22,119,game_ending_name(ending),PURPLE,36);
+ solid(24,132,208,1,good?GREEN:DEEP_PINK);
+ fit(27,137,good?"+$8 AND +1 FAVOR!":"THE BABY GETS ANOTHER DAY",good?GREEN:ROSE,37);
+ snprintf(tmp,sizeof(tmp),"%d / 4 GOOD ENDINGS RECORDED",
+          game_good_ending_count(s));
+ fit(41,153,tmp,MUTED,32);
  foot(PURPLE);
- fit(28,181,"A / B CONTINUE PLAYING",WHITE,30);
+ fit(26,181,"A / B  CONTINUE THE STORY",WHITE,36);
 }
 /* Redraw diagnostic panel once on entry, then update only tiny regions.
  * Repainting 256x192 VRAM every stylus-held frame was tearing/flickering
@@ -1013,18 +1104,23 @@ static int diag_last_raw=-1,diag_last_x=-1,diag_last_y=-1;
 static int diag_cross_x=-1,diag_cross_y=-1;
 static unsigned long diag_last_count=~0ul;
 static void touch_diagnostic(void){
- solid(0,27,256,149,BLUSH);
+ solid(0,27,256,149,SKY);
+ solid(0,27,256,3,screen_accent);
  panel(7,32,242,143,WHITE,PURPLE);
- capsule(14,39,228,21,LILAC,PURPLE);
- fit(27,46,"STYLUS SIGNAL TEST",INK,32);
+ capsule(14,39,228,21,NIGHT,screen_accent);
+ fit(43,46,"STYLUS SIGNAL TEST",WHITE,32);
+ insignia(23,45,screen_accent);
  fit(17,65,"KEY_TOUCH:",PURPLE,14);
  fit(17,79,"X/Y:",PURPLE,5);
  fit(17,93,"TAPS:",PURPLE,5);
+ /* Preserve this uniform BLUSH test canvas: partial crosshair updates
+  * erase only 15x15 tiles and must restore exact underlying pixels. */
  solid(18,108,220,52,BLUSH);
  outline(18,108,220,52,TEAL);
+ solid(20,110,216,2,WHITE);
  fit(27,164,"B / START / SELECT: BACK",MUTED,37);
  foot(PURPLE);
- fit(10,181,"TAP LOWER SCREEN; WATCH SIGNAL",WHITE,39);
+ fit(10,181,"LIVE STYLUS: TOUCH THE CANVAS",WHITE,39);
  diag_last_raw=-1;diag_last_x=-1;diag_last_y=-1;
  diag_cross_x=-1;diag_cross_y=-1;
  diag_last_count=~0ul;
@@ -1074,48 +1170,80 @@ void ui_touch_diag_update(void){
 }
 static void title_screen(const Game *s,int storage_ok,const char *status){
  int i;char count[40];
- solid(0,27,256,149,PINK);
- /* Arcade-era promotional title screen drawn by the DS itself. */
- for(i=0;i<18;i++){
-  int x=(i*59)%247,y=29+(i*47)%135;
-  solid(x,y,5,5,(i&1)?LEMON:SKY);
+ solid(0,27,256,149,LILAC);
+ for(i=0;i<15;i++){
+  int x=(i*53+17)%247,y=30+(i*41)%132;
+  solid(x,y,4,4,(i&1)?LEMON:SKY);
+  solid(x+1,y-2,2,8,(i&1)?WHITE:PINK);
  }
- panel(15,42,226,128,WHITE,DEEP_PINK);
- capsule(28,52,200,37,LILAC,PURPLE);
- label(50,63,"MY BABY A.I.!",INK,1,21);
- capsule(52,103,152,26,MINT,TEAL);
- label(81,112,"START GAME",INK,1,20);
- snprintf(count,sizeof(count),"DAY %lu  $%u",(unsigned long)s->days,s->dollars);
- fit(75,134,count,MUTED,21);
- fit(42,148,storage_ok?"SAVE STORAGE ACTIVE":"X: TRY SAVE STORAGE",TEAL,32);
- fit(33,160,status,DEEP_PINK,36);
- foot(PURPLE);fit(10,181,"START PLAY  SELECT TOUCH TEST",WHITE,39);
+ panel(11,34,234,137,WHITE,DEEP_PINK);
+ capsule(22,39,212,29,NIGHT,PINK);
+ insignia(36,49,LEMON);
+ label(65,49,"MY BABY A.I.!",WHITE,1,21);
+ capsule(90,70,76,49,LEMON,GOLD);
+ sprite(108,76,2,spr_baby,18);
+ insignia(181,77,PINK);
+ snprintf(count,sizeof(count),"DAY %lu",(unsigned long)s->days);
+ fit(25,83,count,PURPLE,10);
+ snprintf(count,sizeof(count),"$%u",s->dollars);
+ fit(25,97,count,TEAL,9);
+ fit(171,107,storage_ok?"SAVE READY":"RAM MODE",TEAL,13);
+ fit(45,121,"SMALL BABY. BIG CHAOS.",PURPLE,31);
+ capsule(48,133,160,27,MINT,TEAL);
+ insignia(59,141,GREEN);
+ label(94,143,"START",INK,1,10);
+ fit(22,162,status,DEEP_PINK,36);
+ foot(PURPLE);
+ fit(9,181,"A START   X SAVE   SELECT TOUCH",WHITE,40);
 }
 static void ending_album(const Game *s){
+ static const char *const names[8]={
+  "BOTTLE TAX","BABY CEO","REBOOT","INTERN STRIKE",
+  "GRADUATION","ARCADE CHAMP","GLITCH TAMER","SECOND CHANCE"
+ };
  int row,col,id,x,y;char tmp[40];
  solid(0,27,256,149,BLUSH);
+ solid(0,28,256,3,screen_accent);
  panel(6,32,244,27,WHITE,PURPLE);
- fit(15,42,"ENDING MEMORY ALBUM",PURPLE,31);
+ fit(15,40,"ENDING SCRAPBOOK",PURPLE,24);
+ snprintf(tmp,sizeof(tmp),"%d/4 GOOD",game_good_ending_count(s));
+ fit(185,47,tmp,TEAL,11);
  for(row=0;row<4;row++)for(col=0;col<2;col++){
+  int saved,good;
   id=1+row+col*4;x=8+col*124;y=64+row*24;
-  capsule(x,y,116,21,(s->ending_mask&(1u<<id))?(id>=5?MINT:LEMON):GRAY,PURPLE);
+  saved=(s->ending_mask&(1u<<id))!=0;good=id>=5;
+  capsule(x,y,116,21,saved?(good?MINT:LEMON):GRAY,
+          saved?(good?GREEN:GOLD):PURPLE);
+  solid(x+3,y+5,2,10,saved?(good?GREEN:ROSE):SILVER);
   snprintf(tmp,sizeof(tmp),"%02d",id);
-  fit(x+5,y+6,tmp,INK,3);
-  fit(x+25,y+6,(s->ending_mask&(1u<<id))?game_ending_name(id):"NOT FOUND",INK,14);
+  fit(x+9,y+5,tmp,PURPLE,2);
+  fit(x+27,y+4,saved?names[id-1]:"???",INK,14);
+  fit(x+27,y+13,saved?(good?"GOOD MEMORY":"BAD MEMORY"):
+      "NOT DISCOVERED",saved?TEAL:MUTED,14);
  }
  foot(PURPLE);
- fit(11,181,"B: BACK  SAVE KEPT",WHITE,32);
+ fit(11,181,"B BACK   YOUR SAVES ARE SAFE",WHITE,39);
 }
 static void reset_screen(int confirm){
+ int i;
  solid(0,27,256,149,LILAC);
- panel(11,37,234,132,IVORY,DEEP_PINK);
- capsule(23,48,210,25,PINK,DEEP_PINK);
- label(48,56,"FACTORY RESET?",INK,1,24);
- fit(27,88,"DELETES THIS GAME SAVE",DEEP_PINK,35);
- fit(34,105,"NO OTHER SD FILES",INK,32);
- fit(24,129,confirm?"HOLD L+R AND PRESS X":"A: REVIEW RESET",PURPLE,38);
- fit(40,147,"B: CANCEL",INK,26);
- foot(PURPLE);fit(38,181,"ONLY IF YOU CHOOSE",WHITE,30);
+ for(i=0;i<7;i++){
+  solid(7+i*36,31,17,3,ROSE);
+  solid(7+i*36,168,17,3,ROSE);
+ }
+ panel(10,35,236,136,WHITE,ROSE);
+ capsule(22,44,212,28,NIGHT,ROSE);
+ insignia(37,54,LEMON);
+ fit(57,54,"FACTORY RESET?",WHITE,27);
+ fit(28,83,"THIS ERASES MY BABY A.I. SAVE",ROSE,37);
+ fit(28,96,"NOT ANY OTHER SD CARD FILES",PURPLE,37);
+ solid(27,110,202,1,ROSE);
+ capsule(26,116,204,25,confirm?PINK:LEMON,ROSE);
+ fit(confirm?35:75,125,confirm?"HOLD L+R, THEN PRESS X":"A  REVIEW RESET",
+     INK,38);
+ fit(70,149,"B  CANCEL / GO BACK",PURPLE,31);
+ foot(PURPLE);
+ fit(35,181,"TWO-STEP CONFIRMATION ONLY",WHITE,36);
 }
 int ui_arcade_navigation(int x,int y){
  if(y<176||y>=192||x<0||x>=256)return 0;
@@ -1123,12 +1251,34 @@ int ui_arcade_navigation(int x,int y){
 }
 void ui_draw(const Game *s,const Arcade *a,int view,int selection,
              int ending,int reset_step,int can_save,const char *message){
+ static const uint16_t accents[16]={
+  SKY,PINK,MINT,LEMON,LILAC,AQUA,SKY,LEMON,
+  MINT,TEAL,GOLD,PINK,LEMON,GREEN,SKY,AQUA
+ };
+ char cabinet_title[24];
+ const char *screen_title;
  if(!pixels||!s)return;
- /* Full UI render overwrites prior cursor pixels; don't restore old
-  * background from a different screen into the newly drawn screen. */
+ /* Full redraw intentionally invalidates the old virtual-cursor backing. */
  cursor_visible=0;
- solid(0,0,256,192,IVORY);
- header(view==0?"MY BABY A.I.!":view==1?"BABY ARCADE":view==2?"MINIGAME":view==3?"SAVE MEMORY":view==4?"ENDING!":view==5?"WELCOME":"MEMORY ALBUM",s);
+ if(view==2&&a&&a->id<16)screen_accent=accents[a->id];
+ else if(view==0)screen_accent=AQUA;
+ else if(view==1)screen_accent=LEMON;
+ else if(view==3)screen_accent=ROSE;
+ else if(view==4)screen_accent=game_is_good_ending(ending)?MINT:ROSE;
+ else if(view==5)screen_accent=PINK;
+ else if(view==6)screen_accent=SKY;
+ else screen_accent=TEAL;
+ if(view==2&&a){
+  snprintf(cabinet_title,sizeof(cabinet_title),"CABINET %02u/16",
+           (unsigned)a->id+1u);
+  screen_title=cabinet_title;
+ }else screen_title=view==0?"MY BABY A.I.!":view==1?"BABY ARCADE":
+         view==3?"SAVE MEMORY":view==4?"ENDING!":view==5?"WELCOME":
+         view==6?"MEMORY ALBUM":"TOUCH TEST";
+ /* Every screen paints its own content band (y=27..175), and header/foot
+  * repaint the other two bands. The previous blanket 256x192 clear was
+  * 49,152 redundant 16-bit VRAM writes on every animation refresh. */
+ header(screen_title,s,can_save);
  switch(view){
  case 0:home(s,can_save,message);break;
  case 1:arcade_list(s,selection);break;
@@ -1149,6 +1299,7 @@ void ui_draw(const Game *s,const Arcade *a,int view,int selection,
         else if(a->id==14)court_challenge(a);
         else if(a->id==15)ceo_challenge(a);
         else challenge(s,a);
+        cabinet_chrome(a);
         break;
  case 3:reset_screen(reset_step);break;
  case 4:finale(s,ending);break;
