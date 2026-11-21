@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include "world.h"
 int main(void){
- Game s;int i;unsigned worst_v=0,worst_p=0;
+ Game s;Roughhouse r;int i;unsigned worst_v=0,worst_p=0;
  game_init(&s);world_init();
  world_draw_title(0);
  assert(world_vertex_count()<=1024);
@@ -23,6 +23,23 @@ int main(void){
   if(world_polygon_count()>worst_p)worst_p=world_polygon_count();
   /* Keep room for expressive meshes after the continuous-hair art pass.
    * The NDS theoretical limits are 6144 vertices and 2048 polygons. */
+  assert(world_vertex_count()<=5000);
+  assert(world_polygon_count()<=1850);
+ }
+ /* Both the new moving doll and the three egg film states MUST fit within
+  * hardware command budgets, with no new framebuffer or geometry spike. */
+ roughhouse_init(&r);
+ assert(roughhouse_strike(&r,ROUGHHOUSE_KICK));
+ for(i=0;i<96;i++){
+  roughhouse_step(&r);
+  world_draw_roughhouse(&s,(uint32_t)i,&r);
+  assert(world_vertex_count()<=5000);
+  assert(world_polygon_count()<=1850);
+ }
+ for(i=0;i<5;i++){
+  static const uint32_t frames[]={0u,EGG_CRACK_FRAME,EGG_PUSH_FRAME,
+                                   EGG_SCARE_FRAME,EGG_HOLD_FRAME};
+  world_draw_secret(&s,frames[i],&r);
   assert(world_vertex_count()<=5000);
   assert(world_polygon_count()<=1850);
  }
