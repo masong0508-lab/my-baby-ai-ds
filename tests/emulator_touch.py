@@ -116,7 +116,7 @@ def test_actual_game(path: Path, output: Path) -> dict:
     # lightweight hardware 3D baby portrait after the bottom title appears.
     title_top = title.crop((0, 0, 256, 192))
     title_top.save(output / "game_title_3d_hero.png")
-    title_colors = len(set(title_top.getdata()))
+    title_colors = len(set(title_top.get_flattened_data()))
     assert title_colors > 20, (
         f"Title top screen remained blank/unrendered ({title_colors} colors)"
     )
@@ -183,7 +183,7 @@ def test_actual_game(path: Path, output: Path) -> dict:
     # touch UI. The last defect was a malformed baby and long vertical lines.
     top = nursery.crop((0, 0, 256, 192))
     top.save(output / "game_nursery_hero_top_screen.png")
-    hero_colors = len(set(top.crop((16, 12, 240, 178)).getdata()))
+    hero_colors = len(set(top.crop((16, 12, 240, 178)).get_flattened_data()))
     assert hero_colors > 20, (
         f"3D nursery render is blank or under-detailed ({hero_colors} colors)"
     )
@@ -284,7 +284,9 @@ def test_actual_game(path: Path, output: Path) -> dict:
     returned = difference(
         diaper, won, (0, 192 + 30, 256, 192 + 175)
     )
-    reward = difference(arcade, won, (150, 192 + 5, 190, 192 + 23))
+    # The redesigned shared header places money in the upper-right pill.
+    # Compare the REAL badge, not the former x=150..190 layout.
+    reward = difference(arcade, won, (208, 192 + 5, 252, 192 + 23))
     assert returned > 500 and reward > 5, (
         f"Four native stylus diaper tasks did not finish and award currency "
         f"(screen={returned}, reward={reward})"
