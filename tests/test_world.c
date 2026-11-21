@@ -69,6 +69,21 @@ int main(void){
    assert(world_polygon_count()>=320);
   }
  }
+ /* The room darkens monotonically during the SAME physical camera move,
+  * with no palette leakage into normal gameplay or the reveal. */
+ {
+  int old_light=world_egg_nursery_ambient(EGG_CRACK_FRAME);
+  unsigned f;
+  assert(old_light==0);
+  for(f=EGG_CRACK_FRAME+1u;f<EGG_SCARE_FRAME;f++){
+   int now=world_egg_nursery_ambient(f);
+   assert(now<=old_light && now>=-5);
+   old_light=now;
+  }
+  assert(old_light==-5);
+  assert(world_egg_nursery_ambient(EGG_SCARE_FRAME)==0);
+  assert(world_egg_nursery_ambient(0u)==0);
+ }
  /* A coherent 3D camera crosses film phase boundaries without a jump.
   * Framing retains room landmarks as the lens moves toward the cavity. */
  {
