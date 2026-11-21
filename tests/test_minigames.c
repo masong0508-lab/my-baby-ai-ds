@@ -298,8 +298,11 @@ static void glitch_gardening(void){
  assert(a.mistakes==1&&a.progress==0);
  for(i=0;i<4;i++){
   int x=46+82*a.target;
-  for(j=0;j<50&&a.active&&a.round==(unsigned)i;j++)
-   game_arcade_garden_touch(&g,&a,1,x,140);
+  for(j=0;j<50&&a.active&&a.round==(unsigned)i;j++){
+   int dirty=game_arcade_garden_touch(&g,&a,1,x,140);
+   if(j==0)assert(!dirty&&a.progress==2);
+   if(j==3)assert(dirty&&a.progress==8);
+  }
   assert(a.round==(unsigned)(i+1));
  }
  assert(a.finished==1&&g.wins==1);
