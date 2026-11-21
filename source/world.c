@@ -432,10 +432,20 @@ void world_draw(const Game *s,uint32_t frame,int activity){
 void world_draw_title(uint32_t frame){
  (void)frame;
  glMatrixMode(GL_MODELVIEW);glLoadIdentity();
- gluLookAt(0.0f,.24f,5.15f,0.0f,-.04f,0.0f,0,1,0);
+ /* Centered, closer hero framing: a cheerful toy-shop portrait rather
+  * than an isolated 80px head floating in a flat gray 3D viewport. */
+ gluLookAt(0.0f,.18f,4.10f,0.0f,-.05f,-.12f,0,1,0);
  glPolyFmt(POLY_ALPHA(31)|POLY_CULL_NONE);
  frame_vertices=0;frame_polygons=0;
- block(0,-.91f,-.85f,2.6f,.20f,1.35f,24,20,24);
+ /* Two-plane matte studio set, entirely ROM-native solid polygons.
+  * Backdrop is BEHIND the portrait, so it cannot hide any facial pieces. */
+ block(0,-.12f,-1.89f,6.8f,4.4f,.08f,21,27,30);
+ block(0,-1.24f,-.68f,6.2f,.16f,2.3f,25,22,29);
+ block(-1.83f,.05f,-1.71f,.27f,2.7f,.12f,28,20,27);
+ block(1.83f,.05f,-1.71f,.27f,2.7f,.12f,27,21,29);
+ wall_sticker(-1.24f,.82f,-1.818f,.39f,.38f,31,26,12);
+ wall_sticker(1.26f,.88f,-1.818f,.35f,.35f,31,22,17);
+ block(0,-.97f,-.84f,2.9f,.20f,1.60f,24,20,24);
  ellipse(0,-.80f,-.23f,.57f,.36f,.39f,23,29,27);
  soft_head(0,.045f,-.18f,.745f,.75f,.53f,31,24,20);
  hair_cap(0,.045f,-.175f,.76f,.77f,.55f,16,11,8);
