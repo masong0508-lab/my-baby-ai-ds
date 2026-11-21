@@ -40,7 +40,7 @@ static void end_day(void){
 }
 static void begin_game(void){
  game_arcade_start(&baby,&arc,selected);
- if(arc.active){view=2;message=arc.id==0?"STEADY THE BOTTLE.":arc.id==1?"CHANGE THAT DIAPER!":arc.id==7?"CATCH SIX RATTLES!":"SIX ROUNDS. THREE STRIKES.";}
+ if(arc.active){view=2;message=arc.id==0?"STEADY THE BOTTLE.":arc.id==1?"CHANGE THAT DIAPER!":arc.id==2?"SORT BABY'S TAX BILLS!":arc.id==4?"MEMORIZE THE BEAT!":arc.id==7?"CATCH SIX RATTLES!":"SIX ROUNDS. THREE STRIKES.";}
  else message="LOCKED CABINET.";
 }
 static void leave_game(void){
@@ -183,6 +183,23 @@ int main(void){
        else if(down&KEY_DOWN)direction=2;
        else if(down&KEY_LEFT)direction=3;
       }
+     }else if(arc.id==2){
+      int pen_down=vpen.enabled?((held&KEY_A)!=0):raw_touch;
+      int pen_x=vpen.enabled?vpen.x:touch.px;
+      int pen_y=vpen.enabled?vpen.y:touch.py;
+      if(game_arcade_teether_touch(&baby,&arc,pen_down,pen_x,pen_y))
+       dirty=1;
+      /* Accessible fallback for controllers without native stylus. */
+      if(!vpen.enabled){
+       if(down&KEY_LEFT)direction=3;
+       else if(down&KEY_RIGHT)direction=1;
+      }
+     }else if(arc.id==4){
+      if(down&KEY_UP)direction=0;
+      else if(down&KEY_RIGHT)direction=1;
+      else if(down&KEY_DOWN)direction=2;
+      else if(down&KEY_LEFT)direction=3;
+      else if(tap)direction=ui_beatbox_touch(touch.px,touch.py);
      }else if(arc.id==7){
       if(down&KEY_LEFT)direction=0;
       else if(down&KEY_DOWN)direction=1;
