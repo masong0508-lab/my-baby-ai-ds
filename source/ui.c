@@ -1363,7 +1363,10 @@ static void roughhouse_screen(int encoded){
  fit(12,181,"A USE   L/R TOOL   B BACK",WHITE,40);
 }
 static void egg_scene_screen(int frame){
- int phase=frame<85?0:frame<210?1:frame<366?2:3;
+ int phase=frame<(int)EGG_CRACK_FRAME?0:
+           frame<(int)EGG_PUSH_FRAME?1:
+           frame<(int)EGG_SCARE_FRAME?2:3;
+ int i;
  solid(0,27,256,149,NIGHT);
  panel(10,35,236,130,phase==3?ROSE:PURPLE,phase==3?PINK:LILAC);
  capsule(21,45,214,28,NIGHT,ROSE);
@@ -1383,7 +1386,10 @@ static void egg_scene_screen(int frame){
   fit(36,88,"THE EGG REMEMBERS YOU",WHITE,35);
   fit(68,110,"IT WAS LISTENING",LEMON,28);
  }
- solid(30,136,196,3,phase==3?PINK:TEAL);
+ /* Four discreet signal segments give the player a cinematic heartbeat.
+  * They also let emulator regression tests identify ACTUAL film phases
+  * rather than incorrectly timestamping frames at variable DS FPS. */
+ for(i=0;i<4;i++)solid(27+i*52,136,45,3,i<=phase?LEMON:GRAY);
  foot(PURPLE);
  fit(23,181,"B SKIP  /  A CONTINUE",WHITE,39);
 }
