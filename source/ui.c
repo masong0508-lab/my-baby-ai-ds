@@ -1279,6 +1279,24 @@ static void challenge(const Game *s,const Arcade *a){
 /* The ending is an actual keepsake: clean character art, one dominant
  * outcome label, one sentence of reward and a single continue affordance. */
 static void finale(const Game *s,int ending){
+ if(ending==END_EGG){
+  solid(0,27,256,149,NIGHT);
+  panel(10,34,236,138,PURPLE,ROSE);
+  capsule(23,42,210,27,NIGHT,ROSE);
+  label(63,49,"BAD ENDING",WHITE,2,10);
+  /* Original alien-egg seal: a synthetic casing, not human gore. */
+  capsule(94,75,68,44,MINT,TEAL);
+  capsule(108,78,42,38,NIGHT,PURPLE);
+  solid(123,88,8,22,LEMON);
+  solid(114,94,30,5,ROSE);
+  fit(28,124,"THE NURSERY IS AN INCUBATOR",WHITE,36);
+  fit(49,140,"FILE 09: UNSEALED",LEMON,28);
+  fit(36,155,"MEMORY SAVED. BABY RETURNS.",PINK,36);
+  foot(PURPLE);
+  fit(15,182,"A CONTINUE      B CONTINUE",WHITE,37);
+  (void)s;
+  return;
+ }
  int good=game_is_good_ending(ending);
  uint16_t edge=good?GREEN:ROSE;
  char count[36];
@@ -1297,6 +1315,52 @@ static void finale(const Game *s,int ending){
  fit(24,154,count,MUTED,28);
  foot(PURPLE);
  fit(15,182,"A CONTINUE      B CONTINUE",WHITE,37);
+}
+/* Synthetic-only slapstick lab: no realistic injury or gore, just
+ * a toy shell that rebounds and develops an ominous stress signal. */
+static void roughhouse_screen(int charge){
+ int filled=charge*214/(int)ROUGHHOUSE_CRACK_CHARGE;
+ if(filled>214)filled=214;
+ solid(0,27,256,149,LILAC);
+ panel(9,32,238,45,WHITE,ROSE);
+ label(18,38,"PRANK LAB",PURPLE,2,9);
+ fit(18,57,"ARTIFICIAL SHELL / TEST SUBJECT",MUTED,38);
+ capsule(12,82,232,40,IVORY,ROSE);
+ sprite(105,83,2,spr_baby,18);
+ fit(16,125,"SHELL STRESS",PURPLE,18);
+ solid(17,135,222,7,GRAY);
+ solid(21,137,filled,3,ROSE);
+ /* All weapons are imaginary comic-book buttons, not realistic violence.
+  * Player can back out at any time; the arcade/care controls are untouched. */
+ capsule(9,146,115,28,PINK,ROSE);
+ label(36,152,"SLAP",INK,2,4);
+ capsule(132,146,115,28,LEMON,GOLD);
+ label(160,152,"KICK",INK,2,4);
+ foot(PURPLE);
+ fit(11,181,"A SLAP   X KICK   B BACK",WHITE,40);
+}
+static void egg_scene_screen(int frame){
+ int phase=frame<85?0:frame<210?1:frame<366?2:3;
+ solid(0,27,256,149,NIGHT);
+ panel(10,35,236,130,phase==3?ROSE:PURPLE,phase==3?PINK:LILAC);
+ capsule(21,45,214,28,NIGHT,ROSE);
+ label(phase==3?43:55,52,phase==3?"IT CAN SEE YOU":"NO SIGNAL",WHITE,2,14);
+ if(phase==0){
+  fit(34,88,"THE SHELL WAS NEVER SKIN.",WHITE,35);
+  fit(52,110,"INTERNAL SEAL: FAIL",LEMON,27);
+ }else if(phase==1){
+  fit(37,88,"INCUBATION CHAMBER 09",WHITE,35);
+  fit(67,110,"SOMETHING MOVED",PINK,25);
+ }else if(phase==2){
+  fit(49,88,"SLOWLY LOOK INSIDE",WHITE,29);
+  fit(66,110,"DO NOT BLINK",LEMON,24);
+ }else{
+  fit(36,88,"THE EGG REMEMBERS YOU",WHITE,35);
+  fit(68,110,"IT WAS LISTENING",LEMON,28);
+ }
+ solid(30,136,196,3,phase==3?PINK:TEAL);
+ foot(PURPLE);
+ fit(23,181,"B SKIP  /  A CONTINUE",WHITE,39);
 }
 /* Redraw diagnostic panel once on entry, then update only tiny regions.
  * Repainting 256x192 VRAM every stylus-held frame was tearing/flickering
