@@ -1206,7 +1206,7 @@ static void court_challenge(const Arcade *a){
  fit(9,181,"TRACE 1 TO 2 TO 3   (L UP R)",WHITE,40);
 }
 static void ceo_challenge(const Arcade *a){
- static const char *const actions[3]={"BANK","PLAY","NAP"};
+ static const char *const actions[3]={"FUND","PLAY","NAP"};
  char text[40];int i;
  arcade_wall(BLUSH);
  panel(6,31,244,41,WHITE,PURPLE);
