@@ -76,6 +76,25 @@ static void side_wall_mark(float x,float y,float z,float sz,float sy,
  glEnd();
  frame_vertices+=4;frame_polygons++;
 }
+/* DS-native four-corner lighting. The hardware interpolates vertex
+ * colors across these TWO quads: a warm lamp-side wall, a colder moonlit
+ * upper-right wall and floor. Much richer depth than one beige plane,
+ * without lightmaps, alpha buffers, textures or per-pixel CPU drawing. */
+static void nursery_light_planes(void){
+ glBegin(GL_QUADS);
+ color(30,24,21,0);glVertex3f(-3.29f,-1.07f,-3.131f);
+ color(27,24,26,0);glVertex3f(3.30f,-1.07f,-3.131f);
+ color(22,19,27,0);glVertex3f(3.30f,2.53f,-3.131f);
+ color(26,19,25,0);glVertex3f(-3.29f,2.53f,-3.131f);
+ glEnd();
+ glBegin(GL_QUADS);
+ color(26,21,18,0);glVertex3f(-3.28f,-1.237f,3.28f);
+ color(25,23,23,0);glVertex3f(3.28f,-1.237f,3.28f);
+ color(24,22,25,0);glVertex3f(3.28f,-1.237f,-3.09f);
+ color(29,23,20,0);glVertex3f(-3.28f,-1.237f,-3.09f);
+ glEnd();
+ frame_vertices+=8;frame_polygons+=2;
+}
 /* A rail has three visible faces rather than all six box faces. */
 static void crib_rail(float x,float y,float z,float width,float height,
                       float depth,int r,int g,int b){
@@ -223,6 +242,7 @@ static void room(void){
  block(0,-1.37,0,7.0,.25,7.0,24,19,14);
  block(0,.67,-3.23,7.0,4.05,.18,29,28,25);
  block(-3.45,.67,0,.18,4.05,7.0,25,27,25);
+ nursery_light_planes();
  block(0,-1.15,-3.12,6.9,.16,.12,24,22,19);
  block(-3.32,-1.15,0,.12,.16,6.9,24,22,19);
  /* Wainscot panel on the large side wall; a few restrained surfaces give
