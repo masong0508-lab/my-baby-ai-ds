@@ -130,18 +130,22 @@ int main(void){
  /* The creature lunges ONCE after the final hard camera cut, then settles
   * into extremely small movement. All features use the SAME matrix. */
  {
-  float peak=world_egg_creature_depth(EGG_SCARE_FRAME+7u);
+  float peak=world_egg_creature_depth(EGG_SCARE_FRAME+9u);
   float start=world_egg_creature_depth(EGG_SCARE_FRAME);
-  float settle=world_egg_creature_depth(EGG_SCARE_FRAME+15u);
+  float settle=world_egg_creature_depth(EGG_SCARE_FRAME+22u);
   unsigned f;
   assert(world_egg_creature_depth(EGG_SCARE_FRAME-1u)==0.f);
   assert(start==0.f);
-  assert(peak>.17f&&peak<.18f);
-  assert(settle>.12f&&settle<.13f);
+  assert(peak>.30f&&peak<.32f);
+  assert(settle>.20f&&settle<.22f);
   for(f=EGG_SCARE_FRAME;f<EGG_TOTAL_FRAMES;f++){
    float motion=world_egg_creature_depth(f);
-   assert(motion>=0.f&&motion<=.18f);
-   if(f>EGG_SCARE_FRAME+15u)assert(motion>=.127f&&motion<.14f);
+   assert(motion>=0.f&&motion<=.32f);
+   if(f>EGG_SCARE_FRAME+22u)assert(motion>=.212f&&motion<.222f);
+   if(f>EGG_SCARE_FRAME){
+    float prev=world_egg_creature_depth(f-1u);
+    assert(motion-prev<.036f && prev-motion<.009f);
+   }
    world_draw_secret(&s,f,&r);
    assert(world_vertex_count()<=5000);
    assert(world_polygon_count()<=1850);
