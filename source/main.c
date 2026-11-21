@@ -349,6 +349,9 @@ int main(void){
    }
   }else if(view==4){
    if((down&(KEY_A|KEY_B|KEY_START))||tap){
+    /* Don't strand the toy selectors after secret #9. Ragdoll state is
+     * deliberately transient; unlocked endings stay in persistent Game. */
+    if(last_ending==END_EGG)roughhouse_init(&rag);
     view=0;message="BACK TO DAYCARE. SAME SAVE!";dirty=1;
    }
   }else if(view==5){
