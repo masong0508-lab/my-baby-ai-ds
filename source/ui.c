@@ -835,6 +835,7 @@ static void cabinet_thumb(int id,int x,int y){
  * unlock state never drift apart. Page controls sit above the cards. */
 static void arcade_list(const Game *s,int selection){
  int slot,id,x,y,opened,page=selection/4;
+ unsigned need_wins,need_dollars,need_favors;
  char tmp[40];
  solid(0,27,256,149,IVORY);
  capsule(8,32,55,23,SKY,TEAL);
@@ -842,7 +843,17 @@ static void arcade_list(const Game *s,int selection){
  capsule(193,32,55,23,SKY,TEAL);
  fit(203,40,"NEXT >",INK,8);
  snprintf(tmp,sizeof(tmp),"PAGE %d / 4",page+1);
- fit(89,39,tmp,PURPLE,13);
+ fit(89,34,tmp,PURPLE,13);
+ /* Two readable lines share the existing empty strip between arrows.
+  * Locked cabinets now explain the precise gameplay goal without opening
+  * another menu or allocating a string/buffer every frame. */
+ if(!game_unlocked(s,selection)&&
+    game_unlock_requirements(selection,&need_wins,
+                             &need_dollars,&need_favors)){
+  snprintf(tmp,sizeof(tmp),"W%u  $%u  F%u",
+           need_wins,need_dollars,need_favors);
+  fit(75,46,tmp,ROSE,23);
+ }else fit(80,46,"READY TO PLAY",TEAL,23);
  snprintf(tmp,sizeof(tmp),"%s",game_names[selection]);
  fit(12,60,tmp,PURPLE,38);
  for(slot=0;slot<4;slot++){
