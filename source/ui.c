@@ -1640,6 +1640,7 @@ static void egg_scene_screen(int selection){
 static int diag_last_raw=-1,diag_last_x=-1,diag_last_y=-1;
 static int diag_cross_x=-1,diag_cross_y=-1;
 static unsigned long diag_last_count=~0ul;
+static unsigned diag_last_vertices=~0u,diag_last_polygons=~0u;
 /* Clear touchscreen diagnostics, preserving the untouched 220x52
  * BLUSH test canvas: crosshair erasure relies on that solid background. */
 static void touch_diagnostic(void){
@@ -1652,14 +1653,18 @@ static void touch_diagnostic(void){
  fit(17,93,"TAPS:",PURPLE,5);
  solid(18,108,220,52,BLUSH);
  outline(18,108,220,52,TEAL);
- fit(23,164,"B / START / SELECT: BACK",MUTED,35);
+ /* Lightweight geometry submission diagnostic. No expensive FPS guess:
+  * values reflect exactly what the top-screen 3D renderer submitted. */
+ fit(19,164,"VERTS:",MUTED,6);
+ fit(135,164,"POLYS:",MUTED,6);
  foot(PURPLE);
- fit(10,181,"DRAW IN THE TOUCH AREA",WHITE,39);
+ fit(10,181,"DRAW AREA   B/START/SELECT BACK",WHITE,39);
  diag_last_raw=-1;diag_last_x=-1;diag_last_y=-1;
  diag_cross_x=-1;diag_cross_y=-1;
  diag_last_count=~0ul;
+ diag_last_vertices=~0u;diag_last_polygons=~0u;
 }
-void ui_touch_diag_update(void){
+void ui_touch_diag_update(unsigned vertices,unsigned polygons){
  char tmp[36];
  int x,y;
  if(!pixels)return;
@@ -1681,6 +1686,21 @@ void ui_touch_diag_update(void){
   snprintf(tmp,sizeof(tmp),"%lu",test_touch_count);
   fit(68,93,tmp,INK,24);
   diag_last_count=test_touch_count;
+ }
+ /* Update only these two small status regions when geometry totals
+  * actually change. Values beyond the portable submission budget are
+  * visibly red instead of silently declaring the scene healthy. */
+ if(diag_last_vertices!=vertices){
+  solid(59,163,65,11,WHITE);
+  snprintf(tmp,sizeof(tmp),"%u",vertices);
+  fit(62,164,tmp,vertices>5000u?ROSE:TEAL,8);
+  diag_last_vertices=vertices;
+ }
+ if(diag_last_polygons!=polygons){
+  solid(173,163,65,11,WHITE);
+  snprintf(tmp,sizeof(tmp),"%u",polygons);
+  fit(176,164,tmp,polygons>1850u?ROSE:TEAL,8);
+  diag_last_polygons=polygons;
  }
  /* Only erase/draw a 13x13 patch within the little touch canvas. */
  if(!test_touch_down||test_touch_x<0||test_touch_y<0||
