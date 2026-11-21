@@ -55,7 +55,7 @@ static void end_day(void){
 static void begin_game(void){
  game_arcade_start(&baby,&arc,selected);
  if(arc.active){view=2;message=arc.id==0?"STEADY THE BOTTLE.":arc.id==1?"CHANGE THAT DIAPER!":arc.id==2?"SORT BABY'S TAX BILLS!":arc.id==3?"DODGE CRIB KART CONES!":arc.id==4?"MEMORIZE THE BEAT!":arc.id==5?"MATCH THE BABY SOCKS!":arc.id==6?"TIME THE QUIET LULLABY!":arc.id==7?"CATCH SIX RATTLES!":arc.id==8?"JUMP OR DUCK AT WORK!":arc.id==9?"DRIFT THE STROLLER!":arc.id==10?"SOLVE CEREAL MATH!":arc.id==11?"STACK THOSE BLOCKS!":arc.id==12?"CHECK THE AUDIT NUMBERS!":arc.id==13?"WATER THE RIGHT FLOWER!":arc.id==14?"TRACE THE EVIDENCE!":arc.id==15?"BALANCE THE DAYCARE!":"SIX ROUNDS. THREE STRIKES.";}
- else message="LOCKED CABINET.";
+ else message="LOCKED: CHECK GOALS ABOVE.";
 }
 /* Scene-specific bitmap refresh. Interactive screens retain fluid redraws;
   * still screens repaint only when state changes or the clock ticks, avoiding
