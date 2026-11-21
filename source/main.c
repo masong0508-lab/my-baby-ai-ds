@@ -11,6 +11,7 @@
 #include "touch_input.h"
 #include "virtual_stylus.h"
 #include "roughhouse.h"
+#include "sfx.h"
 #if defined(__BLOCKSDS__)
 /* BlocksDS main loop convention: traditional foreground VBlank loop. */
 #define GAME_LOOP_ACTIVE() 1
@@ -85,7 +86,11 @@ int main(void){
  }
  /* Always show a visible title before touching the filesystem or heavy 3D.
   * Some older emulators hang during their emulated DLDI/FAT setup. */
- ui_draw(&baby,&arc,view,view==6?album_page:view==8?((int)rag.charge|(toy_tool==ROUGHHOUSE_KICK?32:0)|((int)rag.hits<<6)):view==9?(int)egg_frame:selected,last_ending,reset_step,storage_ok,message);
+ ui_draw(&baby,&arc,view,view==6?album_page:view==8?((int)rag.charge|(toy_tool==ROUGHHOUSE_KICK?32:0)|((int)rag.hits<<6)|
+           (sfx_is_enabled()?(1<<16):0)):view==9?(int)egg_frame:selected,last_ending,reset_step,storage_ok,message);
+ /* Sound starts only AFTER the title is visibly present. Small hardware
+  * PSG cues are synthesized at the ARM9 game tick; no sample bank/heap. */
+ sfx_init();
  /* Stay in RAM-only mode until the player explicitly requests save access.
   * New and old .nds game saves remain compatible when FAT is available. */
  while(GAME_LOOP_ACTIVE()){
@@ -308,7 +313,12 @@ int main(void){
   }else if(view==8){
    int hit=tap?ui_roughhouse_touch(touch.px,touch.py):0;
    if((down&(KEY_B|KEY_START))||hit==3){
+    sfx_stop();
     view=0;message="BACK TO THE NURSERY.";dirty=1;
+   }else if(down&KEY_Y){
+    sfx_set_enabled(!sfx_is_enabled());
+    message=sfx_is_enabled()?"TOYBOX AUDIO ON.":"TOYBOX AUDIO MUTED.";
+    dirty=1;
    }else if(hit==ROUGHHOUSE_SLAP||(down&KEY_L)){
     toy_tool=ROUGHHOUSE_SLAP;dirty=1;
    }else if(hit==ROUGHHOUSE_KICK||(down&(KEY_R|KEY_X))){
@@ -319,12 +329,14 @@ int main(void){
     int sx=hit==4?touch.px:128;
     int sy=hit==4?touch.py:110;
     if(roughhouse_strike_at(&rag,toy_tool,sx,sy)){
+     sfx_play(toy_tool==ROUGHHOUSE_KICK?SFX_KICK:SFX_SLAP);
      pose=0;
      message=toy_tool==ROUGHHOUSE_KICK?
              "BOING! THE SYNTHETIC SHELL BOUNCES.":
              "BONK! THAT WAS AN UNNATURAL SOUND.";
      dirty=1;
      if(roughhouse_cracked(&rag)){
+      sfx_play(SFX_CRACK);
       (void)game_secret_egg(&baby);
       persist();
       view=9;egg_frame=0;last_ending=END_EGG;
@@ -334,12 +346,21 @@ int main(void){
    }
   }else if(view==9){
    if(down&(KEY_B|KEY_START)){
+    sfx_stop();
     view=4;last_ending=END_EGG;dirty=1;
    }else{
     egg_frame++;
+    if(egg_frame==EGG_CRACK_FRAME)sfx_play(SFX_UNSEAL);
+    else if(egg_frame==EGG_SCARE_FRAME)sfx_play(SFX_SCARE);
+    else if(egg_frame==EGG_PUSH_FRAME||
+            (egg_frame>EGG_PUSH_FRAME&&
+             egg_frame<EGG_SCARE_FRAME-24u&&
+             (egg_frame-EGG_PUSH_FRAME)%38u==0u))
+     sfx_play(SFX_PULSE);
     if(egg_frame==EGG_CRACK_FRAME||egg_frame==EGG_PUSH_FRAME||
        egg_frame==EGG_SCARE_FRAME||egg_frame==EGG_HOLD_FRAME)dirty=1;
     if(egg_frame>=EGG_TOTAL_FRAMES){
+     sfx_stop();
      view=4;last_ending=END_EGG;dirty=1;
     }
    }
@@ -411,7 +432,13 @@ int main(void){
   if(!three_d_ready&&frame>=16u){
    videoSetMode(MODE_0_3D);world_init();three_d_ready=1;
   }
-  if(view==8||(view==0&&rag.moving))roughhouse_step(&rag);
+  if(view==8||(view==0&&rag.moving)){
+   unsigned old_rebounds=rag.rebound_count;
+   roughhouse_step(&rag);
+   if(view==8&&rag.rebound_count!=old_rebounds)
+    sfx_play(SFX_BOUNCE);
+  }
+  sfx_tick();
   if(three_d_ready){
    if(view==5||view==7)world_draw_title(frame);
    else if(view==9)world_draw_secret(&baby,egg_frame,&rag);
@@ -422,7 +449,8 @@ int main(void){
   /* Keep bitmap VRAM writes off the hot path unless UI state changed. */
   if(dirty||previous!=view||
      (view==2&&frame%arcade_redraw_period(&arc)==0u)){
-   ui_draw(&baby,&arc,view,view==6?album_page:view==8?((int)rag.charge|(toy_tool==ROUGHHOUSE_KICK?32:0)|((int)rag.hits<<6)):view==9?(int)egg_frame:selected,last_ending,reset_step,storage_ok,message);
+   ui_draw(&baby,&arc,view,view==6?album_page:view==8?((int)rag.charge|(toy_tool==ROUGHHOUSE_KICK?32:0)|((int)rag.hits<<6)|
+           (sfx_is_enabled()?(1<<16):0)):view==9?(int)egg_frame:selected,last_ending,reset_step,storage_ok,message);
    dirty=0;
   }
   if(view==7)ui_touch_diag_update();

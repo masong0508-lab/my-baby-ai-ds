@@ -221,3 +221,16 @@ The continuing pass upgrades the existing **optional** Talking-Tom-style TOYBOX;
 - **Testing:** `tests/test_roughhouse.c` proves touch-left/right impulses differ, out-of-range taps clamp, collision rebound reflects with a transient pulse, and all simulated results stay deterministic. `tests/test_world.c` enforces the exact 2-quad / 5-quad stress details and 5,000-vertex / 1,850-polygon ceilings; `tests/test_ui.c` checks the reduced doll-only touch target, 2 escalating stress states, and full native framebuffer coverage. The full DS, BlocksDS and real DeSmuME integration workflows must all pass before merging.
 
 This is additional *game code*, not a picture-only concept, and does not assert physical DS or DraStic performance measurements without those device runs.
+
+## Toybox articulation, segmented egg and PSG audio
+
+This pass continues from the merged PR #26's fully playable synthetic toy and secret egg.
+
+- **Joint-coherent doll articulation:** The existing baby mesh pivots its entire face/hair/eyes/mouth around a connected neck reference (maximum ±16 degrees) as a secondary response to angular momentum. Sleeves, forearms and hands shift in coordinated pairs, with a small compression response during impacts. The main rigid-body transform remains the existing deterministic, bounded fixed-point simulation.
+- **Split egg structure:** The cinematic egg now has two asymmetric curved shell plates that slide apart gradually during the slow camera push. Three more native hardware-quad ridges make the green alien shell more readable without image assets, a movie stream, or textures. The reveal remains a single non-strobing hard cut.
+- **Real Nintendo DS PSG audio:** A testable one-channel event sequencer drives libnds `soundPlayPSG()` and `soundSetFreq()`/`soundSetVolume()`, and explicitly calls `soundKill()` when a cue completes. Cues include SLAP/KICK, floor/wall bounce, shell crack, alien unseal, occasional tension pulse, and the jump-scare sting. This avoids a 16-channel soundbank, uncompressed PCM, new ARM7 firmware, or large RAM allocations. See https://blocksds.skylyrac.net/tutorial/basic/audio/ and https://github.com/devkitPro/libnds/blob/master/include/nds/arm9/sound.h.
+- **User control and accessibility:** The Toybox screen now displays SFX ON/OFF and supports Y to toggle its sounds for the current session. Default is enabled, and the persistent game/save struct stays unchanged. Each cue stops automatically, and exiting/skipping the film stops the active sound.
+- **Synchrony:** Egg opening, slow approach, periodic low pulse, and the one-time reveal are scheduled by the exact film-state frame constants already driving the visual states. A quiet interval before the reveal increases contrast without flashing the screen or changing the script.
+- **Tests:** All existing host/DS/BlocksDS/legacy/DeSmuME tests remain mandatory. A new host SFX test exercises pitch/volume bounds, mute, cue priority and completion. Geometry tests now cover just-before and just-after split/approach/scare boundaries within the existing DS frame-budget headroom.
+
+Audio is implemented in the ROM using the supported libnds PSG API; emulator screenshot tests and host audio-envelope tests cannot certify speaker balance on an actual DS/DraStic instance. No measured FPS gain or sound-output recording is claimed.

@@ -1329,7 +1329,8 @@ static void finale(const Game *s,int ending){
 static void roughhouse_screen(int encoded){
  int selected=(encoded&32)?ROUGHHOUSE_KICK:ROUGHHOUSE_SLAP;
  int charge=encoded&31;
- int hits=encoded>>6;
+ int hits=(encoded>>6)&255;
+ int audio=(encoded&(1<<16))!=0;
  int filled=charge*208/(int)ROUGHHOUSE_CRACK_CHARGE;
  char count[22];
  if(filled>208)filled=208;
@@ -1342,6 +1343,7 @@ static void roughhouse_screen(int encoded){
  }else fit(139,42,"SELECT A TOOL",MUTED,16);
  fit(15,57,charge>=11?"UNSEALED...":charge>=6?"CRACKED SHELL":"SHELL STRESS",
      charge>=11?GREEN:ROSE,18);
+ fit(187,57,audio?"SFX ON":"SFX OFF",audio?GREEN:MUTED,7);
  solid(15,68,219,5,GRAY);
  solid(19,69,filled,3,ROSE);
  panel(10,79,236,62,WHITE,LILAC);
@@ -1367,7 +1369,7 @@ static void roughhouse_screen(int encoded){
  solid(157,161,3,3,PURPLE);
  label(171,153,"KICK",INK,2,4);
  foot(PURPLE);
- fit(12,181,"A USE   L/R TOOL   B BACK",WHITE,40);
+ fit(7,181,"A USE  L/R TOOL  B BACK  Y SFX",WHITE,40);
 }
 static void egg_scene_screen(int frame){
  int phase=frame<(int)EGG_CRACK_FRAME?0:
