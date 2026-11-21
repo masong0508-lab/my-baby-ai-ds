@@ -27,6 +27,41 @@ int main(void){
   assert(world_vertex_count()<=5000);
   assert(world_polygon_count()<=1850);
  }
+ /* The five native nursery camera poses must share one coherent room.
+  * 16-tick smoothstep travel is continuous, stays within the DS volume,
+  * and leaves the default portrait unchanged. */
+ {
+  EggCamera idle=world_nursery_camera(-1,-1,16u);
+  unsigned f;
+  assert(idle.x>.9f&&idle.z>3.4f);
+  for(i=0;i<4;i++){
+   EggCamera start=world_nursery_camera(i,-1,0u);
+   EggCamera end=world_nursery_camera(i,-1,16u);
+   EggCamera hold=world_nursery_camera(i,-1,5000u);
+   float last=start.x;
+   assert(start.x==idle.x&&start.z==idle.z);
+   assert(end.x==hold.x&&end.look_x==hold.look_x);
+   for(f=1;f<=16;f++){
+    EggCamera q=world_nursery_camera(i,-1,f);
+    float diff=q.x-last;
+    assert(diff<.18f&&diff>-.18f);
+    assert(q.z>2.8f&&q.z<3.8f);
+    last=q.x;
+   }
+   world_draw_nursery(&s,130u,3,18u,i,-1,16u,
+                      i==0,i!=1);
+   assert(world_vertex_count()<=5000);
+   assert(world_polygon_count()<=1850);
+  }
+  /* Visual-state changes must not alter any saved Game data. */
+  {
+   Game original=s;
+   world_draw_nursery(&s,132u,0,0u,0,-1,16u,1,0);
+   assert(memcmp(&original,&s,sizeof(s))==0);
+   world_draw(&s,133u,0); /* normal care restores night + lamp */
+   assert(world_polygon_count()<=1850);
+  }
+ }
  /* Arm gestures now rotate one connected shoulder-to-hand structure.
   * FEED reaches, CHAT invites, PLAY reaches farther, NAP folds in. */
  assert(world_baby_arm_reach(0)==7);
