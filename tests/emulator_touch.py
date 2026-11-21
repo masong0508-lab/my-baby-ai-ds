@@ -269,6 +269,16 @@ def test_actual_game(path: Path, output: Path) -> dict:
     assert day_scene_change > 45, (
         f"Window changed text but not 3D daylight ({day_scene_change})"
     )
+    # Real sunlight must affect the nursery WALLS as well as the blue
+    # glass. This right-hand ROI is separate from the window, guarding
+    # against a fake day/night switch that recolors just the moon disk.
+    daylight_room_change = difference(
+        room_night, room_day, (154, 32, 245, 171)
+    )
+    assert daylight_room_change > 400, (
+        "Daylight still changes only the window, not the room surfaces "
+        f"({daylight_room_change} pixels)"
+    )
     # The bottom status must reflect real prop state. This catches the
     # original bug where only the boot-time UI call supplied room flags,
     # leaving the *per-frame* Room panel stuck on MOONLIGHT/WINDOW.
@@ -802,6 +812,7 @@ def test_actual_game(path: Path, output: Path) -> dict:
         "3D_nursery_green_shadow_artifact_pixels": olive_artifact,
         "Room_tour_open_changed_pixels": room_opened,
         "Room_daylight_top_changed_pixels": day_scene_change,
+        "Room_daylight_wall_changed_pixels": daylight_room_change,
         "Room_daylight_status_changed_pixels": day_label_change,
         "Room_lamp_status_changed_pixels": lamp_label_change,
         "Room_moon_return_top_changed_pixels": night_scene_change,
