@@ -515,10 +515,14 @@ void world_draw_secret(const Game *s,uint32_t frame,const Roughhouse *r){
  phase=frame<EGG_PUSH_FRAME?1u:frame<EGG_SCARE_FRAME?2u:3u;
  glMatrixMode(GL_MODELVIEW);glLoadIdentity();
  if(phase==1u){
-  gluLookAt(0,.18f,4.30f,0,0,.0f,0,1,0);
+  /* Earlier camera was too distant: egg occupied <50px on a 192px LCD.
+   * Keep the shell large and recognizable before slowly advancing. */
+  gluLookAt(0,.18f,3.15f,0,0,.0f,0,1,0);
  }else if(phase==2u){
-  float camera=4.30f-(float)(frame-EGG_PUSH_FRAME)*.016f;
-  if(camera<2.06f)camera=2.06f;
+  /* A real push into the fissure, not a slight distant change in scale.
+   * Camera remains outside the .66-unit fluid surface until the last beat. */
+  float camera=3.15f-(float)(frame-EGG_PUSH_FRAME)*.014f;
+  if(camera<1.20f)camera=1.20f;
   gluLookAt(0,.11f,camera,0,.08f,.13f,0,1,0);
  }else{
   /* Keep full head within view rather than clipping into giant flat planes. */
