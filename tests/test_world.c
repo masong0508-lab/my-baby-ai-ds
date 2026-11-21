@@ -61,6 +61,12 @@ int main(void){
    prev=weight;
   }
  }
+ assert(world_baby_speech_open(0u)==0);
+ assert(world_baby_speech_open(8u)==0);
+ assert(world_baby_speech_open(14u)>=250);
+ assert(world_baby_speech_open(20u)==0);
+ assert(world_baby_speech_open(26u)>=250);
+ assert(world_baby_speech_open(44u)==0);
  assert(world_baby_lid_open(10u,0,25u)==256);
  assert(world_baby_lid_open(10u,4,25u)==0);
  assert(world_baby_lid_open(10u,4,0u)==256);
@@ -225,6 +231,31 @@ int main(void){
   assert(world_egg_embryo_approach(0u)==0.f);
   assert(world_egg_embryo_approach(EGG_PUSH_FRAME)==0.f);
   assert(world_egg_embryo_approach(EGG_TOTAL_FRAMES)>.044f);
+ }
+ /* Smooth physical shell split and restrained one-piece skull sway. */
+ assert(world_egg_shell_open(EGG_PUSH_FRAME-1u)==0.f);
+ assert(world_egg_shell_open(EGG_PUSH_FRAME)==0.f);
+ assert(world_egg_shell_open(EGG_SCARE_FRAME)==1.f);
+ assert(world_egg_shell_open(EGG_TOTAL_FRAMES)==1.f);
+ assert(world_egg_head_tilt(EGG_SCARE_FRAME-1u)==0);
+ assert(world_egg_head_tilt(EGG_SCARE_FRAME)==-3);
+ assert(world_egg_head_tilt(EGG_SCARE_FRAME+9u)==2);
+ {
+  unsigned f;
+  float prior=0.f;
+  int old_tilt=world_egg_head_tilt(EGG_SCARE_FRAME);
+  for(f=EGG_PUSH_FRAME+1u;f<EGG_SCARE_FRAME;f++){
+   float width=world_egg_shell_open(f);
+   assert(width>=prior&&width<=1.f);
+   assert(width-prior<.012f);
+   prior=width;
+  }
+  for(f=EGG_SCARE_FRAME+1u;f<EGG_TOTAL_FRAMES;f++){
+   int tilt=world_egg_head_tilt(f);
+   assert(tilt>=-3&&tilt<=2);
+   assert(tilt-old_tilt<=1&&old_tilt-tilt<=1);
+   old_tilt=tilt;
+  }
  }
  /* The creature lunges ONCE after the final hard camera cut, then settles
   * into extremely small movement. All features use the SAME matrix. */
