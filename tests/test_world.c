@@ -169,6 +169,33 @@ int main(void){
    assert(jaw-prev<=2&&prev-jaw<=2);
   }
  }
+ /* An opening eye glow grows as the camera approaches, then visibly
+  * dims exactly once before the hard cut. Never flash the whole LCD. */
+ assert(world_egg_eye_glow(0u)==0);
+ assert(world_egg_eye_glow(EGG_CRACK_FRAME)==7);
+ assert(world_egg_eye_glow(EGG_PUSH_FRAME)==7);
+ assert(world_egg_eye_glow(EGG_SCARE_FRAME-20u)==31);
+ assert(world_egg_eye_glow(EGG_SCARE_FRAME-1u)==4);
+ assert(world_egg_eye_glow(EGG_SCARE_FRAME)==0);
+ {
+  unsigned f;
+  int prev=world_egg_eye_glow(EGG_PUSH_FRAME);
+  float last_approach=0.f;
+  for(f=EGG_PUSH_FRAME+1u;f<EGG_SCARE_FRAME;f++){
+   int v=world_egg_eye_glow(f);
+   float approach=world_egg_embryo_approach(f);
+   assert(v>=3&&v<=31);
+   assert(v-prev<=1&&prev-v<=2);
+   if(f<=EGG_SCARE_FRAME-20u)assert(v>=prev);
+   else assert(v<=prev);
+   prev=v;
+   assert(approach>=last_approach&&approach<=.046f);
+   last_approach=approach;
+  }
+  assert(world_egg_embryo_approach(0u)==0.f);
+  assert(world_egg_embryo_approach(EGG_PUSH_FRAME)==0.f);
+  assert(world_egg_embryo_approach(EGG_TOTAL_FRAMES)>.044f);
+ }
  /* The creature lunges ONCE after the final hard camera cut, then settles
   * into extremely small movement. All features use the SAME matrix. */
  {
