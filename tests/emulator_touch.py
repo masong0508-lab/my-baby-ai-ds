@@ -171,6 +171,30 @@ def test_actual_game(path: Path, output: Path) -> dict:
     emu.input.touch_release()
     frames(emu, 22)
     nursery = picture(emu, output, "game_nursery_after_touch_start")
+    # Validate and archive the actual hardware-3D TOP screen, not only the
+    # touch UI. The last defect was a malformed baby and long vertical lines.
+    top = nursery.crop((0, 0, 256, 192))
+    top.save(output / "game_nursery_hero_top_screen.png")
+    hero_colors = len(set(top.crop((16, 12, 240, 178)).getdata()))
+    assert hero_colors > 20, (
+        f"3D nursery render is blank or under-detailed ({hero_colors} colors)"
+    )
+    def brightness(rgb):
+        return (rgb[0] * 3 + rgb[1] * 6 + rgb[2]) // 10
+    full_height_stripes = []
+    for x in range(16, 240):
+        dark_column = 0
+        for y in range(14, 178):
+            center = brightness(top.getpixel((x, y)))
+            left = brightness(top.getpixel((x - 1, y)))
+            right = brightness(top.getpixel((x + 1, y)))
+            if center + 65 < left and center + 65 < right:
+                dark_column += 1
+        if dark_column >= 148:
+            full_height_stripes.append(x)
+    assert not full_height_stripes, (
+        f"Top-screen full-height black line artifacts at x={full_height_stripes}"
+    )
     start_changed = difference(ready, nursery, (0, 192 + 30, 256, 192 + 175))
     assert start_changed > 500, (
         f"Stylus could be read, but touching START GAME did not enter nursery "
@@ -258,6 +282,8 @@ def test_actual_game(path: Path, output: Path) -> dict:
         f"(screen={returned}, reward={reward})"
     )
     return {
+        "3D_top_screen_distinct_colors": hero_colors,
+        "3D_top_screen_full_height_dark_stripes": len(full_height_stripes),
         "title_to_diagnostic_changed_pixels": new_screen,
         "KEY_TOUCH_status_changed_pixels": status,
         "coordinates_on_press_changed_pixels": xy1,

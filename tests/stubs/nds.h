@@ -13,6 +13,7 @@
 #define POLY_CULL_NONE 0
 #define glInit() ((void)0)
 #define glEnable(...) ((void)0)
+#define glDisable(...) ((void)0)
 #define glClearColor(...) ((void)0)
 #define glClearPolyID(...) ((void)0)
 #define glClearDepth(...) ((void)0)

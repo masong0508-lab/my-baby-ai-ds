@@ -352,25 +352,27 @@ static void arrow(int x,int y,int dir,uint16_t fill){
  * raster sheets, not the former boxes-and-arrows placeholders. The artwork is
  * embedded in ROM as text rows so the existing bitmap renderer needs no PNG
  * decoder, heap, asset loader, or second framebuffer. */
+/* Shared baby portrait: warm face, small eyes, soft cheeks, chestnut tuft,
+ * mint romper. A matching silhouette appears in the DS 3D nursery. */
 static const char *const spr_baby[]={
- ".......hhhhhh.......",
- ".....hhsssssshh.....",
- "....hssssssssssh....",
- "...hssssssssssssh...",
- "..hssshhhhhhhssssh..",
- "..hsshssssssshsssh..",
- ".hssssssssssssssssh.",
- ".hssswwsssswwsssssh.",
- ".hsssokssssoksssssh.",
- ".hssssssssssssssssh.",
- ".hssrrssssssrrssssh.",
- ".hssssssppssssssssh.",
- ".hssssspwwpsssssssh.",
- ".hssssssppssssssssh.",
- "..hssssssssssssssh..",
- "...hssssssssssssh...",
- "....hhsssssssshh....",
- "......hhhhhhhh......"
+  ".........hh.........",
+  ".......hhhhhh.......",
+  "......oohhhhoo......",
+  ".....ohhhhhhhho.....",
+  "....ohssssssssho....",
+  "...osssssssssssso...",
+  "...osssssssssssso...",
+  "...osswwsssswwsso...",
+  "ossosswksssskwssosso",
+  "ossossssssssssssosso",
+  "...orrsssrssssrro...",
+  "....ossspsspssso....",
+  "....oosssppsssoo....",
+  "......oossssoo......",
+  ".....obssssssbo.....",
+  ".....obttttttbo.....",
+  ".....obbttttbbo.....",
+  ".....oooooooooo....."
 };
 static const char *const spr_bottle[]={
  "......oooo......",
@@ -553,25 +555,31 @@ static const char *const spr_gavel[]={
 static uint16_t art_ink(char p){
  switch(p){
  case 'o':return INK;
- case 'h':return RGB(11,7,6);
- case 's':return RGB(31,24,18);
- case 'r':return RGB(31,15,17);
+ case 'h':return RGB(16,11,8);
+ case 's':return RGB(31,24,20);
+ case 'r':return RGB(31,18,19);
  case 'p':return PINK;
  case 'w':return WHITE;
  case 'b':return SKY;
  case 'g':return GOLD;
  case 't':return TEAL;
- case 'k':return INK;
+ case 'k':return RGB(5,7,11);
  default:return 0;
  }
 }
+/* Group equal-color horizontal pixels to avoid one VRAM rectangle call
+ * per sprite pixel. Transparent runs never write stale/background columns. */
 static void sprite(int x,int y,int scale,const char *const *rows,int count){
  int yy,xx;
+ if(scale<=0)return;
  for(yy=0;yy<count;yy++){
   const char *line=rows[yy];
-  for(xx=0;line[xx];xx++){
+  xx=0;
+  while(line[xx]){
    uint16_t color=art_ink(line[xx]);
-   if(color)solid(x+xx*scale,y+yy*scale,scale,scale,color);
+   int start=xx++;
+   while(line[xx]&&art_ink(line[xx])==color)xx++;
+   if(color)solid(x+start*scale,y+yy*scale,(xx-start)*scale,scale,color);
   }
  }
 }

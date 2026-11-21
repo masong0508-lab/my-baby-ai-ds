@@ -100,3 +100,17 @@ All eight application views and all 16 unique cabinets share an updated Nintendo
 - **QA:** new host assertions check full 256×192 coverage, untouched offscreen 256×64 rows, distinct fingerprints across all 16 cabinets, safe/SD and ending/reset visual variants, plus gardening progress redraw cadence. CI ROM build and DeSmuME touchscreen tests still have to pass before this branch is merged.
 
 Changes to the top-screen 3D nursery geometry are deliberately out of scope for this UI refresh: they would compete with the DS polygon/frame budgets. Character animation and 3D environments remain a separate production effort.
+
+## Baby model & vertical seam cleanup (feature branch)
+The DS top-screen character/room receives a targeted geometry correction:
+- Rebuilt the baby as a soft rounded, short-haired chibi with a pastel one-piece romper, attached hands and feet, smaller shallow eyes, blush, button nose and a small closed-mouth smile. Replaced the prior dark bob/denim outfit, floating eye layers and wide tooth-bearing mouth.
+- Reworked the independent boot/title 3D portrait to match the nursery baby without rendering the complete room.
+- Updated the 18-row ROM-embedded baby sprite for title and all mini-game screens; batched same-color horizontal sprite pixels to reduce bitmap writes.
+- Removed eight full-length floor lines, six skinny plank-end strips, two narrow vertical wainscot marks and three floating mobile stickers, all subpixel-width details prone to looking like artifacts at 256×192.
+- Disabled GL edge antialiasing for this opaque low-poly scene. Adjusted nursery camera to a less oblique 51-degree composition to avoid face distortion and prominent polygon edges.
+- No extra framebuffers, texture VRAM, heap allocations or save schema changes. Existing gameplay and button layouts are unchanged.
+- The real DeSmuME integration test now captures `game_nursery_hero_top_screen.png`, verifies that hardware 3D has nontrivial visible color variety, and fails on isolated almost-full-height dark screen stripes. Static native tests protect polygon budgets, no surprise geometry in glitch/safe display states, and visible baby title palette.
+
+**Validation:** Actual DS and DraStic screenshots, frame times, and aesthetic approval are still necessary; CI checks and code inspection alone do not prove the baby is beautiful or that every possible hardware rendering defect is gone.
+
+**Screenshot-driven follow-up:** Inspected the actual DeSmuME 256×192 nursery capture from this branch. It revealed that the large foreground teddy covered the baby's torso and legs despite the 3D check passing. The teddy has now been moved to the left near the dresser and grounded on the floor; the baby's pale romper and worried-looking single-line mouth were adjusted to a stronger pastel contrast and small curved smile. Fresh screenshots from the final commit must be reviewed before calling that visual occlusion resolved.

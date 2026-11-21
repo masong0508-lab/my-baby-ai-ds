@@ -148,7 +148,8 @@ static void hair_cap(float x,float y,float z,float rx,float ry,float rz,
    float lower;
    j=i%12;
    /* Keep the hairline above the eyes but let it fall behind the ears. */
-   lower=.01f+(ring_z[j]>0?.52f*ring_z[j]:.08f*ring_z[j]);
+   /* Short cap: keep the hairline ABOVE the eyes with no cheek-length bob. */
+   lower=.40f+(ring_z[j]>0?.14f*ring_z[j]:.03f*ring_z[j]);
    color(red,green,blue,(j<5?2:-1)+(a==2?2:0));
    glVertex3f(x+rx*radius[a]*ring_x[j],
               y+ry*(a==0?lower:a==1?.64f:.86f),
@@ -165,12 +166,12 @@ static void hair_cap(float x,float y,float z,float rx,float ry,float rz,
  * Top edge is tucked toward the scalp; lower edge is in front of skin. */
 static void hair_fringe(float x,float y,float z,float sx,float sy,float skew){
  glBegin(GL_QUADS);
- color(8,5,4,1);
- glVertex3f(x-sx*.5f,y+sy*.5f,z-.045f);
- glVertex3f(x+sx*.5f,y+sy*.5f,z-.045f);
- color(7,5,4,-1);
- glVertex3f(x+sx*.43f+skew,y-sy*.5f,z+.015f);
- glVertex3f(x-sx*.43f+skew,y-sy*.5f,z+.015f);
+ color(17,11,8,1);
+ glVertex3f(x-sx*.5f,y+sy*.5f,z-.016f);
+ glVertex3f(x+sx*.5f,y+sy*.5f,z-.016f);
+ color(15,10,8,-1);
+ glVertex3f(x+sx*.43f+skew,y-sy*.5f,z+.009f);
+ glVertex3f(x-sx*.43f+skew,y-sy*.5f,z+.009f);
  glEnd();
  frame_vertices+=4;frame_polygons++;
 }
@@ -224,15 +225,9 @@ static void room(void){
   * the room structure, unlike the old solid saturated wall plane. */
  side_wall_mark(-3.33f,.20f,-.96f,2.05f,.045f,21,24,21);
  side_wall_mark(-3.33f,-.57f,-.96f,2.05f,.035f,21,24,21);
- side_wall_mark(-3.33f,-.17f,-1.99f,.035f,.73f,21,24,21);
- side_wall_mark(-3.33f,-.17f,.07f,.035f,.73f,21,24,21);
- /* Floor boards, big soft nursery rug and stitched edging. */
- for(i=0;i<8;i++)flat_floor(-3.1f+i*.84f,-1.227f,0,.025,6.7,19,14,11);
- /* Stagger plank-end seams instead of a tiled/checkerboard grid. */
- for(i=0;i<3;i++){
-  flat_floor(-1.72f,-1.227f,-2.45f+i*1.70f,3.25f,.024f,21,16,12);
-  flat_floor(2.12f,-1.227f,-1.59f+i*1.70f,2.70f,.024f,21,16,12);
- }
+ /* Removed two hairline-width vertical wainscot details that alias. */
+ /* Continuous nursery floor: removed 14 subpixel strips. Those long
+  * narrow decals produced vertical seams across the DS floor image. */
  /* One darkened ground plane under the play mat gives contact shadow
   * without expensive translucent blending or extra VRAM. */
  flat_floor(.04f,-1.222f,.78f,3.00f,2.58f,20,17,14);
@@ -294,12 +289,9 @@ static void room(void){
  /* Shelf and a row of toy blocks, no giant texture atlas needed. */
  block(2.59,1.06,-3.00,1.09,.13,.38,24,20,16);
  for(i=0;i<4;i++)block(2.16f+i*.26f,1.28,-2.91,.20,.30,.24,19+i*2,20-i,20+i);
- /* A crib mobile, star decals and frame accents make the room feel lived in. */
+ /* Solid mobile support; floating unanchored quads removed. */
  block(2.28,.93,-1.49,.065,.75,.065,24,21,16);
  block(2.28,1.29,-1.49,.91,.07,.10,24,21,16);
- wall_sticker(2.01,.88,-1.02,.19,.23,28,25,18);
- wall_sticker(2.55,.79,-1.02,.19,.23,20,25,24);
- wall_sticker(2.24,.68,-1.02,.15,.17,26,20,20);
  for(i=0;i<6;i++)wall_sticker(-.27f+i*.42f,2.34f+(i&1)*.08f,
                                 -3.015f,.11,.11,27,25,19);
  /* Individual decorative labels on the shelf's toy blocks. */
@@ -314,7 +306,9 @@ static void room(void){
 static void teddy(void){
  /* Readable stuffed-bear silhouette: chest, light muzzle, dark stitched face.
   * Limbs overlap the body, with their axes angled outward. */
- const float x=.02f,y=-.79f,z=1.27f;
+ /* Keep the plush clearly beside the baby, not centered in front of its
+  * legs and romper. Seat it on the floor near the nursery dresser. */
+ const float x=-1.28f,y=-.87f,z=.52f;
  ellipse(x,y-.04f,z,.30f,.32f,.24f,27,16,5);
  ellipse(x,y+.17f,z+.01f,.245f,.235f,.215f,28,17,6);
  ellipse(x,y+.38f,z+.05f,.255f,.265f,.23f,28,17,5);
@@ -337,101 +331,92 @@ static void teddy(void){
  soft_mark(x-.175f,y-.285f,z+.263f,.078f,.065f,30,25,18);
  soft_mark(x+.175f,y-.285f,z+.263f,.078f,.065f,30,25,18);
 }
+/* Baby A.I. hero model. One stable chibi silhouette with a connected
+ * romper, SHORT hair, embedded eyes and a small closed-mouth smile. The
+ * previous dark bob, gaping mouth/teeth, flaring jeans and detached facial
+ * layers were the main reason the character looked frightening at 256x192.
+ * Only ROM-native primitive meshes; no texture or framebuffer allocation. */
 static void baby_model(const Game *s,uint32_t frame,int action){
- /* The reference is uneasy because the infant smiles a little too steadily,
-  * not because of supernatural effects or physically impossible anatomy. */
- const float bob=(float)((int)(frame%120u)-60)*.00020f;
- const float wave=(float)((int)(frame%105u)-52)*.0013f;
- const int blink=(frame%153u)<4u||(action==4&&(frame%110u)<55u);
- const int glitched=game_glitch_tier(s)>=2&&!s->safe_visuals&&frame%121u<13u;
+ unsigned beat=frame%120u,arms=frame%104u;
+ const float bob=((float)(beat<60u?beat:120u-beat)-30.f)*.00028f;
+ const float wave=((float)(arms<52u?arms:104u-arms)-26.f)*.0011f;
+ const int blink=(frame%173u)<5u||(action==4&&(frame%125u)<42u);
  const int happy=s->mood>35;
+ const int glitch=game_glitch_tier(s)>=2&&!s->safe_visuals&&
+                  (frame%151u)<12u;
  glPushMatrix();
- glTranslatef(-.12f,bob,.22f);
- /* Dark, baggy denim. Legs fan outward, teddy occupying the empty space. */
- ellipse(0,-.81f,-.08f,.53f,.26f,.40f,7,9,15);
- ellipse(-.39f,-.96f,.24f,.29f,.23f,.34f,7,9,15);
- ellipse(.39f,-.96f,.24f,.29f,.23f,.34f,7,9,15);
- ellipse(-.44f,-1.105f,.47f,.26f,.125f,.25f,6,7,9);
- ellipse(.44f,-1.105f,.47f,.26f,.125f,.25f,6,7,9);
- /* A little exposed pink sock band breaks up the dark shoes. */
- soft_mark(-.43f,-1.02f,.695f,.26f,.045f,29,16,19);
- soft_mark(.43f,-1.02f,.695f,.26f,.045f,29,16,19);
- /* Dusty pink short-sleeved top and a cheap appliqué detail. */
- soft_head(0,-.295f,-.07f,.54f,.49f,.37f,29,15,18);
- ellipse(0,.13f,.02f,.25f,.09f,.23f,30,21,17);
- /* Angled sleeves and overlapping forearms form a continuous arm pose. */
- tilted_ellipse(-.48f,-.155f,.025f,.21f,.26f,.22f,-24,28,14,17);
- tilted_ellipse(.48f,-.155f,.025f,.21f,.26f,.22f,24,28,14,17);
- tilted_ellipse(-.605f,-.355f+wave,.26f,.155f,.23f,.18f,-29,28,19,15);
- tilted_ellipse(.605f,-.355f-wave,.26f,.155f,.23f,.18f,29,28,19,15);
- ellipse(-.685f,-.455f+wave,.435f,.155f,.14f,.15f,30,22,17);
- ellipse(.685f,-.455f-wave,.435f,.155f,.14f,.15f,30,22,17);
- /* A deliberately blurry sewn teddy-face mark: tiny and low-poly. */
- soft_mark(0,-.32f,.308f,.31f,.19f,29,19,18);
- soft_mark(-.09f,-.28f,.323f,.045f,.045f,21,12,10);
- soft_mark(.09f,-.28f,.323f,.045f,.045f,21,12,10);
- soft_mark(0,-.37f,.329f,.11f,.032f,21,12,10);
- /* One coherent face, with a shallow jaw/cheek transition. */
- soft_head(0,.525f,.035f,.645f,.665f,.49f,29,21,17);
- ellipse(0,.275f,.30f,.42f,.18f,.17f,29,21,17);
- /* Continuous dark scalp, rounded bob sides and tucked fringe panels. */
- hair_cap(0,.535f,-.07f,.68f,.68f,.53f,7,5,4);
- ellipse(-.575f,.555f,-.09f,.13f,.32f,.22f,8,5,4);
- ellipse(.575f,.555f,-.09f,.13f,.32f,.22f,8,5,4);
- ellipse(-.615f,.43f,.15f,.11f,.14f,.105f,27,18,14);
- ellipse(.615f,.43f,.15f,.11f,.14f,.105f,27,18,14);
- hair_fringe(-.29f,.925f,.474f,.29f,.16f,.05f);
- hair_fringe(.005f,.94f,.474f,.31f,.15f,.055f);
- hair_fringe(.295f,.94f,.45f,.25f,.125f,.02f);
- /* A small, partly embedded hair clip survives the hair redesign. */
- ellipse(-.505f,1.015f,.35f,.087f,.13f,.035f,28,9,16);
- ellipse(-.505f,1.035f,.386f,.042f,.067f,.015f,31,20,24);
- /* Smaller eyes are recessed toward the skin, not pasted on as bubbles. */
- ellipse(-.215f,.565f,.533f,.107f,blink?.014f:.079f,.020f,18,12,10);
- ellipse(.215f,.572f,.533f,.107f,blink?.014f:.079f,.020f,18,12,10);
+ glTranslatef(-.12f,bob,.23f);
+ /* Footed one-piece romper, short legs and soft shoes: no adult denim. */
+ ellipse(0,-.75f,-.07f,.46f,.31f,.34f,19,26,27);
+ ellipse(-.32f,-.93f,.14f,.245f,.22f,.27f,18,25,27);
+ ellipse(.32f,-.93f,.14f,.245f,.22f,.27f,18,25,27);
+ ellipse(-.365f,-1.08f,.36f,.235f,.13f,.24f,30,28,23);
+ ellipse(.365f,-1.08f,.36f,.235f,.13f,.24f,30,28,23);
+ /* Curved mint romper and cream collar meet behind the head. */
+ soft_head(0,-.32f,-.08f,.49f,.46f,.36f,19,27,27);
+ ellipse(0,.09f,.0f,.22f,.10f,.205f,31,26,21);
+ ellipse(0,-.39f,.284f,.245f,.25f,.035f,29,30,26);
+ soft_mark(0,-.31f,.329f,.11f,.048f,glitch?25:30,glitch?17:18,21);
+ /* Sleeves overlap the torso and the skin overlaps each sleeve; hands
+  * always remain attached while the animation cycles. */
+ tilted_ellipse(-.45f,-.21f,-.025f,.205f,.22f,.195f,-20,19,26,27);
+ tilted_ellipse(.45f,-.21f,-.025f,.205f,.22f,.195f,20,19,26,27);
+ tilted_ellipse(-.55f,-.37f+wave,.15f,.14f,.18f,.14f,-26,31,23,19);
+ tilted_ellipse(.55f,-.37f-wave,.15f,.14f,.18f,.14f,26,31,23,19);
+ ellipse(-.63f,-.46f+wave,.28f,.13f,.125f,.13f,31,24,20);
+ ellipse(.63f,-.46f-wave,.28f,.13f,.125f,.13f,31,24,20);
+ /* Rounded unified face. No second oversized jaw shell, no floating teeth. */
+ soft_head(0,.54f,.045f,.61f,.615f,.45f,30,22,19);
+ ellipse(-.575f,.49f,.065f,.105f,.145f,.09f,31,23,19);
+ ellipse(.575f,.49f,.065f,.105f,.145f,.09f,31,23,19);
+ /* Chestnut cap and two small swept tufts; old long side hair removed. */
+ hair_cap(0,.54f,.035f,.625f,.63f,.465f,16,11,8);
+ hair_fringe(-.19f,.948f,.44f,.29f,.105f,.045f);
+ hair_fringe(.16f,.959f,.438f,.28f,.095f,-.04f);
+ ellipse(-.39f,1.018f,.365f,.075f,.069f,.029f,29,14,20);
+ /* Sclera and pupils lie just above the curved facial surface, not
+  * stacked .10 units out in space. Each shallow eye has a tiny highlight. */
  if(!blink){
-  ellipse(-.215f,.565f,.548f,.09f,.072f,.014f,29,28,26);
-  ellipse(.215f,.572f,.548f,.09f,.072f,.014f,29,28,26);
-  ellipse(-.195f,.561f,.562f,.05f,.056f,.014f,5,4,4);
-  ellipse(.235f+(glitched?.045f:0),.568f,.562f,.05f,.056f,.014f,5,4,4);
-  soft_mark(-.205f,.603f,.579f,.025f,.025f,31,30,28);
-  soft_mark(.226f,.609f,.579f,.025f,.025f,31,30,28);
+  ellipse(-.205f,.575f,.472f,.100f,.094f,.015f,30,29,27);
+  ellipse(.205f,.575f,.472f,.100f,.094f,.015f,30,29,27);
+  ellipse(-.190f,.565f,.485f,.052f,.061f,.015f,5,7,11);
+  ellipse(.220f,.565f,.485f,.052f,.061f,.015f,5,7,11);
+  soft_mark(-.208f,.602f,.508f,.028f,.023f,31,31,30);
+  soft_mark(.202f,.602f,.508f,.028f,.023f,31,31,30);
  }else{
-  soft_mark(-.215f,.565f,.551f,.20f,.016f,15,9,8);
-  soft_mark(.215f,.572f,.551f,.20f,.016f,15,9,8);
+  soft_mark(-.205f,.575f,.480f,.169f,.016f,15,10,9);
+  soft_mark(.205f,.575f,.480f,.169f,.016f,15,10,9);
  }
- soft_mark(-.22f,.755f,.485f,.19f,.023f,14,9,8);
- soft_mark(.22f,.759f,.485f,.19f,.023f,14,9,8);
- soft_mark(-.405f,.34f,.455f,.125f,.055f,30,17,16);
- soft_mark(.405f,.34f,.455f,.125f,.055f,30,17,16);
- ellipse(0,.395f,.511f,.067f,.045f,.029f,30,23,19);
- /* Layered shallow mouth cavity: dark interior, lip rims, recessed teeth.
-  * A small steady open grin is unsettling without a floating black sticker. */
- ellipse(.006f,.205f,.504f,happy?.156f:.112f,happy?.074f:.043f,
-         .023f,9,3,5);
- ellipse(.004f,.259f,.520f,happy?.158f:.114f,.022f,.019f,24,12,14);
- ellipse(.006f,.15f,.518f,happy?.143f:.10f,.023f,.018f,26,13,15);
+ /* Warm cheeks, gentle brows, button nose and a tiny restrained smile. */
+ ellipse(-.355f,.365f,.397f,.102f,.058f,.016f,31,18,19);
+ ellipse(.355f,.365f,.397f,.102f,.058f,.016f,31,18,19);
+ soft_mark(-.205f,.734f,.459f,.105f,.014f,17,11,9);
+ soft_mark(.205f,.734f,.459f,.105f,.014f,17,11,9);
+ ellipse(0,.375f,.467f,.047f,.034f,.019f,31,23,20);
  if(happy){
-  soft_mark(0,.231f,.535f,.135f,.017f,30,27,25);
-  ellipse(.008f,.163f,.526f,.076f,.020f,.009f,26,11,14);
- }
+  /* Three shallow strokes make a smile, not a heavy straight frown. */
+  soft_mark(-.065f,.278f,.444f,.052f,.017f,18,9,11);
+  soft_mark(0,.251f,.454f,.081f,.017f,18,9,11);
+  soft_mark(.065f,.278f,.444f,.052f,.017f,18,9,11);
+ }else soft_mark(0,.259f,.451f,.084f,.015f,18,9,11);
  glPopMatrix(1);
- if(glitched)block(.55f,.64f,.91f,.10f,.035f,.04f,8,29,23);
 }
 void world_init(void){
  glInit();
- glEnable(GL_ANTIALIAS);
+ /* Edge AA produces dark cracks between adjacent untextured DS polygons. */
+ glDisable(GL_ANTIALIAS);
  glClearColor(27,28,28,31);
  glClearPolyID(63);
  glClearDepth(0x7fff);
  glViewport(0,0,255,191);
  glMatrixMode(GL_PROJECTION);glLoadIdentity();
- gluPerspective(55,256.0f/192.0f,.1f,30);
+ gluPerspective(51,256.0f/192.0f,.1f,30);
 }
 void world_draw(const Game *s,uint32_t frame,int activity){
  glMatrixMode(GL_MODELVIEW);glLoadIdentity();
  /* This is a room with true depth and perspective, not a flat orthographic collage. */
- gluLookAt(1.42f,1.30f,3.26f,-.12f,.08f,.18f,0,1,0);
+ /* More frontal portrait: avoids exaggerated protruding facial geometry. */
+ gluLookAt(.97f,1.05f,3.43f,-.12f,.035f,.17f,0,1,0);
  glPolyFmt(POLY_ALPHA(31)|POLY_CULL_NONE);
  frame_vertices=0;frame_polygons=0;
  room();
@@ -442,18 +427,29 @@ void world_draw(const Game *s,uint32_t frame,int activity){
 
 /* Tiny boot/title scene: do not submit the full ~1800-polygon nursery before
  * the player confirms the program reached its first interactive screen. */
+/* The lightweight pregame portrait uses the SAME baby design language as
+ * the nursery hero. It must remain inexpensive enough to render at boot. */
 void world_draw_title(uint32_t frame){
  (void)frame;
  glMatrixMode(GL_MODELVIEW);glLoadIdentity();
- gluLookAt(0.0f,0.3f,5.5f,0.0f,0.0f,0.0f,0,1,0);
+ gluLookAt(0.0f,.24f,5.15f,0.0f,-.04f,0.0f,0,1,0);
  glPolyFmt(POLY_ALPHA(31)|POLY_CULL_NONE);
  frame_vertices=0;frame_polygons=0;
- block(0.0f,-.82f,-.9f,3.0f,.22f,1.6f,24,17,20);
- ellipse(0.0f,.05f,-.2f,.85f,.91f,.57f,27,17,12);
- ellipse(-.29f,.12f,.33f,.20f,.24f,.08f,31,30,30);
- ellipse(.29f,.12f,.33f,.20f,.24f,.08f,31,30,30);
- ellipse(-.29f,.12f,.41f,.10f,.14f,.04f,3,2,3);
- ellipse(.29f,.12f,.41f,.10f,.14f,.04f,3,2,3);
- ellipse(0,-.32f,.36f,.20f,.11f,.06f,13,4,6);
+ block(0,-.91f,-.85f,2.6f,.20f,1.35f,24,20,24);
+ ellipse(0,-.80f,-.23f,.57f,.36f,.39f,23,29,27);
+ soft_head(0,.045f,-.18f,.745f,.75f,.53f,31,24,20);
+ hair_cap(0,.045f,-.175f,.76f,.77f,.55f,16,11,8);
+ hair_fringe(-.25f,.54f,.30f,.30f,.09f,.025f);
+ hair_fringe(.17f,.54f,.29f,.28f,.09f,-.03f);
+ ellipse(-.225f,.057f,.335f,.106f,.10f,.020f,30,29,27);
+ ellipse(.225f,.057f,.335f,.106f,.10f,.020f,30,29,27);
+ ellipse(-.215f,.049f,.354f,.054f,.062f,.015f,5,7,11);
+ ellipse(.239f,.049f,.354f,.054f,.062f,.015f,5,7,11);
+ soft_mark(-.23f,.086f,.372f,.024f,.019f,31,31,30);
+ soft_mark(.216f,.086f,.372f,.024f,.019f,31,31,30);
+ soft_mark(-.43f,-.205f,.275f,.138f,.07f,31,18,19);
+ soft_mark(.43f,-.205f,.275f,.138f,.07f,31,18,19);
+ soft_mark(0,-.27f,.337f,.14f,.023f,18,9,11);
+ soft_mark(0,-.254f,.343f,.09f,.013f,31,20,19);
  glFlush(0);
 }
