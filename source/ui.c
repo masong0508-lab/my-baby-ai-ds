@@ -850,9 +850,9 @@ static void arcade_list(const Game *s,int selection){
  if(!game_unlocked(s,selection)&&
     game_unlock_requirements(selection,&need_wins,
                              &need_dollars,&need_favors)){
-  snprintf(tmp,sizeof(tmp),"W%u  $%u  F%u",
+  snprintf(tmp,sizeof(tmp),"%u WINS $%u %u FAVOR",
            need_wins,need_dollars,need_favors);
-  fit(75,46,tmp,ROSE,23);
+  fit(71,46,tmp,ROSE,20);
  }else fit(80,46,"READY TO PLAY",TEAL,23);
  snprintf(tmp,sizeof(tmp),"%s",game_names[selection]);
  fit(12,60,tmp,PURPLE,38);
