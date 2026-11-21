@@ -493,7 +493,12 @@ int game_arcade_garden_touch(Game *s,Arcade *a,int touching,int x,int y){
  if(x>=13&&x<79)lane=0;
  else if(x>=95&&x<161)lane=1;
  else if(x>=177&&x<243)lane=2;
- if(lane==a->target){garden_water(s,a,2);return 1;}
+ if(lane==a->target){
+  garden_water(s,a,2);
+  /* Repaint at 8%-progress intervals, not each held-stylus frame.
+   * Watering simulation still advances every frame. */
+  return !a->active||(a->progress%8u)==0u;
+ }
  return 0;
 }
 /* Courtroom evidence must be connected along a continuous gesture.
