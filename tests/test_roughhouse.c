@@ -33,6 +33,23 @@ int main(void){
  assert(a.vx>b.vx);
  assert(a.vy>b.vy);
  assert(a.impact==6&&b.impact==6);
+ /* Tap-aim is not a cosmetic modifier: even the FIRST strike must
+  * throw away from the side the player touched, on either half. */
+ roughhouse_init(&a);roughhouse_init(&b);
+ assert(roughhouse_strike_at(&a,ROUGHHOUSE_KICK,30,110));
+ assert(roughhouse_strike_at(&b,ROUGHHOUSE_KICK,226,110));
+ assert(a.vx>0&&b.vx<0);
+ assert(a.vx==-b.vx);
+ /* Subsequent same-side taps must never reverse just because hit
+  * parity changes; a center tap can still alternate for comedy. */
+ roughhouse_init(&a);
+ a.hits=1;
+ assert(roughhouse_strike_at(&a,ROUGHHOUSE_SLAP,30,110));
+ assert(a.vx>0);
+ roughhouse_init(&b);
+ b.hits=1;
+ assert(roughhouse_strike_at(&b,ROUGHHOUSE_SLAP,128,110));
+ assert(b.vx<0);
  /* Extreme touch coordinates must clamp instead of overdriving physics. */
  roughhouse_init(&a);
  assert(roughhouse_strike_at(&a,ROUGHHOUSE_KICK,-999,-999));
@@ -45,6 +62,17 @@ int main(void){
  a.x=390;a.vx=60;a.y=30;a.vy=0;a.moving=1;
  roughhouse_step(&a);
  assert(a.x==390&&a.vx<0&&a.rebound_count==1&&a.impact==9);
+ /* Ground contact has noticeably more drag than airborne motion.
+  * It stays fixed-point, bounded, and deterministic on real ARM9. */
+ roughhouse_init(&a);roughhouse_init(&b);
+ a.x=b.x=0;a.vx=b.vx=100;
+ a.y=0;b.y=150;b.vy=10;
+ a.moving=b.moving=1;
+ roughhouse_step(&a);roughhouse_step(&b);
+ assert(a.vx==85 && b.vx==94);
+ assert(a.y==0 && b.y>0);
+ for(i=0;i<80&&a.moving;i++)roughhouse_step(&a);
+ assert(!a.moving && a.vx==0 && a.vz==0);
  roughhouse_init(&a);roughhouse_init(&b);
  for(i=0;i<6;i++){
   assert(roughhouse_strike(&a,ROUGHHOUSE_KICK));
