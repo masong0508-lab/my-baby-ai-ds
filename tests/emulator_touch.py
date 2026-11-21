@@ -218,8 +218,23 @@ def test_actual_game(path: Path, output: Path) -> dict:
         f"Touch FEED did not change needs bars or dialogue UI "
         f"({feed_changed} pixels)"
     )
-    # Exercise real arcade hitboxes and a complete multi-step touchscreen
-    # minigame. A successful press indicator alone is not enough.
+    # Reach the ending album on the actual ARM9 program, then return.
+    # The album was previously only covered by a host-side framebuffer test.
+    emu.input.keypad_add_key(keymask(Keys.KEY_L))
+    frames(emu, 6)
+    emu.input.keypad_rm_key(keymask(Keys.KEY_L))
+    frames(emu, 12)
+    album = picture(emu, output, "game_ending_album")
+    album_diff = difference(after_feed, album, (0, 192 + 30, 256, 192 + 176))
+    assert album_diff > 400, (
+        f"Shoulder shortcut failed to open ending scrapbook ({album_diff})"
+    )
+    emu.input.keypad_add_key(keymask(Keys.KEY_B))
+    frames(emu, 6)
+    emu.input.keypad_rm_key(keymask(Keys.KEY_B))
+    frames(emu, 12)
+    # Exercise real arcade hitboxes, four-page navigation, and a complete
+    # multi-step touchscreen minigame.
     stylus_tap(emu, 35, 183)  # ARCADE footer on nursery screen
     arcade = picture(emu, output, "game_arcade_via_touch")
     arcade_changed = difference(
@@ -227,6 +242,22 @@ def test_actual_game(path: Path, output: Path) -> dict:
     )
     assert arcade_changed > 500, (
         f"Touch ARCADE footer did not open cabinet grid ({arcade_changed})"
+    )
+    stylus_tap(emu, 220, 44)  # tap NEXT: second page of four cabinets
+    arcade_second_page = picture(emu, output, "game_arcade_page_2")
+    page_changed = difference(
+        arcade, arcade_second_page, (0, 192 + 32, 256, 192 + 172)
+    )
+    assert page_changed > 300, (
+        f"Arcade NEXT page did not replace cabinet cards ({page_changed})"
+    )
+    stylus_tap(emu, 34, 44)  # tap PREV to restore first four cabinets
+    arcade_first_page = picture(emu, output, "game_arcade_page_1_returned")
+    page_returned = difference(
+        arcade_second_page, arcade_first_page, (0, 192 + 32, 256, 192 + 172)
+    )
+    assert page_returned > 300, (
+        f"Arcade PREV failed to restore cabinet cards ({page_returned})"
     )
     stylus_tap(emu, 35, 76)  # Bottle Balance is preselected
     bottle = picture(emu, output, "game_bottle_via_touch")
@@ -295,6 +326,9 @@ def test_actual_game(path: Path, output: Path) -> dict:
         "3D_top_screen_distinct_colors": hero_colors,
         "3D_top_screen_full_height_dark_stripes": len(full_height_stripes),
         "3D_title_top_screen_colors": title_colors,
+        "album_screen_changed_pixels": album_diff,
+        "arcade_next_page_changed_pixels": page_changed,
+        "arcade_previous_page_changed_pixels": page_returned,
         "title_to_diagnostic_changed_pixels": new_screen,
         "KEY_TOUCH_status_changed_pixels": status,
         "coordinates_on_press_changed_pixels": xy1,
