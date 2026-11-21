@@ -496,6 +496,21 @@ def test_actual_game(path: Path, output: Path) -> dict:
     assert movie_stage(egg_scare) == 3, (
         "The jump-scare image was captured in the wrong cinematic phase"
     )
+    # Regress against the old isolated polygon head: retain two PALE
+    # porcelain halves beside the alien when the final scare camera cuts.
+    left_wing = egg_scare.crop((18, 25, 83, 167))
+    right_wing = egg_scare.crop((174, 25, 245, 167))
+    def ivory_count(img):
+        return sum(
+            1 for r, g, b in img.get_flattened_data()
+            if r >= 135 and g >= 155 and b >= 105
+        )
+    scare_shell_left = ivory_count(left_wing)
+    scare_shell_right = ivory_count(right_wing)
+    assert scare_shell_left > 90 and scare_shell_right > 90, (
+        "Scare cut lost its readable split porcelain egg: "
+        f"left={scare_shell_left}, right={scare_shell_right}"
+    )
     # Capture the NEW animated reaction, not just the first scare frame.
     # The jaw, fangs, eyes and brow must lunge as one 3D subject.
     frames(emu, 12)
@@ -591,6 +606,8 @@ def test_actual_game(path: Path, output: Path) -> dict:
         "Egg_dark_cavity_pixels": cavity_dark_pixels,
         "Egg_visible_porcelain_pixels": ivory_shell_pixels,
         "Alien_jump_scare_changed_pixels": scare_difference,
+        "Jump_scare_porcelain_left_pixels": scare_shell_left,
+        "Jump_scare_porcelain_right_pixels": scare_shell_right,
         "Alien_lunge_animation_changed_pixels": lunge_changed,
         "Alien_ending_finale_changed_pixels": finale_difference,
         "Egg_green_stage": movie_stage(egg_green),
