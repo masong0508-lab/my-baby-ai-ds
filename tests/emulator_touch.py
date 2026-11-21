@@ -512,6 +512,19 @@ def test_actual_game(path: Path, output: Path) -> dict:
     assert finale_header > 75, (
         f"Egg cutscene did not exit into collectible BAD ENDING ({finale_header})"
     )
+    # The egg is an unlock, NOT a permanent disable of the toy controls.
+    # Exit through the real ending UI, reselect the dock and strike again.
+    stylus_tap(emu, 122, 106)
+    stylus_tap(emu, 128, 183)
+    fresh_toybox = picture(emu, output, "game_toybox_after_egg_replay")
+    stylus_tap(emu, 126, 110)
+    replay_bounce = picture(emu, output, "game_toybox_reusable_after_egg")
+    replay_movement = difference(
+        fresh_toybox, replay_bounce, (10, 8, 244, 180)
+    )
+    assert replay_movement > 35, (
+        f"Toybox controls stayed locked after secret ending ({replay_movement})"
+    )
     return {
         "3D_top_screen_distinct_colors": hero_colors,
         "3D_top_screen_full_height_dark_stripes": len(full_height_stripes),
@@ -549,6 +562,7 @@ def test_actual_game(path: Path, output: Path) -> dict:
         "Egg_jump_scare_stage": movie_stage(egg_scare),
         "Alien_ending_header_changed_pixels": finale_header,
         "Alien_finale_readable_ink_pixels": finale_heading_ink,
+        "Toybox_post_ending_replay_changed_pixels": replay_movement,
         "result": "PASS",
     }
 
