@@ -101,8 +101,8 @@ const char *game_ending_name(int e){
  default:return "A NORMAL DAY. SUSPICIOUS.";
  }
 }
-/* Bottle, Diaper, Tax Teether, Baby Beatbox and Rattle use distinct rules.
- * The remaining arcade cabinets retain the six-round direction fallback.
+/* The first eight cabinets have individual rules and artwork.
+ * Remaining cabinets retain the six-round direction fallback.
  * Arcade state is intentionally not part of the persistent Game save.
  */
 static const uint8_t diaper_tasks[4]={3,1,2,0}; /* left,right,down,up */
@@ -118,12 +118,36 @@ static void teether_next(Game *s,Arcade *a){
  a->timer=(uint16_t)(game_glitch_tier(s)>=3?180:240);
  a->touch_active=0;
 }
+static void kart_next(Game *s,Arcade *a){
+ /* The roadblock chooses a lane; steering must happen before it arrives. */
+ a->target=(uint8_t)(next(s)%3u);
+ a->timer=(uint16_t)(game_glitch_tier(s)>=3?66:90);
+ a->hold_frames=a->timer;
+}
+static void sock_next(Game *s,Arcade *a){
+ int i;
+ /* Find the one sock matching the sample; shuffle all three shop stalls. */
+ a->target=(uint8_t)(next(s)%3u);
+ for(i=0;i<3;i++)a->notes[i]=(uint8_t)i;
+ for(i=2;i>0;i--){
+  int j=(int)(next(s)%(unsigned)(i+1));
+  uint8_t t=a->notes[i];a->notes[i]=a->notes[j];a->notes[j]=t;
+ }
+ a->timer=(uint16_t)(game_glitch_tier(s)>=3?150:210);
+}
+static void nap_begin(Game *s,Arcade *a){
+ /* The green lullaby window is broad enough for touchscreen response. */
+ a->elapsed=0;a->taped=0;
+ a->hold_frames=(uint16_t)(game_glitch_tier(s)>=3?80:100);
+ a->timer=(uint16_t)(game_glitch_tier(s)>=3?420:600);
+}
 static void beatbox_next(Game *s,Arcade *a){
  int i;
  a->stage=0;
  a->phase=0;  /* Watch three notes before repeating the pattern. */
  a->elapsed=0;
  a->timer=(uint16_t)(game_glitch_tier(s)>=3?72:90);
+ a->hold_frames=a->timer; /* Fix animated preview: never divide by zero. */
  for(i=0;i<3;i++)a->notes[i]=(uint8_t)(next(s)&3u);
 }
 static void rattle_next(Game *s,Arcade *a){
@@ -146,7 +170,10 @@ void game_arcade_start(Game *s,Arcade *a,int id){
   a->reverse=(uint8_t)(game_glitch_tier(s)>=2);
  }else if(id==1)diaper_next(s,a);
  else if(id==2)teether_next(s,a);
+ else if(id==3){a->stage=1;kart_next(s,a);}
  else if(id==4)beatbox_next(s,a);
+ else if(id==5)sock_next(s,a);
+ else if(id==6)nap_begin(s,a);
  else if(id==7)rattle_next(s,a);
  else round_next(s,a);
 }
@@ -154,6 +181,9 @@ int game_arcade_expected(const Arcade *a){
  if(a->id==1)return a->target^(a->reverse?2:0);
  if(a->id==7||a->id==2)return a->target;
  if(a->id==4)return a->notes[a->stage<3?a->stage:2];
+ if(a->id==3)return (a->target+1u)%3u; /* a safe lane */
+ if(a->id==5){int i;for(i=0;i<3;i++)if(a->notes[i]==a->target)return i;}
+ if(a->id==6)return 0;
  return a->direction^(a->reverse?2:0);
 }
 static void finish(Game *s,Arcade *a,int won){
@@ -176,6 +206,38 @@ void game_arcade_steer(Arcade *a,int direction){
 }
 void game_arcade_input(Game *s,Arcade *a,int dir){
  if(!a->active||a->id==0||dir<0||dir>3)return;
+ if(a->id==3){
+  if(dir<=2)a->stage=(uint8_t)dir;
+  return; /* Steering is not itself a hit or a score. */
+ }
+ if(a->id==5){
+  if(dir>2)return;
+  if(a->notes[dir]==a->target){
+   a->round++;
+   if(a->round>=MBAI_ROUNDS)finish(s,a,1);
+   else sock_next(s,a);
+  }else{
+   a->mistakes++;s->corruption=clamp(s->corruption+3);
+   if(a->mistakes>=3)finish(s,a,0);
+   else sock_next(s,a);
+  }
+  return;
+ }
+ if(a->id==6){
+  unsigned phase;
+  if(dir!=0||a->taped)return;
+  phase=a->elapsed%a->hold_frames;
+  if(phase>=a->hold_frames*38u/100u&&
+     phase<=a->hold_frames*70u/100u){
+   a->round++;
+   a->taped=1; /* One success per lullaby cycle. */
+   if(a->round>=4)finish(s,a,1);
+  }else{
+   a->mistakes++;s->corruption=clamp(s->corruption+3);
+   if(a->mistakes>=3)finish(s,a,0);
+  }
+  return;
+ }
  if(a->id==4){
   int correct;
   if(!a->phase)return; /* Sounds/visuals are demonstrating the tune. */
@@ -224,6 +286,7 @@ void game_arcade_input(Game *s,Arcade *a,int dir){
   if(a->mistakes>=3)finish(s,a,0);
   else if(a->id==1)diaper_next(s,a);
   else if(a->id==2)teether_next(s,a);
+  else if(a->id==5)sock_next(s,a);
   else if(a->id==7)rattle_next(s,a);
   else round_next(s,a);
  }
@@ -337,6 +400,30 @@ static void bottle_tick(Game *s,Arcade *a){
 void game_arcade_tick(Game *s,Arcade *a){
  if(!a->active)return;
  if(a->id==0){bottle_tick(s,a);return;}
+ if(a->id==3){
+  if(a->timer)a->timer--;
+  if(!a->timer){
+   if(a->stage==a->target){
+    a->mistakes++;s->corruption=clamp(s->corruption+4);
+    if(a->mistakes>=3){finish(s,a,0);return;}
+   }else{
+    a->round++;
+    if(a->round>=MBAI_ROUNDS){finish(s,a,1);return;}
+   }
+   kart_next(s,a);
+  }
+  return;
+ }
+ if(a->id==6){
+  unsigned phase;
+  a->elapsed++;
+  phase=a->elapsed%a->hold_frames;
+  if(phase<a->hold_frames*38u/100u||
+     phase>a->hold_frames*70u/100u)a->taped=0;
+  if(a->timer)a->timer--;
+  if(!a->timer)finish(s,a,0);
+  return;
+ }
  if(a->id==4){
   if(!a->phase)a->elapsed++;
   if(a->timer)a->timer--;
@@ -357,6 +444,7 @@ void game_arcade_tick(Game *s,Arcade *a){
   if(a->mistakes>=3)finish(s,a,0);
   else if(a->id==1)diaper_next(s,a);
   else if(a->id==2)teether_next(s,a);
+  else if(a->id==5)sock_next(s,a);
   else if(a->id==7)rattle_next(s,a);
   else round_next(s,a);
  }
