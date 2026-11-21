@@ -218,6 +218,14 @@ def test_actual_game(path: Path, output: Path) -> dict:
         f"Touch FEED did not change needs bars or dialogue UI "
         f"({feed_changed} pixels)"
     )
+    # The shoulders must move as articulated limbs, not independent
+    # floating hand ellipsoids. This samples a real CHAT gesture.
+    stylus_tap(emu, 187, 131)
+    after_chat = picture(emu, output, "game_nursery_chat_reach")
+    chat_changed = difference(after_feed, after_chat, (34, 20, 222, 182))
+    assert chat_changed > 28, (
+        f"CHAT failed to visibly raise the connected infant arms ({chat_changed})"
+    )
     # The new 3D emotion/gesture pass must affect the actual TOP display:
     # FEED lifts an arm, while NAP closes both eyes and relaxes the arms.
     emu.input.touch_set_pos(187, 160)  # NAP on unchanged lower-screen hitbox
@@ -577,6 +585,7 @@ def test_actual_game(path: Path, output: Path) -> dict:
         "3D_top_screen_distinct_colors": hero_colors,
         "3D_top_screen_full_height_dark_stripes": len(full_height_stripes),
         "3D_care_pose_changed_pixels": pose_changed,
+        "3D_chat_reach_changed_pixels": chat_changed,
         "3D_title_top_screen_colors": title_colors,
         "album_screen_changed_pixels": album_diff,
         "album_next_page_changed_pixels": album_next_diff,
