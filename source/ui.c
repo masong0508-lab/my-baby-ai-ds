@@ -357,6 +357,35 @@ static const char *const spr_baby[]={
   ".....omffmmmmmo.....",
   ".....oommmmmmoo....."
 };
+/* Original 32x24 ROM pixel illustration of a *split*, artificial egg.
+ * The center remains visibly black: shell halves frame the living cavity.
+ * 768 bytes of indexed text, no image loader or graphics allocation. */
+static const char *const spr_egg[24]={
+ "................................",
+ ".......qqqqq.........wwwww......",
+ ".....qqqiwwqqq.....wwwwwwwww....",
+ "....qqiiiwwwwqq...wwwwwwwwwww...",
+ "...qqiiiiwwwwwqmmmwwwwwwwwwwww..",
+ "...qiiiiiwwwwwmnnnmwwwwwwwwwww..",
+ "..qiiiiiiwwwwmnnnnnmwwwwwwwwwww.",
+ "..qiiiiiiwwtwmnnnnnmwtwwwwwwwww.",
+ "..iiiiiiiwwtwnnnnnnnwtwwwwwwwww.",
+ ".qiiiiiiiwwtwnynnnynitiiaaaaaaaq",
+ ".qiiiiiiiwwfmngnnngnmfiiaaaaaaaq",
+ ".qiiiiiiiwwtmnnnnnnnmtiiaaaaaaaq",
+ ".qiiiiiiiwwtynnnnnnnytiiaaaaaaaq",
+ ".qiiiiiiiwwtmnnnnnnnmtiiaaaaaaaq",
+ ".qiiiiiiiwwtmnnnnnnnmtiiaaaaaaaq",
+ "..iiiiiiiiifynnnnnnnyfiiaaaaaaa.",
+ "..iiiiiiiiitmnnkkknnmtiiaaaaaaq.",
+ "..iiiiiiiiitmmnkkknmmtiiaaaaaaq.",
+ "...iiiiiiiitymnnnnnmytiiaaaaaq..",
+ "...iiiiiiiiimimnnnmimiiiaaaaqq..",
+ "....iiiiiiiiiiimmmqqiiiiaaaqq...",
+ ".....iiiiiiiii.....qqqiiaqqq....",
+ ".......iiiii.........qqqqq......",
+ "................................"
+};
 static const char *const spr_bottle[]={
   "......oooo......",
   "......owwo......",
@@ -1285,18 +1314,18 @@ static void challenge(const Game *s,const Arcade *a){
  * outcome label, one sentence of reward and a single continue affordance. */
 static void finale(const Game *s,int ending){
  if(ending==END_EGG){
+  /* A coherent terminal art card: muted vault, unmistakable cracked egg
+   * pictogram, and pale-green reveal instead of random flat rectangles. */
   solid(0,27,256,149,NIGHT);
-  panel(10,34,236,138,PURPLE,ROSE);
-  capsule(23,42,210,27,NIGHT,ROSE);
+  panel(10,34,236,138,NIGHT,GREEN);
+  capsule(23,42,210,27,INK,ROSE);
   label(63,49,"BAD ENDING",WHITE,2,10);
-  /* Original alien-egg seal: a synthetic casing, not human gore. */
-  capsule(94,75,68,44,MINT,TEAL);
-  capsule(108,78,42,38,NIGHT,PURPLE);
-  solid(123,88,8,22,LEMON);
-  solid(114,94,30,5,ROSE);
-  fit(28,124,"THE NURSERY IS AN INCUBATOR",WHITE,36);
-  fit(49,140,"FILE 09: UNSEALED",LEMON,28);
-  fit(36,155,"MEMORY SAVED. BABY RETURNS.",PINK,36);
+  capsule(82,74,92,48,INK,TEAL);
+  sprite(97,74,2,spr_egg,24);
+  fit(27,124,"THE NURSERY WAS AN INCUBATOR",WHITE,37);
+  solid(25,136,206,2,GREEN);
+  fit(61,142,"FILE 09: UNSEALED",LEMON,27);
+  fit(32,157,"THE THING INSIDE REMEMBERS.",MINT,37);
   foot(PURPLE);
   fit(15,182,"A CONTINUE      B CONTINUE",WHITE,37);
   (void)s;
@@ -1376,31 +1405,33 @@ static void egg_scene_screen(int frame){
            frame<(int)EGG_PUSH_FRAME?1:
            frame<(int)EGG_SCARE_FRAME?2:3;
  int i;
+ /* The lower screen belongs to the SAME horror scene as the upper screen.
+  * Deep black/green monitoring UI replaces the old pastel-pink dialogue
+  * card that clashed with the creature and made it feel like a toy menu. */
  solid(0,27,256,149,NIGHT);
- panel(10,35,236,130,phase==3?ROSE:PURPLE,phase==3?PINK:LILAC);
- capsule(21,45,214,28,NIGHT,ROSE);
+ panel(10,35,236,130,INK,phase==3?ROSE:TEAL);
+ capsule(21,45,214,28,phase==3?ROSE:NIGHT,phase==3?PINK:GREEN);
  label(phase==3?43:phase==2?57:phase==1?59:55,52,
        phase==3?"IT CAN SEE YOU":
        phase==2?"COME CLOSER":
        phase==1?"DO NOT OPEN":"NO SIGNAL",WHITE,2,14);
+ fit(27,81,"SPECIMEN 09 / UNIDENTIFIED",MINT,35);
+ solid(22,98,4,31,phase==3?ROSE:GREEN);
  if(phase==0){
-  fit(34,88,"THE SHELL WAS NEVER SKIN.",WHITE,35);
-  fit(52,110,"INTERNAL SEAL: FAIL",LEMON,27);
+  fit(34,100,"SYNTHETIC SHELL BREACH",WHITE,34);
+  fit(34,116,"A SECOND HEARTBEAT.",LEMON,30);
  }else if(phase==1){
-  fit(37,88,"INCUBATION CHAMBER 09",WHITE,35);
-  fit(67,110,"SOMETHING MOVED",PINK,25);
-  fit(48,124,"ALIEN ICHOR DETECTED",GREEN,30);
+  fit(34,100,"PORCELAIN SHELL SEPARATING",WHITE,35);
+  fit(34,116,"GREEN BIOFLUID DETECTED",LEMON,31);
  }else if(phase==2){
-  fit(49,88,"SLOWLY LOOK INSIDE",WHITE,29);
-  fit(66,110,"DO NOT BLINK",LEMON,24);
-  fit(56,124,"GREEN FLUID LEAK",GREEN,28);
+  fit(34,100,"SOMETHING IS LOOKING BACK",WHITE,35);
+  fit(34,116,"DO NOT ENTER THE CAVITY",LEMON,31);
  }else{
-  fit(36,88,"THE EGG REMEMBERS YOU",WHITE,35);
-  fit(68,110,"IT WAS LISTENING",LEMON,28);
+  fit(34,100,"SUBJECT 09 HAS RECOGNIZED YOU",WHITE,35);
+  fit(34,116,"CONTAINMENT HAS FAILED",LEMON,31);
  }
- /* Four discreet signal segments give the player a cinematic heartbeat.
-  * They also let emulator regression tests identify ACTUAL film phases
-  * rather than incorrectly timestamping frames at variable DS FPS. */
+ /* Four non-blinking film-phase segments remain at the exact positions
+  * used by the native DeSmuME phase assertions. */
  for(i=0;i<4;i++)solid(27+i*52,136,45,3,i<=phase?LEMON:GRAY);
  foot(PURPLE);
  fit(23,181,"B SKIP  /  A CONTINUE",WHITE,39);
@@ -1511,14 +1542,15 @@ static void ending_album(const Game *s,int page){
   capsule(192,32,55,28,SKY,TEAL);
   fit(201,42,"NEXT >",INK,8);
   fit(95,40,"PAGE 3/3",WHITE,12);
-  panel(19,67,218,101,discovered?PURPLE:GRAY,ROSE);
-  capsule(103,78,50,48,discovered?MINT:SILVER,TEAL);
-  capsule(113,82,30,38,NIGHT,PURPLE);
+  panel(19,67,218,101,NIGHT,discovered?GREEN:PURPLE);
+  capsule(82,74,92,48,INK,discovered?TEAL:GRAY);
   if(discovered){
-   fit(34,130,"09  THE INCUBATOR WAS ALIVE",WHITE,36);
+   sprite(97,74,2,spr_egg,24);
+   fit(33,130,"09  THE INCUBATOR WAS ALIVE",WHITE,36);
    fit(68,148,"TAP TO REPLAY",LEMON,30);
   }else{
-   fit(51,130,"09  ???  SEALED",INK,30);
+   fit(113,90,"09?",WHITE,5);
+   fit(51,130,"09  ???  SEALED",WHITE,30);
    fit(42,148,"SECRET MEMORY NOT FOUND",MUTED,35);
   }
   foot(PURPLE);
