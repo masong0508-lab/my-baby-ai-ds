@@ -43,6 +43,16 @@ static void care(Care action){
  message=game_care(&baby,action);
  pose=(int)action+1;
  pose_age=0; /* restart this care gesture: do not loop it forever */
+ /* Short original PSG phrases now match the on-screen head/jaw/arm
+  * reactions. The single-channel audio engine handles mute and priority,
+  * so neither the egg scare nor old Toybox cues can be affected. */
+ switch(action){
+ case FEED:sfx_play(SFX_FEED);break;
+ case CHAT:sfx_play(SFX_CHAT);break;
+ case PLAY:sfx_play(SFX_PLAY);break;
+ case NAP:sfx_play(SFX_NAP);break;
+ default:break;
+ }
  persist();
 }
 static void end_day(void){
@@ -465,7 +475,13 @@ int main(void){
    if(down&(KEY_B|KEY_SELECT|KEY_START)){view=5;dirty=1;}
   }else if(view==10){
    int picked=-1;
-   if(down&(KEY_B|KEY_START)){
+   if(down&KEY_Y){
+    /* Same global mute as Toybox, now accessible without entering the
+     * horror mode. Does not spend a tap or change baby care stats. */
+    sfx_set_enabled(!sfx_is_enabled());
+    message=sfx_is_enabled()?"ROOM AUDIO ON.":"ROOM AUDIO MUTED.";
+    dirty=1;
+   }else if(down&(KEY_B|KEY_START)){
     room_camera_anchor=world_nursery_camera_from(room_camera_anchor,
                                                      room_focus,room_camera_age);
     room_previous=room_focus;room_focus=-1;room_camera_age=0;
@@ -480,7 +496,13 @@ int main(void){
      else if(down&KEY_DOWN)picked=3;
      else if(down&KEY_A)picked=room_focus;
     }
-    if(picked==4){
+    /* The sound toggle and USE labels are also true stylus hitboxes. */
+    if(picked==6)picked=room_focus;
+    if(picked==5){
+     sfx_set_enabled(!sfx_is_enabled());
+     message=sfx_is_enabled()?"ROOM AUDIO ON.":"ROOM AUDIO MUTED.";
+     dirty=1;
+    }else if(picked==4){
      room_camera_anchor=world_nursery_camera_from(room_camera_anchor,
                                                      room_focus,room_camera_age);
     room_previous=room_focus;room_focus=-1;room_camera_age=0;
@@ -494,15 +516,20 @@ int main(void){
      room_prop_age=0u; /* every tap restarts an interaction, not a loop */
      if(picked==0){
       room_daylight^=1;
+      sfx_play(SFX_ROOM_SWITCH);
       message=room_daylight?"THE WINDOW SHOWS A NEW DAY.":"THE MOON IS WATCHING AGAIN.";
      }else if(picked==1){
       room_lamp^=1;
+      sfx_play(SFX_ROOM_SWITCH);
       message=room_lamp?"LAMP ON. BUDGET APPROVED.":"LIGHTS OUT. OVERTIME DENIED.";
      }else if(picked==2){
       care(PLAY);
       message="TEDDY RECEIVED A PROMOTION.";
      }else{
       care(NAP);
+      /* The attached mobile chimes while it performs its one-shot
+       * 40-tick swing. It supersedes the ordinary NAP phrase only here. */
+      sfx_play(SFX_MOBILE);
       if(game_room_quiet_rest(&baby,room_daylight,room_lamp)){
        message="QUIET NIGHT: +8 ENERGY, -4 CHAOS.";
        persist(); /* persist BOTH care and conditional quiet benefit */
@@ -546,7 +573,7 @@ int main(void){
                      (sfx_is_enabled()?(1<<16):0)):
            view==9?((int)egg_frame|(egg_paused?EGG_FILM_PAUSED_FLAG:0)):
            view==10?((room_focus&3)|(room_daylight?8:0)|
-                    (room_lamp?16:0)):
+                    (room_lamp?16:0)|(sfx_is_enabled()?0:32)):
            selected,last_ending,reset_step,storage_ok,message);
    dirty=0;
   }
