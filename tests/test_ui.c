@@ -52,6 +52,15 @@ int main(void){
  assert(ui_nursery_touch(0,0)==-1);
  assert(ui_home_navigation(35,183)==1);
  assert(ui_home_navigation(225,183)==2);
+ assert(ui_home_navigation(130,183)==0);
+ assert(ui_prank_entry_touch(125,184));
+ assert(!ui_prank_entry_touch(194,45));
+ assert(!ui_prank_entry_touch(225,183));
+ assert(ui_roughhouse_touch(48,160)==1); /* select SLAP */
+ assert(ui_roughhouse_touch(191,160)==2); /* select KICK */
+ assert(ui_roughhouse_touch(130,109)==4); /* use selected toy */
+ assert(ui_roughhouse_touch(128,182)==3); /* back */
+ assert(ui_roughhouse_touch(128,67)==0);
  assert(ui_arcade_select_page(35,92,0)==0);
  assert(ui_arcade_select_page(173,92,0)==1);
  assert(ui_arcade_select_page(35,145,0)==2);
@@ -76,6 +85,22 @@ int main(void){
  assert(ui_arcade_navigation(112,181)==2);
  assert(ui_arcade_navigation(221,181)==3);
  assert(ui_arcade_navigation(11,122)==0);
+ {
+  uint32_t hand,foot;
+  ui_draw(&g,&a,8,5,0,0,1,"TOYBOX");
+  verify_coverage();
+  hand=fingerprint();
+  ui_draw(&g,&a,8,37,0,0,1,"TOYBOX");
+  verify_coverage();
+  foot=fingerprint();
+  assert(hand!=foot); /* SELECTED mode must be unmistakable */
+  ui_draw(&g,&a,9,EGG_PUSH_FRAME,0,0,1,"EGG");
+  verify_coverage();
+  ui_draw(&g,&a,9,EGG_SCARE_FRAME,0,0,1,"EGG");
+  verify_coverage();
+  ui_draw(&g,&a,6,2,0,0,1,"ALBUM");
+  verify_coverage();
+ }
  a.timer=110;
  ui_draw(&g,&a,1,0,0,0,1,"ARCADE");
  {
