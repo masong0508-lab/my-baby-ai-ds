@@ -25,7 +25,7 @@ Apply changes after ending resolution and the original ending recovery. An overn
 - A dedicated 360-day long-term rehabilitation playthrough uses only real FEED/CHAT/NAP actions chosen from the visible care hint, verifies that normal needs can always be recovered, and performs recurring two-slot save/load round trips. The pre-existing 25,000-transition stress test remains enabled.
 - Require strict host tests, both original DS build workflows, DeSmuME native input checks and saved-game compatibility before merge. No physical DS FPS measurements yet.
 
-**Dependency:** stacked on PR #57, the on-screen care guidance.
+**Integration:** PR #57's on-screen care guidance is now merged into `main`. This day-cycle milestone is rebased directly on top of that release branch.
 ## Failed-write visibility
 
 A mounted save device may stop accepting writes. The original game discarded this error silently; now every `persist()` call reports `SAVE WRITE FAILED. PROGRESS IN RAM!` via the current lower-screen message if a write fails. The game continues in RAM and the next meaningful action retries the two-slot write. A strict host test ensures an invalid save target does not modify the in-memory sequence. The save file format is unchanged.
