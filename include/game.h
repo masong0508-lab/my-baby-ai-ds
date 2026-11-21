@@ -31,6 +31,8 @@ typedef struct {
 extern const char *const game_names[MBAI_GAMES];
 void game_init(Game *s);
 const char *game_care(Game *s,Care action);
+/* Adds calm/energy only when Room Tour crib is moonlit and lamp off. */
+int game_room_quiet_rest(Game *s,int daylight,int lamp_on);
 unsigned game_glitch_tier(const Game *s);
 int game_unlocked(const Game *s,int id);
 int game_unlock(Game *s,int id);
