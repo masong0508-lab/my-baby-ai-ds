@@ -152,6 +152,7 @@ int main(void){
   assert(b.z-c.z<.05f); /* no teleport at push transition */
   assert(d.z>1.35f && d.z<1.45f);
   assert(e.z>2.5f); /* single intentional jump-scare cut */
+  assert(e.look_y<-.09f&&e.look_y>-.15f); /* jaw visible, not cropped */
  }
  /* Connected lower jaw: the tongue and fangs open together and settle
   * without strobing, repeat surprise cuts or frame-dependent randomness. */
