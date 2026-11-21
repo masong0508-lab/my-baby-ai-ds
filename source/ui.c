@@ -408,7 +408,10 @@ static void room_screen(const Game *s,int state,const char *message){
    solid(x+32,y+31,4,3,INK);
   }
   fit(x+45,y+8,name[i],PURPLE,10);
-  fit(x+45,y+22,benefit[i],INK,13);
+  /* Teach the real interaction: moonlight + lamp off makes Crib
+   * meaningfully more restful. The cards always match gameplay state. */
+  fit(x+45,y+22,i==3&&!day&&!lamp?"BONUS +8":benefit[i],
+      INK,13);
  }
  foot(PURPLE);
  capsule(8,178,240,13,NIGHT,TEAL);
