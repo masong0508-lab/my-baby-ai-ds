@@ -7,6 +7,11 @@
 #define ROUGHHOUSE_CRACK_CHARGE 15u
 #define ROUGHHOUSE_SLAP 1
 #define ROUGHHOUSE_KICK 2
+#define EGG_CRACK_FRAME 85u
+#define EGG_PUSH_FRAME 210u
+#define EGG_SCARE_FRAME 366u
+#define EGG_HOLD_FRAME 391u
+#define EGG_TOTAL_FRAMES 460u
 typedef struct {
  int32_t x,y,z,vx,vy,vz;
  int16_t roll,pitch,yaw,vr,vp,vyaw;
