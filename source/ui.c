@@ -317,25 +317,27 @@ static void arrow(int x,int y,int dir,uint16_t fill){
  * decoder, heap, asset loader, or second framebuffer. */
 /* Shared baby portrait: warm face, small eyes, soft cheeks, chestnut tuft,
  * mint romper. A matching silhouette appears in the DS 3D nursery. */
+/* Warm shaded 20x18 ROM pixel baby shared by the title and all cabinets.
+ * Added hair sheen, cheek contour, bright sclera and a two-tone romper. */
 static const char *const spr_baby[]={
-  ".........hh.........",
-  ".......hhhhhh.......",
-  "......oohhhhoo......",
-  ".....ohhhhhhhho.....",
-  "....ohssssssssho....",
-  "...osssssssssssso...",
-  "...osssssssssssso...",
-  "...osswwsssswwsso...",
-  "ossosswksssskwssosso",
-  "ossossssssssssssosso",
-  "...orrsssrssssrro...",
-  "....ossspsspssso....",
-  "....oosssppsssoo....",
-  "......oossssoo......",
-  ".....obssssssbo.....",
-  ".....obttttttbo.....",
-  ".....obbttttbbo.....",
-  ".....oooooooooo....."
+  ".........dd.........",
+  ".......hdddhh.......",
+  ".....hodddooooh.....",
+  ".....dddsssshho.....",
+  "....osssssssssso....",
+  "...ollsssssssssso...",
+  "...ollhhsssshhsso...",
+  "...olloossssoossoo..",
+  "..oollwksssswkssoso.",
+  ".osollasssssasaaoso.",
+  "..oorrsssvssssrrooo.",
+  "....osssvssvssao....",
+  ".....osssvvssso.....",
+  "......occcccco......",
+  ".....omfcfmcmmo.....",
+  ".....omfbbbbmmo.....",
+  ".....omffmmmmmo.....",
+  ".....oommmmmmoo....."
 };
 static const char *const spr_bottle[]={
  "......oooo......",
@@ -515,6 +517,97 @@ static const char *const spr_gavel[]={
  "...owwwwwwwwo.",
  "...oooooooooo."
 };
+/* Original 16x16 miniature assets: beatbox microphone, naptime pillow, office badge, audit clipboard and CEO briefcase with gold crown. Each stays in ROM, never copied to a new framebuffer. */
+static const char *const spr_mic[]={
+  "................",
+  ".......ooo......",
+  ".....oowwpoo....",
+  "..g..owppppo.g..",
+  ".....opwpppo....",
+  ".g...opppppo..g.",
+  ".....opppppo....",
+  ".....oqqqqqo....",
+  "......qqqqq.....",
+  "..g....qwq....g.",
+  ".......qwq......",
+  ".......qwq......",
+  ".....ooooooo....",
+  "....ootttttoo...",
+  "....ooooooooo...",
+  "................"
+};
+static const char *const spr_pillow[]={
+  "................",
+  "...g.......gg...",
+  "...gg.....gy....",
+  "...g......gyy...",
+  "..........gyyyg.",
+  "...........ggg..",
+  "..oooooooooooo..",
+  "..oiiiiiiiiiio..",
+  "..oiuuuuuuuuio..",
+  "..oiuulllluuio..",
+  "..oiuulllluuio..",
+  "..oiuuuuuuuuio..",
+  "..oiiiiiiiiiio..",
+  "..oppooooooppo..",
+  "................",
+  "................"
+};
+static const char *const spr_badge[]={
+  ".......pp.......",
+  ".......pp.......",
+  ".....owwwwo.....",
+  "..oooooooooooo..",
+  "..ojjjjjjjjjjo..",
+  "..ojwwwwwwwwjo..",
+  "..ojjjjooojjjo..",
+  "..ojjjosssojjo..",
+  "..ojjjokskojjo..",
+  "..ojjjosssojjo..",
+  "..ojjjjorojjjo..",
+  "..ojjjjjjjjjjo..",
+  "..ojjwwwwwwjjo..",
+  "..ojjiiiiijjjo..",
+  "..ojjjjjjjjjjo..",
+  "..oooooooooooo.."
+};
+static const char *const spr_audit[]={
+  ".....oooooo.....",
+  ".....oggggo.....",
+  "..ooooggggoooo..",
+  "..owwoooooowwo..",
+  "..owwwwwwwwwwo..",
+  "..owuuuuwqqqwo..",
+  "..owwwwwwwwwwo..",
+  "..owuuuuwqqqwo..",
+  "..owwwwwwwwwwo..",
+  "..owuuuuwqqtwo..",
+  "..owwwwwwwtwwo..",
+  "..owutuuwtqqwo..",
+  "..owwwtwtwwwwo..",
+  "..owwwwtwwwwwo..",
+  "..owwwwwwwwwwo..",
+  "..oooooooooooo.."
+};
+static const char *const spr_ceo[]={
+  "................",
+  ".......y........",
+  "...y........y...",
+  "....y.y.y.y.....",
+  ".....y...y......",
+  "....gggggggg....",
+  "....gyyyyyyg....",
+  "....oooooooo....",
+  "......ollo......",
+  ".oooooolloooooo.",
+  ".ottttooootttto.",
+  ".otmmmmmmmmmmto.",
+  ".otttffggffttto.",
+  ".otttttttttttto.",
+  ".oooooooooooooo.",
+  "................"
+};
 static uint16_t art_ink(char p){
  switch(p){
  case 'o':return INK;
@@ -527,6 +620,19 @@ static uint16_t art_ink(char p){
  case 'g':return GOLD;
  case 't':return TEAL;
  case 'k':return RGB(5,7,11);
+ /* Extended warm baby/material palette, using only 16-bit DS RGB5 colors. */
+ case 'a':return RGB(27,18,16); /* skin shadow */
+ case 'c':return RGB(31,29,25); /* romper collar */
+ case 'd':return RGB(23,14,9);  /* chestnut sheen */
+ case 'f':return RGB(22,30,23); /* mint fabric highlight */
+ case 'i':return RGB(30,27,30); /* pillow ivory */
+ case 'j':return RGB(15,26,29); /* badge sky */
+ case 'l':return RGB(31,27,23); /* face highlight */
+ case 'm':return RGB(12,24,21); /* jade cloth */
+ case 'q':return RGB(12,11,16); /* muted ink */
+ case 'u':return RGB(23,19,27); /* lavender shadow */
+ case 'v':return RGB(21,10,13); /* small smile */
+ case 'y':return RGB(31,28,16); /* sunlit gold */
  default:return 0;
  }
 }
