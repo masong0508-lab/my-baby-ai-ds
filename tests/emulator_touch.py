@@ -496,6 +496,19 @@ def test_actual_game(path: Path, output: Path) -> dict:
     assert movie_stage(egg_scare) == 3, (
         "The jump-scare image was captured in the wrong cinematic phase"
     )
+    # Capture the NEW animated reaction, not just the first scare frame.
+    # The jaw, fangs, eyes and brow must lunge as one 3D subject.
+    frames(emu, 12)
+    egg_lunge = picture(emu, output, "game_egg_creature_lunge")
+    assert movie_stage(egg_lunge) == 3, (
+        "Lunge exited the horror film before the reaction was visible"
+    )
+    lunge_changed = difference(
+        egg_scare, egg_lunge, (22, 10, 234, 182)
+    )
+    assert lunge_changed > 25, (
+        f"Creature is frozen after the scare cut ({lunge_changed})"
+    )
 
     finale_heading_ink = 0
     for _ in range(100):
@@ -578,6 +591,7 @@ def test_actual_game(path: Path, output: Path) -> dict:
         "Egg_dark_cavity_pixels": cavity_dark_pixels,
         "Egg_visible_porcelain_pixels": ivory_shell_pixels,
         "Alien_jump_scare_changed_pixels": scare_difference,
+        "Alien_lunge_animation_changed_pixels": lunge_changed,
         "Alien_ending_finale_changed_pixels": finale_difference,
         "Egg_green_stage": movie_stage(egg_green),
         "Egg_push_stage": movie_stage(egg_push),
