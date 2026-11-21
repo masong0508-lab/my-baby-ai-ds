@@ -198,12 +198,12 @@ static void tulip(float x,float y,float z,int pink){
 /* Rounded-looking flower silhouettes on the floor: five petals and a center.
  * All six details are one quad each, preserving polygon budget. */
 static void rug_flower(float x,float z){
- flat_floor(x-.105f,-1.109f,z,.17f,.14f,10,18,6);
- flat_floor(x+.105f,-1.109f,z,.17f,.14f,10,18,6);
- flat_floor(x,-1.109f,z-.105f,.17f,.14f,10,18,6);
- flat_floor(x,-1.109f,z+.105f,.17f,.14f,10,18,6);
- flat_floor(x-.065f,-1.108f,z-.065f,.14f,.14f,11,20,6);
- flat_floor(x,-1.107f,z,.12f,.11f,30,26,5);
+ flat_floor(x-.105f,-1.109f,z,.17f,.14f,28,17,22);
+ flat_floor(x+.105f,-1.109f,z,.17f,.14f,28,17,22);
+ flat_floor(x,-1.109f,z-.105f,.17f,.14f,28,17,22);
+ flat_floor(x,-1.109f,z+.105f,.17f,.14f,28,17,22);
+ flat_floor(x-.065f,-1.108f,z-.065f,.14f,.14f,30,21,24);
+ flat_floor(x,-1.107f,z,.12f,.11f,31,27,17);
 }
 /* Thin surface layers read as fabric, eyebrows or facial blush rather than
  * big detached spheres. Each costs a single GPU quad. */
@@ -231,9 +231,12 @@ static void room(void){
  /* One darkened ground plane under the play mat gives contact shadow
   * without expensive translucent blending or extra VRAM. */
  flat_floor(.04f,-1.222f,.78f,3.00f,2.58f,20,17,14);
- block(.04,-1.20,.78,2.86,.09,2.43,15,22,8);
- block(.04,-1.145,.78,2.62,.045,2.18,25,29,11);
- for(i=0;i<4;i++)flat_floor(-.89f+i*.56f,-1.112f,1.78f,.13f,.035f,18,25,9);
+ block(.04,-1.20,.78,2.86,.09,2.43,15,17,23);
+ block(.04,-1.145,.78,2.62,.045,2.18,23,23,29);
+ for(i=0;i<4;i++)flat_floor(-.89f+i*.56f,-1.112f,1.78f,.13f,.035f,31,25,23);
+ /* Muted lavender-and-blush nursery rug keeps the turquoise synthetic
+  * baby distinct against the floor instead of washing it out in neon lime.
+  * Flowers and crib remain playful without fighting the foreground. */
  /* Big stylized flowers, a defining motif of the 2000s reference. */
  /* The contact shadow now follows the doll during Toybox physics, so it
   * is drawn by each scene, not painted permanently at its spawn point. */
@@ -376,9 +379,10 @@ static void baby_model(const Game *s,uint32_t frame,int action,
  ellipse(.365f,-1.08f,.36f,.235f,.13f,.24f,30,28,23);
  soft_mark(-.365f,-1.07f,.599f,.10f,.017f,21,27,24);
  soft_mark(.365f,-1.07f,.599f,.10f,.017f,21,27,24);
- /* Curved mint romper and cream collar meet behind the head. */
+ /* Layered shadow + warm collar replaces the single white floating coin. */
  soft_head(0,-.32f,-.08f,.49f,.46f,.36f,19,27,27);
- ellipse(0,.09f,.0f,.22f,.10f,.205f,31,26,21);
+ ellipse(0,.084f,-.015f,.27f,.11f,.196f,17,22,21);
+ ellipse(0,.117f,.012f,.23f,.073f,.215f,31,27,22);
  ellipse(0,-.39f,.284f,.235f,.225f,.035f,29,30,26);
  /* Four inexpensive stitched glints on the romper's central pocket. */
  soft_mark(0,-.30f,.330f,.10f,.044f,glitch?24:27,glitch?17:23,10);
@@ -419,12 +423,17 @@ static void baby_model(const Game *s,uint32_t frame,int action,
  /* Sclera and pupils lie just above the curved facial surface, not
   * stacked .10 units out in space. Each shallow eye has a tiny highlight. */
  if(!blink){
-  ellipse(-.205f,.575f,.472f,.100f,.094f,.015f,30,29,27);
-  ellipse(.205f,.575f,.472f,.100f,.094f,.015f,30,29,27);
-  ellipse(-.190f,.565f,.485f,.052f,.061f,.015f,5,7,11);
-  ellipse(.220f,.565f,.485f,.052f,.061f,.015f,5,7,11);
-  soft_mark(-.208f,.602f,.508f,.028f,.023f,31,31,30);
-  soft_mark(.202f,.602f,.508f,.028f,.023f,31,31,30);
+  /* Eye sockets/iris/pupils form a clear expression at only 256x192. */
+  ellipse(-.205f,.579f,.462f,.135f,.113f,.014f,22,15,14);
+  ellipse(.205f,.579f,.462f,.135f,.113f,.014f,22,15,14);
+  ellipse(-.205f,.575f,.477f,.113f,.099f,.015f,31,30,28);
+  ellipse(.205f,.575f,.477f,.113f,.099f,.015f,31,30,28);
+  ellipse(-.188f,.565f,.493f,.066f,.072f,.015f,10,19,22);
+  ellipse(.218f,.565f,.493f,.066f,.072f,.015f,10,19,22);
+  ellipse(-.185f,.560f,.509f,.040f,.054f,.011f,3,7,10);
+  ellipse(.221f,.560f,.509f,.040f,.054f,.011f,3,7,10);
+  soft_mark(-.208f,.602f,.526f,.031f,.023f,31,31,29);
+  soft_mark(.202f,.602f,.526f,.031f,.023f,31,31,29);
  }else{
   soft_mark(-.205f,.575f,.480f,.169f,.016f,15,10,9);
   soft_mark(.205f,.575f,.480f,.169f,.016f,15,10,9);
@@ -519,114 +528,170 @@ void world_draw_roughhouse(const Game *s,uint32_t frame,const Roughhouse *r){
  teddy();
  glFlush(0);
 }
-/* Cosmic-horror reveal: the SYNTHETIC outer shell is filled with luminous
- * poisonous-green extraterrestrial ichor, not human blood. A few opaque
- * hardware quads form viscous dripping rivulets; no particles, alpha sort,
- * extra framebuffer, textures, or per-frame allocations. The jump scare is
- * a single sudden camera cut with no repeating flashes. */
+/* One pointed tooth costs one triangle and follows the curved mouth.
+ * Fixed, tiny per-frame geometry: never a texture atlas or CPU rasterizer. */
+static void fang(float x,float y,float z,float width,float height,int upper){
+ glBegin(GL_TRIANGLES);
+ color(28,30,23,0);
+ glVertex3f(x-width*.5f,y,z);
+ glVertex3f(x+width*.5f,y,z);
+ color(21,28,20,-1);
+ glVertex3f(x,y+(upper?height:-height),z);
+ glEnd();
+ frame_vertices+=3;frame_polygons++;
+}
+/* Purpose-built visual hierarchy for the secret BAD ending:
+ *   porcelain shell / shadowed inner lip / black incubation chamber /
+ *   clearly silhouetted parasite / thin luminous green ichor.
+ * All surfaces are hardware vertices (no extra textures, heap, framebuffer,
+ * animation buffers or random particles). This is synthetic alien material. */
+/* During the slow approach, the same nursery walls, window, crib and
+ * floor retain their positions. A continuous lateral dolly creates real
+ * parallax; only the final scare intentionally hard-cuts. Camera arithmetic
+ * is constant-time and never allocates a new scene or framebuffer. */
+EggCamera world_secret_camera(uint32_t frame){
+ EggCamera c;
+ float travel,settle;
+ if(frame<EGG_CRACK_FRAME)frame=EGG_CRACK_FRAME;
+ if(frame>=EGG_SCARE_FRAME){
+  c.x=0.f;c.y=.05f;c.z=2.63f;
+  c.look_x=0.f;c.look_y=.03f;c.look_z=.40f;
+  return c;
+ }
+ travel=(float)(frame-EGG_CRACK_FRAME)/
+        (float)(EGG_SCARE_FRAME-EGG_CRACK_FRAME);
+ /* Hold the wide shot long enough to identify the original nursery;
+  * start a slow continuous lateral track through the shell opening. */
+ settle=travel*travel*(3.f-2.f*travel);
+ c.x=.94f-.90f*settle;
+ c.y=.93f-.83f*settle;
+ c.z=3.46f-2.06f*settle;
+ c.look_x=-.12f+.12f*settle;
+ c.look_y=.035f-.12f*settle;
+ c.look_z=.17f+.25f*settle;
+ return c;
+}
 void world_draw_secret(const Game *s,uint32_t frame,const Roughhouse *r){
- float eye_z;
  unsigned phase;
  int i;
+ EggCamera camera;
+ float opened=0.f;
  if(frame<EGG_CRACK_FRAME){
   world_draw_roughhouse(s,frame,r);
   return;
  }
  phase=frame<EGG_PUSH_FRAME?1u:frame<EGG_SCARE_FRAME?2u:3u;
+ camera=world_secret_camera(frame);
  glMatrixMode(GL_MODELVIEW);glLoadIdentity();
- if(phase==1u){
-  /* Earlier camera was too distant: egg occupied <50px on a 192px LCD.
-   * Keep the shell large and recognizable before slowly advancing. */
-  gluLookAt(0,.18f,3.15f,0,0,.0f,0,1,0);
- }else if(phase==2u){
-  /* A real push into the fissure, not a slight distant change in scale.
-   * Camera remains outside the .66-unit fluid surface until the last beat. */
-  float camera=3.15f-(float)(frame-EGG_PUSH_FRAME)*.014f;
-  if(camera<1.20f)camera=1.20f;
-  gluLookAt(0,.11f,camera,0,.08f,.13f,0,1,0);
- }else{
-  /* Keep full head within view rather than clipping into giant flat planes. */
-  gluLookAt(0,.10f,2.70f,0,.10f,.37f,0,1,0);
- }
+ gluLookAt(camera.x,camera.y,camera.z,
+           camera.look_x,camera.look_y,camera.look_z,0,1,0);
  glPolyFmt(POLY_ALPHA(31)|POLY_CULL_NONE);
  frame_vertices=0;frame_polygons=0;
- block(0,0,-2.8f,11,8,.08f,4,4,11);
+ /* Keep the real nursery where the player last saw it: the patterned
+  * rug, window and crib provide persistent parallax behind the synthetic
+  * shell. Final scare still cuts to a stark silhouette for contrast. */
+ if(phase<3u)room();
+ else block(0,0,-2.8f,11,8,.08f,3,5,9);
  if(phase<3u){
-  /* A single intact alien-egg core, with splitting synthetic plates.
-   * Fracture marks are drawn IN FRONT of the shell, not as random pixels. */
-  soft_head(0,-.15f,.02f,.70f,.88f,.48f,16,24,21);
-  soft_head(0,-.21f,.35f,.57f,.69f,.22f,24,26,17);
-  /* Overlapping asymmetric shell plates visibly PART as the lens moves in.
-   * Four inexpensive 12-sided softly lit shells with stepped curvature
-   * replace the original 8-sided origami-like silhouette. No texture VRAM,
-   * framebuffers or new mesh buffers are allocated. */
-  {
-   float opened=frame>=EGG_PUSH_FRAME?
-        (float)(frame-EGG_PUSH_FRAME)/(float)(EGG_SCARE_FRAME-EGG_PUSH_FRAME):0.f;
+  if(phase==2u){
+   opened=(float)(frame-EGG_PUSH_FRAME)/
+          (float)(EGG_SCARE_FRAME-EGG_PUSH_FRAME);
    if(opened>1.f)opened=1.f;
-   soft_head(-.31f-opened*.11f,-.14f,.482f,.26f,.61f,.072f,22,28,20);
-   soft_head(.31f+opened*.11f,-.11f,.483f,.26f,.58f,.072f,20,26,19);
-   soft_mark(-.48f-opened*.10f,-.25f,.558f,.055f,.24f,12,28,9);
-   soft_mark(.47f+opened*.09f,.13f,.56f,.048f,.19f,9,26,12);
-   soft_mark(-.34f-opened*.08f,.31f,.558f,.058f,.15f,16,30,10);
   }
-  soft_mark(0,-.05f,.562f,.18f,.55f,6,8,12);
-  soft_mark(-.14f,-.09f,.568f,.10f,.24f,5,10,14);
-  soft_mark(.16f,.12f,.568f,.08f,.29f,5,10,14);
-  ellipse(0,-.05f,.58f,.23f,.35f,.038f,5,8,15);
-  ellipse(0,-.06f,.62f,.14f,.22f,.020f,25,8,13);
-  ellipse(0,-.075f,.643f,.055f,.14f,.011f,29,22,7);
-  /* Fracture fluid pools INSIDE the alien shell opening before leaking out.
-   * Staggered static shades create thick, wet, luminous green ichor. */
-  soft_mark(-.105f,.064f,.664f,.065f,.36f,6,28,10);
-  soft_mark(-.062f,-.065f,.666f,.059f,.32f,9,31,7);
-  soft_mark(.115f,.057f,.664f,.065f,.28f,5,27,13);
-  soft_mark(.168f,-.051f,.665f,.042f,.21f,12,31,9);
-  soft_mark(-.020f,-.224f,.667f,.17f,.067f,4,25,8);
-  /* Gravity makes the alien ichor creep farther down the eggshell while the
-   * camera approaches, using deterministic staggered pixel-world quads. */
-  if(frame>=EGG_PUSH_FRAME){
-   float drip=(float)(frame-EGG_PUSH_FRAME)/(float)(EGG_SCARE_FRAME-EGG_PUSH_FRAME);
-   if(drip>1.f)drip=1.f;
-   soft_mark(-.10f,-.25f-drip*.22f,.653f,.070f,.18f+drip*.30f,4,28,7);
-   soft_mark(.17f,-.19f-drip*.12f,.649f,.058f,.10f+drip*.23f,8,30,5);
-   soft_mark(-.10f,-.44f-drip*.27f,.650f,.060f,.06f,14,31,8);
-   soft_mark(.17f,-.36f-drip*.25f,.648f,.045f,.06f,16,31,8);
-   /* Sickly pooling at the base, visible in the slow push-in. */
-   ellipse(-.10f,-.76f,.49f,.25f,.045f,.048f,9,28,9);
-   ellipse(.18f,-.76f,.48f,.17f,.032f,.047f,14,31,10);
+  block(0,-1.09f,-.26f,1.91f,.13f,1.45f,9,13,13);
+  flat_floor(0,-1.016f,-.23f,1.67f,1.18f,5,7,8);
+  /* The dark backing is a SINGLE continuous incubation sac, not pale
+   * geometry blocking the center of the egg. */
+  soft_head(0,-.14f,-.015f,.79f,.91f,.42f,12,18,18);
+  soft_head(0,-.15f,.32f,.50f,.76f,.16f,9,24,13);
+  soft_head(0,-.13f,.42f,.42f,.67f,.20f,1,3,7);
+  /* A subtle moving silhouette inside makes the chamber feel inhabited. */
+  {
+   float sway=phase==2u?opened*.032f:0.f;
+   soft_head(sway,-.17f,.54f,.23f,.42f,.10f,5,11,12);
+   /* Two intentionally placed eyes and a dark breathing aperture.
+    * Nothing floats outside the chamber's silhouette. */
+   ellipse(-.090f+sway,-.07f,.652f,.055f,.044f,.012f,25,30,17);
+   ellipse(.096f+sway,-.07f,.652f,.055f,.044f,.012f,24,30,18);
+   soft_mark(-.086f+sway,-.066f,.667f,.025f,.042f,3,6,7);
+   soft_mark(.099f+sway,-.066f,.667f,.025f,.042f,3,6,7);
+   soft_mark(sway,-.36f,.650f,.083f,.15f,0,1,3);
   }
-  if(frame>=EGG_PUSH_FRAME){
-   /* A barely visible creature waits INSIDE while the camera peers in. */
-   soft_mark(-.09f,.045f,.652f,.07f,.03f,30,9,20);
-   soft_mark(.09f,.045f,.652f,.07f,.03f,30,9,20);
+  /* TWO SEPARATE porcelain halves. The inner seam is open from the
+   * first shot and widens during the dolly; both halves have physical
+   * curvature, lit outer faces, and darker beveled inner lips. */
+  soft_head(-.466f-opened*.17f,-.14f,.45f,
+            .32f,.78f,.16f,28,29,24);
+  soft_head(.472f+opened*.17f,-.13f,.46f,
+            .32f,.77f,.16f,25,28,23);
+  soft_head(-.223f-opened*.17f,-.13f,.606f,
+            .065f,.66f,.042f,17,25,18);
+  soft_head(.232f+opened*.17f,-.12f,.608f,
+            .066f,.65f,.042f,15,24,18);
+  /* Single broad ceramic highlight on each half establishes key light;
+   * dark secondary seams make the curved exterior read as hard material. */
+  soft_mark(-.575f-opened*.17f,.18f,.620f,.08f,.41f,31,30,26);
+  soft_mark(.61f+opened*.17f,-.19f,.627f,.047f,.38f,29,29,23);
+  soft_mark(-.37f-opened*.17f,-.46f,.627f,.029f,.25f,14,20,18);
+  soft_mark(.41f+opened*.17f,.38f,.628f,.024f,.17f,14,20,18);
+  /* The alien liquid collects on the INNER lips, not over the face.
+   * Four viscous ribbons and tiny wet specular cores; no particle noise. */
+  soft_mark(-.267f-opened*.17f,.09f,.676f,.052f,.36f,5,29,10);
+  soft_mark(.271f+opened*.17f,-.03f,.679f,.053f,.30f,6,30,9);
+  soft_mark(-.261f-opened*.17f,.09f,.680f,.017f,.20f,24,31,11);
+  soft_mark(.265f+opened*.17f,-.03f,.682f,.018f,.18f,23,31,11);
+  if(phase==2u){
+   float drip=opened*.29f;
+   soft_mark(-.269f-opened*.17f,-.31f-drip*.46f,.686f,
+             .057f,.12f+drip,5,29,10);
+   soft_mark(.277f+opened*.17f,-.26f-drip*.33f,.686f,
+             .043f,.14f+drip*.72f,12,31,7);
+   ellipse(-.28f,-.94f,.64f,.19f,.038f,.050f,8,28,8);
+   ellipse(.27f,-.94f,.63f,.14f,.026f,.045f,14,31,10);
   }
  }else{
-  /* One sudden shot from the inside of the egg: enormous asymmetric
-   * crescent skull, unnatural eyes, and a layered black vocal aperture. */
-  soft_head(0,.08f,.37f,.92f,1.10f,.59f,6,11,15);
-  ellipse(-.38f,.34f,.84f,.26f,.13f,.06f,31,14,17);
-  ellipse(.38f,.31f,.84f,.26f,.13f,.06f,31,14,17);
-  ellipse(-.35f,.34f,.905f,.08f,.095f,.016f,31,31,21);
-  ellipse(.36f,.32f,.905f,.08f,.095f,.016f,31,31,21);
-  ellipse(0,-.38f,.83f,.42f,.42f,.050f,1,2,6);
-  ellipse(0,-.36f,.887f,.25f,.29f,.029f,18,5,10);
-  eye_z=.92f;
+  /* The reveal is a DESIGNED creature portrait rather than overlapping
+   * random ellipsoids: cranium, socketed eyes, slit pupils, jaw and teeth. */
+  soft_head(0,.085f,.34f,1.00f,1.08f,.51f,5,10,12);
+  soft_head(0,.68f,.36f,.66f,.29f,.28f,7,15,14);
+  /* Raised brow masses visually lock the sockets to the head. */
+  tilted_ellipse(-.37f,.51f,.79f,.34f,.105f,.055f,-12,8,18,16);
+  tilted_ellipse(.38f,.50f,.79f,.34f,.105f,.055f,12,8,18,16);
+  /* Deep black eye wells with bright sideways sclera, vertical irises
+   * and one highlight apiece. Shadows are OUTSIDE the lit pupils. */
+  ellipse(-.36f,.28f,.832f,.286f,.192f,.048f,1,3,6);
+  ellipse(.36f,.28f,.832f,.286f,.192f,.048f,1,3,6);
+  ellipse(-.36f,.276f,.887f,.195f,.117f,.022f,23,30,16);
+  ellipse(.36f,.276f,.887f,.195f,.117f,.022f,24,30,17);
+  ellipse(-.346f,.278f,.918f,.062f,.117f,.010f,1,4,5);
+  ellipse(.374f,.278f,.918f,.062f,.117f,.010f,1,4,5);
+  soft_mark(-.398f,.325f,.934f,.044f,.031f,31,31,24);
+  soft_mark(.324f,.325f,.934f,.044f,.031f,31,31,24);
+  /* Nose bridge and cheek masses define where the mouth belongs. */
+  soft_mark(0,-.002f,.879f,.074f,.26f,14,22,15);
+  ellipse(-.60f,-.18f,.71f,.19f,.17f,.055f,7,16,13);
+  ellipse(.60f,-.18f,.71f,.19f,.17f,.055f,7,16,13);
+  /* The yawning black mouth is a recognisable cavity with an outer
+   * gum line, not a red rectangle or detached floating teeth. */
+  ellipse(0,-.47f,.820f,.395f,.385f,.070f,15,5,11);
+  ellipse(0,-.47f,.892f,.320f,.320f,.034f,1,2,4);
+  ellipse(0,-.65f,.930f,.195f,.074f,.018f,19,5,13);
   for(i=0;i<5;i++){
-   soft_mark(-.24f+(float)i*.12f,-.20f,eye_z,
-             .047f,.15f,29,28,22);
+   float x=-.245f+(float)i*.122f;
+   float tip=(i&1)?.13f:.20f;
+   fang(x,-.215f,.953f,.085f,tip,0);
   }
-  soft_mark(0,-.66f,.905f,.28f,.09f,30,11,19);
-  /* The thing behind the shell still carries streaks of bright green
-   * ichor; it is unmistakably alien when it fills the camera. */
-  soft_mark(-.70f,-.38f,.86f,.070f,.49f,7,30,9);
-  soft_mark(.70f,-.29f,.86f,.066f,.34f,13,31,8);
-  soft_mark(-.62f,-.66f,.91f,.22f,.078f,5,25,7);
-  soft_mark(.61f,-.53f,.92f,.14f,.065f,9,29,9);
-  if(frame<EGG_SCARE_FRAME+5u){
-   /* A SINGLE sharp highlight on the first reveal, not rapid flashing. */
-   soft_mark(0,.71f,.88f,.74f,.055f,31,29,25);
-  }
+  fang(-.22f,-.71f,.956f,.098f,.12f,1);
+  fang(.20f,-.72f,.956f,.092f,.14f,1);
+  /* Sickly reflective slime follows the facial contour rather than
+   * obscuring pupils and teeth with arbitrary green rectangles. */
+  soft_mark(-.77f,-.40f,.764f,.068f,.39f,8,29,11);
+  soft_mark(.77f,-.30f,.765f,.061f,.31f,9,28,10);
+  soft_mark(-.67f,-.64f,.793f,.19f,.062f,10,31,11);
+  soft_mark(.67f,-.56f,.793f,.16f,.054f,11,31,12);
+  /* A single reveal glint, never an eye-burning strobe loop. */
+  if(frame<EGG_SCARE_FRAME+4u)
+   soft_mark(0,.78f,.840f,.65f,.033f,30,31,26);
  }
  glFlush(0);
 }
