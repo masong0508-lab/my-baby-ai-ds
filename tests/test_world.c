@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <string.h>
 #include <stdint.h>
 #include <stdio.h>
 #include "world.h"
@@ -97,6 +98,31 @@ int main(void){
     * submitted after the hard cut, but fit the same DS polygon budget. */
    assert(world_polygon_count()>=650);
   }
+ }
+ /* Physics can throw the toy out of frame. The movie introduction is a
+  * consistent damaged portrait while preserving the actual source state. */
+ {
+  Roughhouse original,staged,again;
+  roughhouse_init(&original);
+  original.x=390;original.y=345;original.z=-192;
+  original.roll=155;original.pitch=-130;original.yaw=210;
+  original.moving=1;original.charge=ROUGHHOUSE_CRACK_CHARGE;
+  staged=world_egg_staged_doll(&original,17u);
+  again=world_egg_staged_doll(&original,17u);
+  assert(staged.x==0&&staged.y==0&&staged.z==0);
+  assert(!staged.moving && !staged.impact);
+  assert(staged.roll>=-18&&staged.roll<=18);
+  assert(staged.pitch==0 && staged.yaw==0);
+  assert(staged.charge==original.charge);
+  assert(memcmp(&staged,&again,sizeof(staged))==0);
+  assert(original.x==390&&original.y==345&&original.moving);
+  world_draw_secret(&s,17u,&original);
+  assert(world_vertex_count()<=5000);
+  assert(world_polygon_count()<=1850);
+  roughhouse_init(&original);
+  staged=world_egg_staged_doll(&original,0);
+  assert(staged.charge>=ROUGHHOUSE_CRACK_CHARGE);
+  assert(!staged.moving);
  }
  /* The room darkens monotonically during the SAME physical camera move,
   * with no palette leakage into normal gameplay or the reveal. */
