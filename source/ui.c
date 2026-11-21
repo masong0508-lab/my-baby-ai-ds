@@ -1374,9 +1374,11 @@ static void egg_scene_screen(int frame){
  }else if(phase==1){
   fit(37,88,"INCUBATION CHAMBER 09",WHITE,35);
   fit(67,110,"SOMETHING MOVED",PINK,25);
+  fit(48,124,"ALIEN ICHOR DETECTED",GREEN,30);
  }else if(phase==2){
   fit(49,88,"SLOWLY LOOK INSIDE",WHITE,29);
   fit(66,110,"DO NOT BLINK",LEMON,24);
+  fit(56,124,"GREEN FLUID LEAK",GREEN,28);
  }else{
   fit(36,88,"THE EGG REMEMBERS YOU",WHITE,35);
   fit(68,110,"IT WAS LISTENING",LEMON,28);
