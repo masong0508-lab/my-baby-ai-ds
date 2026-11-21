@@ -198,12 +198,12 @@ static void tulip(float x,float y,float z,int pink){
 /* Rounded-looking flower silhouettes on the floor: five petals and a center.
  * All six details are one quad each, preserving polygon budget. */
 static void rug_flower(float x,float z){
- flat_floor(x-.105f,-1.109f,z,.17f,.14f,10,18,6);
- flat_floor(x+.105f,-1.109f,z,.17f,.14f,10,18,6);
- flat_floor(x,-1.109f,z-.105f,.17f,.14f,10,18,6);
- flat_floor(x,-1.109f,z+.105f,.17f,.14f,10,18,6);
- flat_floor(x-.065f,-1.108f,z-.065f,.14f,.14f,11,20,6);
- flat_floor(x,-1.107f,z,.12f,.11f,30,26,5);
+ flat_floor(x-.105f,-1.109f,z,.17f,.14f,28,17,22);
+ flat_floor(x+.105f,-1.109f,z,.17f,.14f,28,17,22);
+ flat_floor(x,-1.109f,z-.105f,.17f,.14f,28,17,22);
+ flat_floor(x,-1.109f,z+.105f,.17f,.14f,28,17,22);
+ flat_floor(x-.065f,-1.108f,z-.065f,.14f,.14f,30,21,24);
+ flat_floor(x,-1.107f,z,.12f,.11f,31,27,17);
 }
 /* Thin surface layers read as fabric, eyebrows or facial blush rather than
  * big detached spheres. Each costs a single GPU quad. */
@@ -231,9 +231,12 @@ static void room(void){
  /* One darkened ground plane under the play mat gives contact shadow
   * without expensive translucent blending or extra VRAM. */
  flat_floor(.04f,-1.222f,.78f,3.00f,2.58f,20,17,14);
- block(.04,-1.20,.78,2.86,.09,2.43,15,22,8);
- block(.04,-1.145,.78,2.62,.045,2.18,25,29,11);
- for(i=0;i<4;i++)flat_floor(-.89f+i*.56f,-1.112f,1.78f,.13f,.035f,18,25,9);
+ block(.04,-1.20,.78,2.86,.09,2.43,15,17,23);
+ block(.04,-1.145,.78,2.62,.045,2.18,23,23,29);
+ for(i=0;i<4;i++)flat_floor(-.89f+i*.56f,-1.112f,1.78f,.13f,.035f,31,25,23);
+ /* Muted lavender-and-blush nursery rug keeps the turquoise synthetic
+  * baby distinct against the floor instead of washing it out in neon lime.
+  * Flowers and crib remain playful without fighting the foreground. */
  /* Big stylized flowers, a defining motif of the 2000s reference. */
  /* The contact shadow now follows the doll during Toybox physics, so it
   * is drawn by each scene, not painted permanently at its spawn point. */
@@ -376,9 +379,10 @@ static void baby_model(const Game *s,uint32_t frame,int action,
  ellipse(.365f,-1.08f,.36f,.235f,.13f,.24f,30,28,23);
  soft_mark(-.365f,-1.07f,.599f,.10f,.017f,21,27,24);
  soft_mark(.365f,-1.07f,.599f,.10f,.017f,21,27,24);
- /* Curved mint romper and cream collar meet behind the head. */
+ /* Layered shadow + warm collar replaces the single white floating coin. */
  soft_head(0,-.32f,-.08f,.49f,.46f,.36f,19,27,27);
- ellipse(0,.09f,.0f,.22f,.10f,.205f,31,26,21);
+ ellipse(0,.084f,-.015f,.27f,.11f,.196f,17,22,21);
+ ellipse(0,.117f,.012f,.23f,.073f,.215f,31,27,22);
  ellipse(0,-.39f,.284f,.235f,.225f,.035f,29,30,26);
  /* Four inexpensive stitched glints on the romper's central pocket. */
  soft_mark(0,-.30f,.330f,.10f,.044f,glitch?24:27,glitch?17:23,10);
@@ -419,12 +423,17 @@ static void baby_model(const Game *s,uint32_t frame,int action,
  /* Sclera and pupils lie just above the curved facial surface, not
   * stacked .10 units out in space. Each shallow eye has a tiny highlight. */
  if(!blink){
-  ellipse(-.205f,.575f,.472f,.100f,.094f,.015f,30,29,27);
-  ellipse(.205f,.575f,.472f,.100f,.094f,.015f,30,29,27);
-  ellipse(-.190f,.565f,.485f,.052f,.061f,.015f,5,7,11);
-  ellipse(.220f,.565f,.485f,.052f,.061f,.015f,5,7,11);
-  soft_mark(-.208f,.602f,.508f,.028f,.023f,31,31,30);
-  soft_mark(.202f,.602f,.508f,.028f,.023f,31,31,30);
+  /* Eye sockets/iris/pupils form a clear expression at only 256x192. */
+  ellipse(-.205f,.579f,.462f,.135f,.113f,.014f,22,15,14);
+  ellipse(.205f,.579f,.462f,.135f,.113f,.014f,22,15,14);
+  ellipse(-.205f,.575f,.477f,.113f,.099f,.015f,31,30,28);
+  ellipse(.205f,.575f,.477f,.113f,.099f,.015f,31,30,28);
+  ellipse(-.188f,.565f,.493f,.066f,.072f,.015f,10,19,22);
+  ellipse(.218f,.565f,.493f,.066f,.072f,.015f,10,19,22);
+  ellipse(-.185f,.560f,.509f,.040f,.054f,.011f,3,7,10);
+  ellipse(.221f,.560f,.509f,.040f,.054f,.011f,3,7,10);
+  soft_mark(-.208f,.602f,.526f,.031f,.023f,31,31,29);
+  soft_mark(.202f,.602f,.526f,.031f,.023f,31,31,29);
  }else{
   soft_mark(-.205f,.575f,.480f,.169f,.016f,15,10,9);
   soft_mark(.205f,.575f,.480f,.169f,.016f,15,10,9);
