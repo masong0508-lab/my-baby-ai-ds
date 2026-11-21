@@ -3,9 +3,25 @@
 #include <stdio.h>
 #include "ui.h"
 static uint16_t screen[256*256];
+/* All rendering must remain inside the 256x192 visible bitmap. Each screen
+ * now draws its own complete three-band surface without a blanket clear. */
+static void verify_coverage(void){
+ unsigned i;
+ for(i=0;i<256u*192u;i++)assert(screen[i]&0x8000u);
+ for(i=256u*192u;i<256u*256u;i++)assert(screen[i]==0x5a5au);
+}
+static uint32_t fingerprint(void){
+ uint32_t h=2166136261u;
+ unsigned i;
+ for(i=0;i<256u*192u;i+=7){
+  h^=screen[i];h*=16777619u;
+ }
+ return h;
+}
 int main(void){
  Game g;Arcade a={0};unsigned i,changed=0;
  game_init(&g);ui_init(screen);
+ for(i=256u*192u;i<256u*256u;i++)screen[i]=0x5a5au;
  ui_draw(&g,&a,0,0,0,0,1,"TELL HR I'M TEETHING.");
  for(i=0;i<256u*192u;i++)if(screen[i])changed++;
  assert(changed>30000);
@@ -167,6 +183,31 @@ int main(void){
   ui_virtual_cursor_update(1,42,112,0);
   ui_virtual_cursor_update(0,42,112,0);
  }
- puts("PASS: bitmap UI and touch hitboxes");
+ /* Full visual coverage is a correctness requirement after removing the
+  * unconditional 49,152-pixel VRAM clear in the DS renderer. */
+ {
+  uint32_t hashes[16];
+  unsigned view,id,k;
+  g.unlocked=0xffffu;
+  for(view=0;view<8;view++){
+   if(view==2)continue;
+   ui_draw(&g,&a,(int)view,0,END_GRADUATION,0,1,"DISPLAY TEST");
+   verify_coverage();
+  }
+  for(id=0;id<16;id++){
+   game_arcade_start(&g,&a,(int)id);
+   assert(a.active);
+   ui_draw(&g,&a,2,(int)id,0,0,1,"CABINET");
+   verify_coverage();
+   hashes[id]=fingerprint();
+   /* Every cabinet gets its own theme and unique composition. */
+   for(k=0;k<id;k++)assert(hashes[id]!=hashes[k]);
+  }
+  /* Safe-visuals and the unlocked state do not affect screen coverage. */
+  g.safe_visuals=1;
+  ui_draw(&g,&a,0,0,0,0,0,"SAFE MODE");
+  verify_coverage();
+ }
+ puts("PASS: 16 unique themed cabinets, full-screen coverage, touch hitboxes, cursor");
  return 0;
 }
