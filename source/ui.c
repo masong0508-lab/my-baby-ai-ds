@@ -360,6 +360,22 @@ static const char *const spr_diaper[]={
  "....owwwwwwo....",
  ".....oooooo....."
 };
+/* Receipt sheet with inked totals, folded corners and a bright stamp. */
+static const char *const spr_receipt[]={
+ "..oooooooooo..",
+ ".owwwwwwwwwwo.",
+ "owwwwwwwwwwwwo",
+ "owgwwwwwwwwgwo",
+ "owwwppppwwwwo",
+ "owwwwwwwwwwwo",
+ "owwwwwwwwwwwo",
+ "owttttttttwwo",
+ "owwwwwwwwwwwo",
+ "owppppwwppwwo",
+ "owwwwwwwwwwwo",
+ ".owwwwwwwwwwo.",
+ "..oooooooooo.."
+};
 static uint16_t art_ink(char p){
  switch(p){
  case 'o':return INK;
@@ -425,6 +441,68 @@ static void bottle_challenge(const Arcade *a){
  foot(PURPLE);
  snprintf(text,sizeof(text),"SPILLS %u/3   %u SEC",a->mistakes,(a->timer+59)/60);
  fit(19,181,text,WHITE,36);
+}
+static void teether_challenge(const Arcade *a){
+ char text[40];
+ arcade_wall(MINT);
+ panel(6,31,244,41,WHITE,TEAL);
+ fit(13,38,"TAX RETURN TEETHER",PURPLE,35);
+ snprintf(text,sizeof(text),"SORTED %u/6   %u SEC",a->round,(a->timer+59)/60);
+ fit(13,53,text,DEEP_PINK,36);
+ /* Office-nursery scene: receipts come from the baby executive's desk. */
+ solid(91,76,74,4,GOLD);
+ solid(94,79,6,48,TEAL);
+ solid(155,79,6,48,TEAL);
+ sprite(107,83,2,spr_baby,18);
+ capsule(94,121,68,24,SKY,BLUE);
+ sprite(114,111,2,spr_receipt,13);
+ if(a->touch_active&&a->touch_start_x>=99&&a->touch_start_x<160&&
+    a->touch_start_y>=91&&a->touch_start_y<150)
+  sprite(a->touch_last_x-14,a->touch_last_y-13,2,spr_receipt,13);
+ capsule(10,128,86,43,a->target==3?LEMON:SKY,GOLD);
+ capsule(160,128,86,43,a->target==1?PINK:SKY,DEEP_PINK);
+ for(int i=0;i<4;i++){
+  solid(18+i*18,135,8,3,INK);
+  solid(171+i*16,137,6,3,PURPLE);
+ }
+ fit(26,150,"KEEP",INK,9);
+ fit(174,150,"SHRED",INK,9);
+ sparkle(11,96,LEMON);sparkle(236,100,PINK);
+ fit(10,77,a->target==3?"REFUND: SAVE IT!":"JUNK BILL: SHRED!",PURPLE,35);
+ foot(PURPLE);
+ fit(9,181,"DRAG PAPER TO THE MATCHING BIN",WHITE,40);
+}
+static void beatbox_challenge(const Arcade *a){
+ static const char *const pads[4]={"BOOM","CLAP","BEEP","POP"};
+ static const uint16_t colors[4]={MINT,PINK,LEMON,SKY};
+ char text[40];
+ int active=-1;
+ arcade_wall(LILAC);
+ panel(6,31,244,42,WHITE,PURPLE);
+ fit(12,38,"BABY BEATBOX",PURPLE,37);
+ snprintf(text,sizeof(text),"TUNE %u/3  MISS %u/3",a->round+1,a->mistakes);
+ fit(12,54,text,DEEP_PINK,36);
+ if(!a->phase&&a->hold_frames){
+  int index=(int)(a->elapsed*3u/a->hold_frames);
+  if(index>2)index=2;
+  active=a->notes[index];
+ }
+ capsule(69,79,118,20,a->phase?MINT:LEMON,TEAL);
+ fit(83,85,a->phase?"YOUR TURN: REPEAT!":"WATCH THE PATTERN",INK,29);
+ sprite(111,101,1,spr_baby,18);
+ for(int i=0;i<3;i++)
+  capsule(143+i*18,103,13,11,a->phase?(i<a->stage?GREEN:GRAY):
+          (i==(int)(a->elapsed*3u/(a->hold_frames?a->hold_frames:1u))?GOLD:GRAY),INK);
+ for(int i=0;i<4;i++){
+  int x=12+i*62;
+  capsule(x,123,48,47,active==i?WHITE:colors[i],active==i?GOLD:PURPLE);
+  solid(x+17,131,14,14,active==i?LEMON:WHITE);
+  outline(x+16,130,16,16,PURPLE);
+  fit(x+7,152,pads[i],INK,6);
+ }
+ foot(PURPLE);
+ snprintf(text,sizeof(text),"%s  %u SEC   B BACK",a->phase?"REPEAT":"LISTEN",(a->timer+59)/60);
+ fit(11,181,text,WHITE,39);
 }
 static void diaper_challenge(const Arcade *a){
  static const char *const steps[4]={
@@ -663,6 +741,8 @@ void ui_draw(const Game *s,const Arcade *a,int view,int selection,
  case 1:arcade_list(s,selection);break;
  case 2:if(a->id==0)bottle_challenge(a);
         else if(a->id==1)diaper_challenge(a);
+        else if(a->id==2)teether_challenge(a);
+        else if(a->id==4)beatbox_challenge(a);
         else if(a->id==7)rattle_challenge(a);
         else challenge(s,a);
         break;
@@ -709,6 +789,13 @@ int ui_diaper_touch(int x,int y){
  return -1;
 }
 
+/* Four large rhythmic pads, each mapping to one D-pad equivalent. */
+int ui_beatbox_touch(int x,int y){
+ int i;
+ if(y<123||y>=171)return -1;
+ for(i=0;i<4;i++)if(x>=12+i*62&&x<60+i*62)return i;
+ return -1;
+}
 /* Three generous touchscreen lanes; the golden catch band is the target. */
 int ui_rattle_touch(int x,int y){
  if(x<13||x>=243||y<130||y>=172)return -1;
