@@ -8,7 +8,8 @@ void ui_draw(const Game *s,const Arcade *a,int view,int selected,
              int ending,int reset_step,int can_save,const char *message);
 int ui_nursery_touch(int x,int y);
 int ui_home_navigation(int x,int y);
-int ui_arcade_select(int x,int y);
+int ui_arcade_select_page(int x,int y,int selected);
+int ui_arcade_page_touch(int x,int y); /* -1 previous, +1 next */
 int ui_arcade_touch(int x,int y);
 int ui_diaper_touch(int x,int y); /* legacy button accessibility */
 int ui_rattle_touch(int x,int y);

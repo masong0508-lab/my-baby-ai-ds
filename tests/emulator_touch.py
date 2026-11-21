@@ -112,6 +112,14 @@ def test_actual_game(path: Path, output: Path) -> dict:
     emu.open(str(path.resolve()))
     frames(emu, FRAMES_BOOT)
     title = picture(emu, output, "game_title")
+    # The TOP screen is no longer an empty purple slab. It displays the
+    # lightweight hardware 3D baby portrait after the bottom title appears.
+    title_top = title.crop((0, 0, 256, 192))
+    title_top.save(output / "game_title_3d_hero.png")
+    title_colors = len(set(title_top.get_flattened_data()))
+    assert title_colors > 20, (
+        f"Title top screen remained blank/unrendered ({title_colors} colors)"
+    )
     # Title screen should be painted by game's own bitmap UI, not white.
     center = title.getpixel((128, 192 + 75))
     assert center != (255, 255, 255), "Game remained all white at title."
@@ -175,7 +183,7 @@ def test_actual_game(path: Path, output: Path) -> dict:
     # touch UI. The last defect was a malformed baby and long vertical lines.
     top = nursery.crop((0, 0, 256, 192))
     top.save(output / "game_nursery_hero_top_screen.png")
-    hero_colors = len(set(top.crop((16, 12, 240, 178)).getdata()))
+    hero_colors = len(set(top.crop((16, 12, 240, 178)).get_flattened_data()))
     assert hero_colors > 20, (
         f"3D nursery render is blank or under-detailed ({hero_colors} colors)"
     )
@@ -232,8 +240,8 @@ def test_actual_game(path: Path, output: Path) -> dict:
     frames(emu, 6)
     emu.input.keypad_rm_key(keymask(Keys.KEY_B))
     frames(emu, 8)
-    stylus_tap(emu, 85, 76)  # select Diaper Dash
-    stylus_tap(emu, 85, 76)  # enter selected cabinet
+    stylus_tap(emu, 176, 91)  # select Diaper Dash, large second card
+    stylus_tap(emu, 176, 91)  # enter selected cabinet
     diaper = picture(emu, output, "game_diaper_start")
     diaper_changed = difference(
         arcade, diaper, (0, 192 + 30, 256, 192 + 175)
@@ -276,7 +284,9 @@ def test_actual_game(path: Path, output: Path) -> dict:
     returned = difference(
         diaper, won, (0, 192 + 30, 256, 192 + 175)
     )
-    reward = difference(arcade, won, (150, 192 + 5, 190, 192 + 23))
+    # The redesigned shared header places money in the upper-right pill.
+    # Compare the REAL badge, not the former x=150..190 layout.
+    reward = difference(arcade, won, (208, 192 + 5, 252, 192 + 23))
     assert returned > 500 and reward > 5, (
         f"Four native stylus diaper tasks did not finish and award currency "
         f"(screen={returned}, reward={reward})"
@@ -284,6 +294,7 @@ def test_actual_game(path: Path, output: Path) -> dict:
     return {
         "3D_top_screen_distinct_colors": hero_colors,
         "3D_top_screen_full_height_dark_stripes": len(full_height_stripes),
+        "3D_title_top_screen_colors": title_colors,
         "title_to_diagnostic_changed_pixels": new_screen,
         "KEY_TOUCH_status_changed_pixels": status,
         "coordinates_on_press_changed_pixels": xy1,

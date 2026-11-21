@@ -114,3 +114,30 @@ The DS top-screen character/room receives a targeted geometry correction:
 **Validation:** Actual DS and DraStic screenshots, frame times, and aesthetic approval are still necessary; CI checks and code inspection alone do not prove the baby is beautiful or that every possible hardware rendering defect is gone.
 
 **Screenshot-driven follow-up:** Inspected the actual DeSmuME 256×192 nursery capture from this branch. It revealed that the large foreground teddy covered the baby's torso and legs despite the 3D check passing. The teddy has now been moved to the left near the dresser and grounded on the floor; the baby's pale romper and worried-looking single-line mouth were adjusted to a stronger pastel contrast and small curved smile. Fresh screenshots from the final commit must be reviewed before calling that visual occlusion resolved.
+
+## Readable dual-screen UI redesign — inspiration-led pass
+
+This replaces the earlier overly dense, bootleg-looking pixel menus with Nintendo DS-native layouts. Design references were reviewed as inspiration for hierarchy and ergonomic principles, **not copied artwork**:
+- *Nintendogs* (Nintendo DS): keep the character on the upper display and make the lower display an uncluttered care-menu surface.
+- *Cooking Mama 2* (Nintendo DS): large character identity, dominant single call-to-action, plain instruction typography.
+- *Tamagotchi Connection: Corner Shop 3* (Nintendo DS): consistent visual personality while keeping the primary mini-game touch action prominent.
+- *Professor Layton and the Curious Village* (Nintendo DS): restrained borders, legible list rows, selected states.
+
+### What changed in source
+
+- Title screen: a lightweight native 3D baby portrait appears on the top display once the bottom-screen title has been visible for 16 frames. Bottom screen uses a centered 2x title, large baby art and one full-width START action. This does not require loading textures or allocating a framebuffer.
+- Nursery: a two-line dialogue area, four compact needs meters, a corruption line and four substantially larger care cards with **2x** action text. Touch hitboxes now align with the entire visible button, not just the lower part.
+- Arcade: sixteen cabinets are organized into **four pages of four**. The 2x2 cabinet cards now offer real identification, readable readiness/lock state, selected border and big numbers. PREV/NEXT touch zones and L/R shoulder paging permit all cabinets to be reached; D-pad up/down navigates rows. The selected cabinet is still playable with A or a second tap.
+- All sixteen mini-games: prominent 2x headings with shorter on-screen names; full longer titles remain in the cabinet catalogue. The gameplay areas and native touch hitboxes are unchanged.
+- Album: one line per keepsake and a visible discovery counter, instead of overlapping text lines.
+- Shared system chrome: large screen titles, stable separate day/money badges, a minimal footer, fewer decorative strokes, flat card hierarchy and stronger margins.
+
+### Guardrails and verification
+
+- All gameplay state, persistence, and the 256x192 bottom bitmap format remain unchanged.
+- Added 2x2 pagination/hitbox tests to the host UI suite, which also validates full screen coverage and the offscreen scanlines.
+- The real DeSmuME touch test now checks the actual 3D title portrait and selects/enters the second oversized cabinet using real stylus coordinates.
+- Existing physical DS budget and RAM rules apply: no extra textures, framebuffer, data decoder, image assets or per-frame heap work.
+- Host ROM compilation and DeSmuME checks must pass before merge. Review actual emulator screenshots for text clipping and hierarchy; a compiled program is not proof of aesthetically successful UI.
+
+Reference pages: https://www.nintendo.com/en-gb/Games/Nintendo-DS/Cooking-Mama-2-270341.html ; https://www.nintendo.com/en-gb/Games/Nintendo-DS/Tamagotchi-Connexion-Corner-Shop-273223.html ; https://www.mobygames.com/game/32910/professor-layton-and-the-curious-village/screenshots/nintendo-ds/301323/

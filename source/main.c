@@ -141,10 +141,12 @@ int main(void){
     persist();dirty=1;
    }
   }else if(view==1){
-   if(down&KEY_UP){selected=(selected+15)%16;dirty=1;}
-   else if(down&KEY_DOWN){selected=(selected+1)%16;dirty=1;}
+   if(down&KEY_UP){selected=(selected&~3)|((selected+2)&3);dirty=1;}
+   else if(down&KEY_DOWN){selected=(selected&~3)|((selected+2)&3);dirty=1;}
    else if(down&KEY_LEFT){selected=(selected+15)%16;dirty=1;}
    else if(down&KEY_RIGHT){selected=(selected+1)%16;dirty=1;}
+   else if(down&KEY_L){selected=(selected+12)%16;dirty=1;}
+   else if(down&KEY_R){selected=(selected+4)%16;dirty=1;}
    else if(down&KEY_B){view=0;message="BACK TO THE NURSERY.";dirty=1;}
    else if(down&KEY_X){
     if(game_unlock(&baby,selected)){message="CABINET BOUGHT!";persist();}
@@ -160,8 +162,13 @@ int main(void){
      dirty=1;
     }else if(nav==3){view=0;message="BACK TO THE NURSERY.";dirty=1;}
     else{
-     int id=ui_arcade_select(touch.px,touch.py);
-     if(id>=0){if(id==selected)begin_game();else selected=id;dirty=1;}
+     int page=ui_arcade_page_touch(touch.px,touch.py);
+     if(page){
+      selected=(selected+(page<0?12:4))%16;dirty=1;
+     }else{
+      int id=ui_arcade_select_page(touch.px,touch.py,selected);
+      if(id>=0){if(id==selected)begin_game();else selected=id;dirty=1;}
+     }
     }
    }
   }else if(view==2){
@@ -311,10 +318,10 @@ int main(void){
     }else message="NO SAVE DEVICE - RAM ONLY.";
     dirty=1;
    }else if((down&(KEY_A|KEY_START))||tap){
-    /* Successfully displaying the 2D title means ARM9 game code ran. */
-    videoSetMode(MODE_0_3D);
-    world_init();
-    three_d_ready=1;
+    /* A visible bottom title is already drawn. Initialize top 3D only once. */
+    if(!three_d_ready){
+     videoSetMode(MODE_0_3D);world_init();three_d_ready=1;
+    }
     view=0;
     message=storage_ok?"WELCOME BACK, SHAREHOLDER.":"RAM MODE: X ON TITLE ENABLES SAVES.";
     dirty=1;
@@ -326,7 +333,15 @@ int main(void){
   }else if(view==7){
    if(down&(KEY_B|KEY_SELECT|KEY_START)){view=5;dirty=1;}
   }
-  if(three_d_ready)world_draw(&baby,frame,pose);
+  /* Delay the lightweight top portrait until AFTER the bottom title has
+   * been visible for 16 frames. It keeps boot safe on older DS emulators. */
+  if(!three_d_ready&&frame>=16u){
+   videoSetMode(MODE_0_3D);world_init();three_d_ready=1;
+  }
+  if(three_d_ready){
+   if(view==5||view==7)world_draw_title(frame);
+   else world_draw(&baby,frame,pose);
+  }
   /* Keep bitmap VRAM writes off the hot path unless UI state changed. */
   if(dirty||previous!=view||
      (view==2&&frame%arcade_redraw_period(&arc)==0u)){
