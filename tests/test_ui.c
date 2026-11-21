@@ -30,6 +30,15 @@ static uint32_t arcade_goal_fingerprint(void){
  }
  return hash;
 }
+static uint32_t care_hint_fingerprint(void){
+ uint32_t hash=2166136261u;
+ int x,y;
+ /* Header location never crosses ROOM capsule or BABY SAYS. */
+ for(y=35;y<43;y++)for(x=126;x<189;x++){
+  hash^=screen[y*256+x];hash*=16777619u;
+ }
+ return hash;
+}
 static uint32_t fingerprint(void){
  uint32_t h=2166136261u;
  unsigned i;
@@ -78,6 +87,26 @@ int main(void){
   g.hunger=80;
   ui_draw(&g,&a,0,0,0,0,1,"TELL HR I'M TEETHING.");
   verify_coverage();
+ }
+ /* Guidance must actually appear on the native 256x192 nursery bitmap,
+  * not merely change a non-visible model property. The same hitboxes
+  * and framebuffer coverage must survive all recommendation changes. */
+ {
+  uint32_t normal,feed,nap,chat;
+  game_init(&g);
+  ui_draw(&g,&a,0,0,0,0,1,"NURSERY");
+  verify_coverage();normal=care_hint_fingerprint();
+  g.hunger=90;
+  ui_draw(&g,&a,0,0,0,0,1,"NURSERY");
+  verify_coverage();feed=care_hint_fingerprint();
+  g.energy=9;
+  ui_draw(&g,&a,0,0,0,0,1,"NURSERY");
+  verify_coverage();nap=care_hint_fingerprint();
+  g.hunger=35;g.energy=80;g.mood=25;
+  ui_draw(&g,&a,0,0,0,0,1,"NURSERY");
+  verify_coverage();chat=care_hint_fingerprint();
+  assert(normal!=feed&&feed!=nap&&nap!=chat&&chat!=normal);
+  game_init(&g);
  }
  /* Selected locked cabinets display exact win/cash/Favor requirements
   * on the EXISTING 256x192 page, in the free strip between arrows.
