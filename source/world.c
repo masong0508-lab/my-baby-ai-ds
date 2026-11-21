@@ -417,7 +417,6 @@ static void baby_model(const Game *s,uint32_t frame,int action,
  /* Primary body rotation comes from the fixed-point toy simulation. The
   * secondary shoulder/neck reactions are tiny and remain physically
   * connected to the parent model rather than becoming floating parts. */
- const float swing=rag&&rag->moving?(float)rag->vr*.0022f:0.f;
  const float settle=rag?(float)rag->impact*.0025f:0.f;
  /* Care IDs: FEED=1, CHAT=2, PLAY=3, NAP=4. Each reaches using
   * a shared shoulder pivot, not isolated upward-moving arm balls. */
