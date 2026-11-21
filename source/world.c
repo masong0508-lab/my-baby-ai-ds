@@ -249,13 +249,24 @@ static void room(void){
  rug_flower(-.33f,1.77f);
  /* Glazed nursery window, mullions, curtains and cornice. */
  block(-1.76,1.15,-3.06,1.95,1.76,.07,29,28,25);
- block(-1.76,1.15,-3.01,1.65,1.51,.04,16,24,29);
- /* Five sky-hill/cloud quads live between the glass and the mullions. */
- wall_sticker(-1.76f,.67f,-2.978f,1.52f,.42f,17,25,19);
- wall_sticker(-1.20f,.85f,-2.977f,.60f,.18f,20,28,22);
- wall_sticker(-2.20f,1.56f,-2.978f,.46f,.11f,30,31,30);
- wall_sticker(-2.32f,1.61f,-2.976f,.24f,.10f,31,31,30);
- wall_sticker(-1.41f,1.75f,-2.976f,.39f,.08f,29,31,31);
+ block(-1.76,1.15,-3.01,1.65,1.51,.04,6,12,24);
+ /* Dark, moonlit glass deliberately contrasts with the amber dresser
+  * lamp. The same recognizable frame, blinds and furniture stay put for
+  * the full film dolly. All marks are fixed native quads (no texture). */
+ wall_sticker(-1.76f,.67f,-2.978f,1.52f,.42f,7,15,19);
+ wall_sticker(-1.20f,.85f,-2.977f,.60f,.18f,8,18,21);
+ wall_sticker(-2.20f,1.56f,-2.978f,.46f,.11f,11,17,25);
+ wall_sticker(-2.32f,1.61f,-2.976f,.24f,.10f,9,15,23);
+ wall_sticker(-1.41f,1.75f,-2.976f,.39f,.08f,10,16,27);
+ /* One recognizable moon disk and a few rain streaks, with bright pink
+  * glitch eyes hiding OUTSIDE, not random floating indoor particles. */
+ ellipse(-1.35f,1.54f,-2.964f,.14f,.14f,.016f,31,29,22);
+ wall_sticker(-2.18f,1.32f,-2.954f,.016f,.24f,15,22,29);
+ wall_sticker(-1.95f,1.62f,-2.954f,.014f,.18f,17,23,29);
+ wall_sticker(-1.63f,1.12f,-2.954f,.015f,.23f,13,20,29);
+ wall_sticker(-1.17f,1.42f,-2.954f,.015f,.16f,15,21,28);
+ wall_sticker(-2.06f,1.07f,-2.949f,.06f,.05f,27,8,22);
+ wall_sticker(-1.83f,1.07f,-2.949f,.06f,.05f,27,8,22);
  wall_sticker(-1.76,1.15,-2.97,.10,1.57,28,27,24);
  wall_sticker(-1.76,1.15,-2.965,1.71,.10,28,27,24);
  block(-2.63,1.12,-2.81,.27,1.84,.15,25,12,18);
@@ -276,7 +287,11 @@ static void room(void){
   ellipse(-2.55,-.13f-i*.36f,.063,.059,.055,.04,28,13,18);
  }
  block(-2.55,.42,-.48,.14,.28,.14,29,23,21);
- ellipse(-2.55,.65,-.48,.34,.16,.32,31,27,13);
+ ellipse(-2.55,.65,-.48,.34,.16,.32,31,25,15);
+ /* Lamp rim and warm key-light patch: intentional large forms rather than
+  * noisy fake bloom or per-frame translucent screen effects. */
+ ellipse(-2.55,.76,-.48,.20,.06,.18,31,30,20);
+ wall_sticker(-2.73f,.78f,-.012f,.40f,.03f,31,25,18);
  /* Warm white wall panels and a subtle horizontal chair rail ground
   * the room visually without large textures or extra 3D geometry. */
  wall_sticker(.35f,-.69f,-3.125f,5.65f,.035f,23,23,20);
@@ -448,8 +463,12 @@ static void baby_model(const Game *s,uint32_t frame,int action,
  soft_mark(-.205f,.734f,.459f,.105f,.014f,17,11,9);
  soft_mark(.205f,.734f,.459f,.105f,.014f,17,11,9);
  ellipse(0,.375f,.467f,.047f,.034f,.019f,31,23,20);
- if(happy){
-  /* Three shallow strokes make a smile, not a heavy straight frown. */
+ if(happy&&(action==2||action==3)){
+  /* The cheerful speech/play reaction now has an actual shallow open
+   * mouth and connected rosy tongue, instead of the same frozen line. */
+  ellipse(0,.252f,.451f,.094f,.085f,.020f,12,4,9);
+  soft_mark(0,.212f,.476f,.095f,.025f,30,15,19);
+ }else if(happy){
   soft_mark(-.065f,.278f,.444f,.052f,.017f,18,9,11);
   soft_mark(0,.251f,.454f,.081f,.017f,18,9,11);
   soft_mark(.065f,.278f,.444f,.052f,.017f,18,9,11);
@@ -656,6 +675,10 @@ void world_draw_secret(const Game *s,uint32_t frame,const Roughhouse *r){
    soft_mark(-.086f+sway,-.066f,.667f,.025f,.042f,3,6,7);
    soft_mark(.099f+sway,-.066f,.667f,.025f,.042f,3,6,7);
    soft_mark(sway,-.36f,.650f,.083f,.15f,0,1,3);
+   /* Two strong catchlights keep the captive organism readable during
+    * the camera approach even after the nursery light has dimmed. */
+   soft_mark(-.104f+sway,-.092f,.682f,.038f,.026f,23,31,10);
+   soft_mark(.078f+sway,-.092f,.682f,.038f,.026f,23,31,10);
    glPopMatrix(1);
   }
   /* TWO SEPARATE porcelain halves. The inner seam is open from the
@@ -675,6 +698,12 @@ void world_draw_secret(const Game *s,uint32_t frame,const Roughhouse *r){
   soft_mark(.61f+opened*.17f,-.19f,.627f,.047f,.38f,29,29,23);
   soft_mark(-.37f-opened*.17f,-.46f,.627f,.029f,.25f,14,20,18);
   soft_mark(.41f+opened*.17f,.38f,.628f,.024f,.17f,14,20,18);
+  /* Deep cracks break the edges of the ceramic halves and lead the eye
+   * toward the living cavity. Static quad seams, no animated particles. */
+  soft_mark(-.535f-opened*.17f,.49f,.640f,.017f,.19f,15,15,18);
+  soft_mark(-.467f-opened*.17f,.31f,.640f,.030f,.11f,15,16,18);
+  soft_mark(.55f+opened*.17f,.39f,.643f,.017f,.21f,13,16,18);
+  soft_mark(.49f+opened*.17f,.15f,.643f,.028f,.10f,13,16,18);
   /* The alien liquid collects on the INNER lips, not over the face.
    * Four viscous ribbons and tiny wet specular cores; no particle noise. */
   soft_mark(-.267f-opened*.17f,.09f,.676f,.052f,.36f,5,29,10);
@@ -705,8 +734,8 @@ void world_draw_secret(const Game *s,uint32_t frame,const Roughhouse *r){
    * and one highlight apiece. Shadows are OUTSIDE the lit pupils. */
   ellipse(-.36f,.28f,.832f,.286f,.192f,.048f,1,3,6);
   ellipse(.36f,.28f,.832f,.286f,.192f,.048f,1,3,6);
-  ellipse(-.36f,.276f,.887f,.195f,.117f,.022f,23,30,16);
-  ellipse(.36f,.276f,.887f,.195f,.117f,.022f,24,30,17);
+  ellipse(-.36f,.276f,.887f,.195f,.117f,.022f,17,31,7);
+  ellipse(.36f,.276f,.887f,.195f,.117f,.022f,17,31,7);
   ellipse(-.346f,.278f,.918f,.062f,.117f,.010f,1,4,5);
   ellipse(.374f,.278f,.918f,.062f,.117f,.010f,1,4,5);
   soft_mark(-.398f,.325f,.934f,.044f,.031f,31,31,24);
@@ -717,16 +746,23 @@ void world_draw_secret(const Game *s,uint32_t frame,const Roughhouse *r){
   ellipse(.60f,-.18f,.71f,.19f,.17f,.055f,7,16,13);
   /* The yawning black mouth is a recognisable cavity with an outer
    * gum line, not a red rectangle or detached floating teeth. */
-  ellipse(0,-.47f,.820f,.395f,.385f,.070f,15,5,11);
-  ellipse(0,-.47f,.892f,.320f,.320f,.034f,1,2,4);
+  ellipse(0,-.47f,.820f,.425f,.415f,.070f,16,5,11);
+  ellipse(0,-.47f,.892f,.340f,.344f,.034f,1,2,4);
   ellipse(0,-.65f,.930f,.195f,.074f,.018f,19,5,13);
   for(i=0;i<5;i++){
    float x=-.245f+(float)i*.122f;
-   float tip=(i&1)?.13f:.20f;
+   float tip=(i&1)?.18f:.25f;
    fang(x,-.215f,.953f,.085f,tip,0);
   }
-  fang(-.22f,-.71f,.956f,.098f,.12f,1);
-  fang(.20f,-.72f,.956f,.092f,.14f,1);
+  fang(-.23f,-.75f,.956f,.098f,.19f,1);
+  fang(-.08f,-.775f,.956f,.082f,.14f,1);
+  fang(.09f,-.775f,.956f,.080f,.15f,1);
+  fang(.22f,-.75f,.956f,.092f,.18f,1);
+  /* Attached sickly cheek and forehead plates create a stronger faceted
+   * silhouette like the target art, without multiplying face meshes. */
+  soft_mark(-.67f,.07f,.790f,.10f,.15f,7,21,16);
+  soft_mark(.67f,.07f,.790f,.10f,.15f,7,21,16);
+  soft_mark(0,.615f,.787f,.22f,.035f,11,27,12);
   /* Sickly reflective slime follows the facial contour rather than
    * obscuring pupils and teeth with arbitrary green rectangles. */
   soft_mark(-.77f,-.40f,.764f,.068f,.39f,8,29,11);
