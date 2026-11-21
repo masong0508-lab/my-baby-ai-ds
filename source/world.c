@@ -430,7 +430,8 @@ void world_draw(const Game *s,uint32_t frame,int activity){
 /* The lightweight pregame portrait uses the SAME baby design language as
  * the nursery hero. It must remain inexpensive enough to render at boot. */
 void world_draw_title(uint32_t frame){
- (void)frame;
+ unsigned phase=frame%100u;
+ const float bob=(float)(phase<50u?phase:100u-phase)*.00045f;
  glMatrixMode(GL_MODELVIEW);glLoadIdentity();
  /* Centered, closer hero framing: a cheerful toy-shop portrait rather
   * than an isolated 80px head floating in a flat gray 3D viewport. */
@@ -446,6 +447,9 @@ void world_draw_title(uint32_t frame){
  wall_sticker(-1.24f,.82f,-1.818f,.39f,.38f,31,26,12);
  wall_sticker(1.26f,.88f,-1.818f,.35f,.35f,31,22,17);
  block(0,-.97f,-.84f,2.9f,.20f,1.60f,24,20,24);
+ /* Animation only transforms the baby; title decorations stay fixed. */
+ glPushMatrix();
+ glTranslatef(0,bob,0);
  ellipse(0,-.80f,-.23f,.57f,.36f,.39f,23,29,27);
  soft_head(0,.045f,-.18f,.745f,.75f,.53f,31,24,20);
  hair_cap(0,.045f,-.175f,.76f,.77f,.55f,16,11,8);
@@ -461,5 +465,6 @@ void world_draw_title(uint32_t frame){
  soft_mark(.43f,-.205f,.275f,.138f,.07f,31,18,19);
  soft_mark(0,-.27f,.337f,.14f,.023f,18,9,11);
  soft_mark(0,-.254f,.343f,.09f,.013f,31,20,19);
+ glPopMatrix(1);
  glFlush(0);
 }
