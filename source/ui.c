@@ -362,6 +362,7 @@ static void home(const Game *s,int can_save,const char *message){
 static void room_screen(const Game *s,int state,const char *message){
  int selected=state&3;
  int day=(state&8)!=0,lamp=(state&16)!=0;
+ int muted=(state&32)!=0; /* shared Toybox/Room sound setting */
  static const char *const name[4]={"WINDOW","LAMP","TEDDY","CRIB"};
  static const char *const benefit[4]={
   "SKY / MOON","SWITCH LIGHT","MOOD +10","ENERGY +25"
@@ -415,9 +416,11 @@ static void room_screen(const Game *s,int state,const char *message){
  }
  foot(PURPLE);
  capsule(8,178,240,13,NIGHT,TEAL);
- fit(20,182,"B BACK",WHITE,9);
- fit(93,182,"D-PAD / TAP",MINT,14);
- fit(210,182,"A USE",WHITE,6);
+ fit(18,182,"B BACK",WHITE,7);
+ fit(75,182,"D-PAD",MINT,6);
+ fit(151,182,muted?"Y SND OFF":"Y SND ON",
+     muted?ROSE:MINT,9);
+ fit(211,182,"A USE",WHITE,6);
 }
 /* Five-character art-directed wordmarks can occupy a genuine 2x font,
  * with the full cabinet title displayed in the section above. */
@@ -1855,7 +1858,13 @@ int ui_roughhouse_touch(int x,int y){
  * whitespace. All hitboxes are visibly filled in room_screen(). */
 int ui_room_touch(int x,int y){
  if(x<0||x>=256||y<0||y>=192)return -1;
- if(y>=176)return 4;
+ if(y>=176){
+  /* Footer labels are ACTUAL touch buttons (not invisible instructions).
+   * Center retains the historic BACK area to preserve existing tests. */
+  if(x>=150&&x<208)return 5; /* SOUND, same as physical Y */
+  if(x>=208&&x<248)return 6; /* USE highlighted prop */
+  return 4;
+ }
  if(y>=77&&y<115)return x>=8&&x<124?0:x>=132&&x<248?1:-1;
  if(y>=122&&y<161)return x>=8&&x<124?2:x>=132&&x<248?3:-1;
  return -1;
