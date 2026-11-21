@@ -650,21 +650,33 @@ static void baby_model(const Game *s,uint32_t frame,int action,
  ellipse(-.39f,1.018f,.365f,.075f,.069f,.029f,29,14,20);
  /* Sclera and pupils lie just above the curved facial surface, not
   * stacked .10 units out in space. Each shallow eye has a tiny highlight. */
- if(lid>32){
-  /* Eye sockets/iris/pupils form a clear expression at only 256x192. */
-  ellipse(-.205f,.579f,.462f,.135f,.113f*lid_height,.014f,22,15,14);
-  ellipse(.205f,.579f,.462f,.135f,.113f*lid_height,.014f,22,15,14);
-  ellipse(-.205f,.575f,.477f,.113f,.099f*lid_height,.015f,31,30,28);
-  ellipse(.205f,.575f,.477f,.113f,.099f*lid_height,.015f,31,30,28);
-  ellipse(-.188f,.565f,.493f,.066f,.072f*lid_height,.015f,10,19,22);
-  ellipse(.218f,.565f,.493f,.066f,.072f*lid_height,.015f,10,19,22);
-  ellipse(-.185f,.560f,.509f,.040f,.054f*lid_height,.011f,3,7,10);
-  ellipse(.221f,.560f,.509f,.040f,.054f*lid_height,.011f,3,7,10);
-  soft_mark(-.208f,.602f,.526f,.031f,.023f*lid_height,31,31,29);
-  soft_mark(.202f,.602f,.526f,.031f,.023f*lid_height,31,31,29);
- }else{
-  soft_mark(-.205f,.575f,.480f,.169f,.016f,15,10,9);
-  soft_mark(.205f,.575f,.480f,.169f,.016f,15,10,9);
+ /* Render eye geometry at FIXED healthy thickness. Compressing the
+  * 3-band GL_QUAD_STRIP ellipsoids by lid_height produced a 40+ pixel
+  * horizontal cyan/black eyelid streak across the face during NAP.
+  * Instead, keep both eyes as intact mesh and slide a broad facial-
+  * colored eyelid panel down OVER each socket. Only two extra quads,
+  * nondegenerate at every frame, with the head's shared pivot. */
+ ellipse(-.205f,.579f,.462f,.135f,.113f,.014f,22,15,14);
+ ellipse(.205f,.579f,.462f,.135f,.113f,.014f,22,15,14);
+ ellipse(-.205f,.575f,.477f,.113f,.099f,.015f,31,30,28);
+ ellipse(.205f,.575f,.477f,.113f,.099f,.015f,31,30,28);
+ ellipse(-.188f,.565f,.493f,.066f,.072f,.015f,10,19,22);
+ ellipse(.218f,.565f,.493f,.066f,.072f,.015f,10,19,22);
+ ellipse(-.185f,.560f,.509f,.040f,.054f,.011f,3,7,10);
+ ellipse(.221f,.560f,.509f,.040f,.054f,.011f,3,7,10);
+ soft_mark(-.208f,.602f,.526f,.031f,.023f,31,31,29);
+ soft_mark(.202f,.602f,.526f,.031f,.023f,31,31,29);
+ if(lid<256){
+  float shutter=.300f*(1.f-lid_height);
+  float center=.716f-shutter*.5f;
+  /* The inner corners follow the same face orientation; front depth
+   * avoids fighting the iris and does not draw through the dresser. */
+  soft_mark(-.205f,center,.548f,.276f,shutter,30,22,19);
+  soft_mark(.205f,center,.548f,.276f,shutter,30,22,19);
+  if(lid<48){
+   soft_mark(-.205f,.566f,.556f,.184f,.018f,18,11,9);
+   soft_mark(.205f,.566f,.556f,.184f,.018f,18,11,9);
+  }
  }
  /* Warm cheeks, gentle brows, button nose and a tiny restrained smile. */
  ellipse(-.355f,.365f,.397f,.102f,.058f,.016f,31,18,19);
