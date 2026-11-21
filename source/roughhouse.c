@@ -38,15 +38,19 @@ int roughhouse_strike_at(Roughhouse *r,int kind,int touch_x,int touch_y){
  if(touch_x>246)touch_x=246;
  if(touch_y<79)touch_y=79;
  if(touch_y>141)touch_y=141;
- aim_x=(128-touch_x)/5; /* +/-23, toward the contact point's opposite side */
+ aim_x=(128-touch_x)/3; /* +/-39, away from actual contact; still clamped */
  aim_y=(110-touch_y)/4; /* gentle varying loft from lower or upper taps */
- side=(r->hits&1u)?-1:1;
+ /* The touched half now controls the *direction* of a shove. Before,
+  * every other hit arbitrarily reversed travel even when the player
+  * kept striking the same side. Dead-center hits retain the playful
+  * alternating rhythm; offset taps take priority. */
+ side=aim_x>4?1:aim_x< -4?-1:((r->hits&1u)?-1:1);
  energy=kind==ROUGHHOUSE_KICK?52:36;
  if(r->hits<255u)r->hits++;
  r->charge=(uint8_t)(r->charge+(kind==ROUGHHOUSE_KICK?3u:2u));
  /* Carry some previous inertia. Three-axis spin is still clamped and
   * damping remains deterministic on ARM9 or host integer arithmetic. */
- r->vx=clamp32(r->vx/3+side*energy+aim_x,-112,112);
+ r->vx=clamp32(r->vx/3+side*(energy/2)+aim_x,-112,112);
  r->vy=clamp32(r->vy/4+(kind==ROUGHHOUSE_KICK?96:75)+aim_y,32,135);
  r->vz=clamp32(r->vz/4-side*(kind==ROUGHHOUSE_KICK?35:22)+aim_x/2,-87,87);
  r->vr=(int16_t)clamp32(r->vr/3+side*(kind==ROUGHHOUSE_KICK?27:21)+aim_x/3,-48,48);
@@ -107,7 +111,14 @@ void roughhouse_step(Roughhouse *r){
   if(r->rebound_count<255u)r->rebound_count++;
   r->impact=9;
  }
- r->vx=decay(r->vx,242);r->vz=decay(r->vz,242);
+ /* Horizontal momentum persists while airborne, but a doll touching
+  * the mat must stop sliding within a short, predictable interval.
+  * Integer-only contact drag avoids long low-speed floor skates. */
+ if(r->y==0){
+  r->vx=decay(r->vx,220);r->vz=decay(r->vz,220);
+ }else{
+  r->vx=decay(r->vx,242);r->vz=decay(r->vz,242);
+ }
  r->roll=(int16_t)(r->roll+r->vr);
  r->pitch=(int16_t)(r->pitch+r->vp);
  r->yaw=(int16_t)(r->yaw+r->vyaw);

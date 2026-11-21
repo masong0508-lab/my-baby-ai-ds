@@ -190,6 +190,46 @@ int main(void){
  assert(world_baby_neck_tilt(2,0u)==world_baby_neck_tilt(2,80u));
  assert(world_baby_arm_reach(3)>world_baby_arm_reach(2));
  assert(world_baby_arm_reach(2)>world_baby_arm_reach(1));
+ /* The same care-age sequence replays consistently no matter when
+  * the physical button is pressed. Keep the 80-age curve in range. */
+ {
+  unsigned age;
+  for(age=0;age<80u;age++){
+   int chat=world_baby_neck_tilt(2,age);
+   int play=world_baby_neck_tilt(3,age);
+   assert(chat>=-1&&chat<=7);
+   assert(play>=3&&play<=7);
+   assert(chat==world_baby_neck_tilt(2,age+80u));
+   assert(play==world_baby_neck_tilt(3,age+80u));
+  }
+ }
+ /* No abrupt chest pop at wrap, no idle breathing during Toybox
+  * collisions, and no new render geometry at the breath peak. */
+ assert(world_baby_breath(0u)==0);
+ assert(world_baby_breath(64u)==256);
+ assert(world_baby_breath(128u)==0);
+ assert(world_baby_breath(192u)==256);
+ {
+  unsigned age,prev=0;
+  for(age=1u;age<=256u;age++){
+   unsigned current=(unsigned)world_baby_breath(age);
+   assert(current<=256u);
+   assert(current-prev<=7u || prev-current<=7u);
+   prev=current;
+  }
+ }
+ {
+  unsigned baseline,peak;
+  s.mood=12;
+  /* Frame zero is also the first instant of the automatic eyelid blink:
+   * comparing it with 64 measures a blink, not the breathing pass.
+   * Frame 128 is the same zero-breath phase, safely outside blink. */
+  world_draw_care(&s,128u,0,56u);
+  baseline=world_polygon_count();
+  world_draw_care(&s,64u,0,56u);
+  peak=world_polygon_count();
+  assert(baseline==peak && peak<=1850u);
+ }
  /* Finite staged animation: anticipatory ease-in, expressive hold,
   * graceful return to idle (not indefinitely repeating CHAT/PLAY forever). */
  assert(world_baby_care_weight(0u)==0);
@@ -226,6 +266,20 @@ int main(void){
   assert(world_vertex_count()<=5000);
   assert(world_polygon_count()<=1850);
  }
+ /* CHAT has three visible syllables at either mood. In particular an
+  * unhappy baby must not produce a full babble soundtrack with an
+  * unmoving flat mouth when nursery audio is enabled. */
+ {
+  unsigned sad_idle,sad_chat;
+  s.mood=10;
+  world_draw_care(&s,15u,0,20u);
+  sad_idle=world_polygon_count();
+  world_draw_care(&s,15u,2,20u);
+  sad_chat=world_polygon_count();
+  assert(sad_chat>sad_idle && sad_chat-sad_idle<=25u);
+  assert(world_vertex_count()<=5000);
+  assert(world_polygon_count()<=1850);
+ }
  /* Normal care gestures should actually alter the infant's mouth geometry:
   * HAPPY CHAT / PLAY displays a connected, shallow open smile. */
  {
@@ -239,6 +293,25 @@ int main(void){
   assert(expressive-idle<=26u);
   assert(world_vertex_count()<=5000);
   assert(world_polygon_count()<=1850);
+ }
+ /* Toybox contact has a brief attached facial recoil: the mouth opens
+  * on an actual hit, then closes to its normal relaxed expression.
+  * It costs no additional polygons outside the short hit pulse. */
+ {
+  unsigned relaxed,shocked;
+  roughhouse_init(&r);
+  s.mood=95;
+  world_draw_roughhouse(&s,410u,&r);
+  relaxed=world_polygon_count();
+  r.impact=9;r.moving=1;
+  world_draw_roughhouse(&s,411u,&r);
+  shocked=world_polygon_count();
+  assert(shocked>relaxed && shocked-relaxed<=25u);
+  assert(world_vertex_count()<=5000);
+  assert(world_polygon_count()<=1850);
+  r.impact=0;r.moving=0;
+  world_draw_roughhouse(&s,412u,&r);
+  assert(world_polygon_count()==relaxed);
  }
  /* Both the new moving doll and the three egg film states MUST fit within
   * hardware command budgets, with no new framebuffer or geometry spike. */
