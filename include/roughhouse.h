@@ -20,9 +20,13 @@ typedef struct {
  int32_t x,y,z,vx,vy,vz;
  int16_t roll,pitch,yaw,vr,vp,vyaw;
  uint8_t hits,charge,cooldown,moving;
+ uint8_t impact,rebound_count; /* transient rumble / shell rebounds */
 } Roughhouse;
 void roughhouse_init(Roughhouse *r);
 int roughhouse_strike(Roughhouse *r,int kind);
+/* Explicit lower-LCD tap point adds directional impulse without changing
+ * the on-screen tool-selection hitboxes or the existing button shortcut. */
+int roughhouse_strike_at(Roughhouse *r,int kind,int touch_x,int touch_y);
 void roughhouse_step(Roughhouse *r);
 int roughhouse_cracked(const Roughhouse *r);
 #endif

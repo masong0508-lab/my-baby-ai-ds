@@ -25,6 +25,26 @@ int main(void){
  assert(roughhouse_strike(&a,ROUGHHOUSE_KICK));
  assert(a.hits==1&&a.charge==3&&a.moving);
  assert(!roughhouse_strike(&a,ROUGHHOUSE_SLAP));
+ /* Two different touch points create distinct, bounded takeoff impulses,
+  * without affecting tool selection or the secret ending threshold. */
+ roughhouse_init(&a);roughhouse_init(&b);
+ assert(roughhouse_strike_at(&a,ROUGHHOUSE_KICK,101,96));
+ assert(roughhouse_strike_at(&b,ROUGHHOUSE_KICK,156,128));
+ assert(a.vx>b.vx);
+ assert(a.vy>b.vy);
+ assert(a.impact==6&&b.impact==6);
+ /* Extreme touch coordinates must clamp instead of overdriving physics. */
+ roughhouse_init(&a);
+ assert(roughhouse_strike_at(&a,ROUGHHOUSE_KICK,-999,-999));
+ assert(a.vx<=112&&a.vy<=135);
+ roughhouse_init(&b);
+ assert(roughhouse_strike_at(&b,ROUGHHOUSE_KICK,10,79));
+ assert(memcmp(&a,&b,sizeof(a))==0);
+ /* Walls actually reflect, and collision feedback is deterministic. */
+ roughhouse_init(&a);
+ a.x=390;a.vx=60;a.y=30;a.vy=0;a.moving=1;
+ roughhouse_step(&a);
+ assert(a.x==390&&a.vx<0&&a.rebound_count==1&&a.impact==9);
  roughhouse_init(&a);roughhouse_init(&b);
  for(i=0;i<6;i++){
   assert(roughhouse_strike(&a,ROUGHHOUSE_KICK));
@@ -64,6 +84,6 @@ int main(void){
  state.ending_mask=(uint16_t)(0x01e0u);
  assert(game_good_ending_count(&state)==4);
  assert(!game_reset_unlocked(&state));
- puts("PASS: deterministic bounded synthetic ragdoll, six-hit secret, one-shot persistent alien egg");
+ puts("PASS: tap-aimed synthetic ragdoll, stable inertia, wall bounces, six-hit secret and once-only egg save");
  return 0;
 }

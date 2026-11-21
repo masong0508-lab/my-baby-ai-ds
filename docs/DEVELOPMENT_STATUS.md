@@ -208,3 +208,16 @@ https://www.talkandroid.com/4687-how-to-play-my-talking-tom-2-walkthrough-tips-h
 - DeSmuME integration asserts the *actual rendered* Toybox selection, animated doll kick, repeated six-hit trigger, visible alien-green fluid on the 3D egg, a clearly distinct jump-scare frame, and the BAD ENDING postcard.
 
 Do not consider this tested on physical DS or the user's specific DraStic installation until confirmed there. These effects have not been given a measured FPS figure.
+
+## Toybox physics and secret-shell polish, continuing after PR #25
+
+The continuing pass upgrades the existing **optional** Talking-Tom-style TOYBOX; the normal NDS nursery care actions, arcade, native stylus, virtual stylus, and nine existing ending records stay compatible.
+
+- **Aim rather than canned movement:** The selected SLAP/KICK still requires a *second tap*, specifically inside the 65×52px illustrated doll target. Empty text margins no longer accidentally apply an impact. The point within the doll determines a bounded horizontal and vertical impulse through `roughhouse_strike_at()`, while A is a neutral center hit. Previous velocity decays but contributes inertia to the next move; all calculations are fixed-point integers with clamped max velocities.
+- **Actual collisions:** Wall X/Z boundary rebounds now also reverse angular components for a readable tumbling effect, while floor rebounds set transient impact feedback. Hit cooldown remains 4 ticks at slower DS gameplay rates. No larger physics library or save-field additions.
+- **No more pose teleport:** The 3D baby's old artificial 0.46-world-unit jump at roll 90 is replaced by continuous angle-dependent compensation. A single **moving floor-shadow quad** tracks the shell and shrinks when airborne; the old stationary shadow is not left under the spawn spot.
+- **Escalating reveal:** At shell charge 6, a fine crack appears on the artificial romper's chest panel using 2 ROM-native 3D decals; at charge 11, three additional green synthetic-ichor marks appear, before secret ending 9's fully staged alien egg opens. This pre-reveal uses just five extra quads (20 submitted vertices), no texture changes, no particle buffer.
+- **Better lower-screen hierarchy:** A legible impact count, worsening 'SHELL STRESS' / 'CRACKED SHELL' / 'UNSEALED...' state, and 'AWAKE?' / 'ALIEN?' response foreshadow the synthetic child's hidden intelligence. The selected hand/boot icon remains unmistakable. The 256×192 screen still paints on change only.
+- **Testing:** `tests/test_roughhouse.c` proves touch-left/right impulses differ, out-of-range taps clamp, collision rebound reflects with a transient pulse, and all simulated results stay deterministic. `tests/test_world.c` enforces the exact 2-quad / 5-quad stress details and 5,000-vertex / 1,850-polygon ceilings; `tests/test_ui.c` checks the reduced doll-only touch target, 2 escalating stress states, and full native framebuffer coverage. The full DS, BlocksDS and real DeSmuME integration workflows must all pass before merging.
+
+This is additional *game code*, not a picture-only concept, and does not assert physical DS or DraStic performance measurements without those device runs.

@@ -1327,15 +1327,21 @@ static void finale(const Game *s,int ending){
  * select SLAP/KICK on the dock, then tap the doll to apply the selected
  * impulse. The upper DS 3D screen is intentionally not a touchscreen. */
 static void roughhouse_screen(int encoded){
- int selected=encoded>=32?ROUGHHOUSE_KICK:ROUGHHOUSE_SLAP;
- int charge=encoded%32;
+ int selected=(encoded&32)?ROUGHHOUSE_KICK:ROUGHHOUSE_SLAP;
+ int charge=encoded&31;
+ int hits=encoded>>6;
  int filled=charge*208/(int)ROUGHHOUSE_CRACK_CHARGE;
+ char count[22];
  if(filled>208)filled=208;
  solid(0,27,256,149,IVORY);
  panel(9,31,238,45,WHITE,ROSE);
  label(14,36,"TOYBOX",PURPLE,2,6);
- fit(139,42,"SELECT A TOOL",MUTED,16);
- fit(15,57,"SHELL STRESS",ROSE,18);
+ if(hits>0){
+  snprintf(count,sizeof(count),"HITS %d/6",hits>6?6:hits);
+  fit(177,42,count,ROSE,10);
+ }else fit(139,42,"SELECT A TOOL",MUTED,16);
+ fit(15,57,charge>=11?"UNSEALED...":charge>=6?"CRACKED SHELL":"SHELL STRESS",
+     charge>=11?GREEN:ROSE,18);
  solid(15,68,219,5,GRAY);
  solid(19,69,filled,3,ROSE);
  panel(10,79,236,62,WHITE,LILAC);
@@ -1344,7 +1350,8 @@ static void roughhouse_screen(int encoded){
  label(21,97,"TAP",INK,2,3);
  fit(20,115,"TO USE",PURPLE,9);
  label(184,97,"DOLL",INK,2,4);
- fit(184,115,"BOING!",ROSE,9);
+ fit(184,115,charge>=11?"ALIEN?":charge>=6?"AWAKE?":"BOING!",
+     charge>=11?GREEN:ROSE,9);
  capsule(9,145,115,29,selected==ROUGHHOUSE_SLAP?PINK:GRAY,
          selected==ROUGHHOUSE_SLAP?ROSE:PURPLE);
  /* A mitten/hand is the selection icon, not a violent depiction. */
@@ -1370,7 +1377,10 @@ static void egg_scene_screen(int frame){
  solid(0,27,256,149,NIGHT);
  panel(10,35,236,130,phase==3?ROSE:PURPLE,phase==3?PINK:LILAC);
  capsule(21,45,214,28,NIGHT,ROSE);
- label(phase==3?43:55,52,phase==3?"IT CAN SEE YOU":"NO SIGNAL",WHITE,2,14);
+ label(phase==3?43:phase==2?57:phase==1?59:55,52,
+       phase==3?"IT CAN SEE YOU":
+       phase==2?"COME CLOSER":
+       phase==1?"DO NOT OPEN":"NO SIGNAL",WHITE,2,14);
  if(phase==0){
   fit(34,88,"THE SHELL WAS NEVER SKIN.",WHITE,35);
   fit(52,110,"INTERNAL SEAL: FAIL",LEMON,27);
@@ -1631,7 +1641,9 @@ int ui_roughhouse_touch(int x,int y){
   if(x>=9&&x<124)return ROUGHHOUSE_SLAP;
   if(x>=132&&x<247)return ROUGHHOUSE_KICK;
  }
- if(y>=79&&y<141&&x>=10&&x<246)return 4;
+ /* Only the illustrated doll is tappable; blank panel text is inert.
+  * This also makes directional touch impulses intentional and repeatable. */
+ if(y>=83&&y<135&&x>=95&&x<160)return 4;
  return 0;
 }
 int ui_nursery_touch(int x,int y){

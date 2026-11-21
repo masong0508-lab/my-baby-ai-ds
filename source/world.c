@@ -235,8 +235,8 @@ static void room(void){
  block(.04,-1.145,.78,2.62,.045,2.18,25,29,11);
  for(i=0;i<4;i++)flat_floor(-.89f+i*.56f,-1.112f,1.78f,.13f,.035f,18,25,9);
  /* Big stylized flowers, a defining motif of the 2000s reference. */
- /* Native 1-quad contact shadow grounds the baby's shoes on the rug. */
- flat_floor(-.10f,-1.105f,.34f,.96f,.32f,17,22,12);
+ /* The contact shadow now follows the doll during Toybox physics, so it
+  * is drawn by each scene, not painted permanently at its spawn point. */
  rug_flower(-.92f,1.32f);
  rug_flower(.92f,1.48f);
  rug_flower(-.33f,1.77f);
@@ -443,6 +443,7 @@ void world_draw(const Game *s,uint32_t frame,int activity){
  glPolyFmt(POLY_ALPHA(31)|POLY_CULL_NONE);
  frame_vertices=0;frame_polygons=0;
  room();
+ flat_floor(-.10f,-1.105f,.34f,.96f,.32f,17,22,12);
  baby_model(s,frame,activity);
  teddy();
  glFlush(0);
@@ -453,16 +454,28 @@ void world_draw(const Game *s,uint32_t frame,int activity){
  * supplies 1/256-world-unit motion, so it stays deterministic on DS. */
 void world_draw_roughhouse(const Game *s,uint32_t frame,const Roughhouse *r){
  int tilt;
- float elevation=0.f;
+ float elevation=0.f,shadow=.92f;
  glMatrixMode(GL_MODELVIEW);glLoadIdentity();
  gluLookAt(.97f,1.05f,3.43f,-.12f,.035f,.17f,0,1,0);
  glPolyFmt(POLY_ALPHA(31)|POLY_CULL_NONE);
  frame_vertices=0;frame_polygons=0;
  room();
+ if(r){
+  /* The shadow moves WITH the synthetic doll and tightens as it falls.
+   * One floor quad adds no texture VRAM or per-frame image operations. */
+  shadow=1.f-(float)r->y/850.f;
+  if(shadow<.60f)shadow=.60f;
+  flat_floor(-.10f+(float)r->x/256.f,-1.105f,
+             .34f+(float)r->z/256.f,
+             .96f*shadow,.32f*shadow,17,22,12);
+ }else flat_floor(-.10f,-1.105f,.34f,.96f,.32f,17,22,12);
  glPushMatrix();
  if(r){
   tilt=r->roll<0?-r->roll:r->roll;
-  if(tilt>90)elevation=.46f;
+  /* Before: an abrupt .46 world-unit teleport after 90 roll units.
+   * Now: continuous contact compensation from an upright pose to a roll.
+   * The model's feet never suddenly jump when it rotates past the gate. */
+  elevation=(float)tilt*.00075f;
   glTranslatef((float)r->x/256.f,(float)r->y/256.f+elevation,
                (float)r->z/256.f);
   glRotateZ(degreesToAngle((int)r->roll/4));
@@ -470,6 +483,18 @@ void world_draw_roughhouse(const Game *s,uint32_t frame,const Roughhouse *r){
   glRotateY(degreesToAngle((int)r->yaw/4));
  }
  baby_model(s,frame,r&&r->moving?5:0);
+ if(r&&r->charge>=6){
+  /* First fracture: the hospital-pastel chest pocket conceals a seam. */
+  soft_mark(-.12f,-.27f,.565f,.029f,.20f,11,13,14);
+  soft_mark(-.08f,-.34f,.571f,.079f,.033f,9,14,14);
+  if(r->charge>=11){
+   /* Second stage: green alien ichor appears INSIDE the artificial shell.
+    * Three low-cost decals, no gore sprite or simulated fluid particles. */
+   soft_mark(-.11f,-.26f,.580f,.027f,.15f,11,30,10);
+   soft_mark(-.085f,-.345f,.580f,.060f,.025f,17,31,9);
+   soft_mark(-.04f,-.378f,.580f,.028f,.065f,5,25,7);
+  }
+ }
  glPopMatrix(1);
  teddy();
  glFlush(0);
@@ -490,10 +515,14 @@ void world_draw_secret(const Game *s,uint32_t frame,const Roughhouse *r){
  phase=frame<EGG_PUSH_FRAME?1u:frame<EGG_SCARE_FRAME?2u:3u;
  glMatrixMode(GL_MODELVIEW);glLoadIdentity();
  if(phase==1u){
-  gluLookAt(0,.18f,4.30f,0,0,.0f,0,1,0);
+  /* Earlier camera was too distant: egg occupied <50px on a 192px LCD.
+   * Keep the shell large and recognizable before slowly advancing. */
+  gluLookAt(0,.18f,3.15f,0,0,.0f,0,1,0);
  }else if(phase==2u){
-  float camera=4.30f-(float)(frame-EGG_PUSH_FRAME)*.016f;
-  if(camera<2.06f)camera=2.06f;
+  /* A real push into the fissure, not a slight distant change in scale.
+   * Camera remains outside the .66-unit fluid surface until the last beat. */
+  float camera=3.15f-(float)(frame-EGG_PUSH_FRAME)*.014f;
+  if(camera<1.20f)camera=1.20f;
   gluLookAt(0,.11f,camera,0,.08f,.13f,0,1,0);
  }else{
   /* Keep full head within view rather than clipping into giant flat planes. */

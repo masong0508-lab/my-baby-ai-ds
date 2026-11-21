@@ -36,6 +36,19 @@ int main(void){
   assert(world_vertex_count()<=5000);
   assert(world_polygon_count()<=1850);
  }
+ /* Fractures and neon-green seam appear progressively ON the actual 3D
+  * synthetic character before the secret cutscene. No mesh overload. */
+ r.charge=0;
+ world_draw_roughhouse(&s,13,&r);
+ {
+  unsigned shell_base=world_polygon_count();
+  r.charge=6;world_draw_roughhouse(&s,13,&r);
+  assert(world_polygon_count()==shell_base+2u);
+  r.charge=11;world_draw_roughhouse(&s,13,&r);
+  assert(world_polygon_count()==shell_base+5u);
+  assert(world_vertex_count()<=5000);
+  assert(world_polygon_count()<=1850);
+ }
  for(i=0;i<5;i++){
   static const uint32_t frames[]={0u,EGG_CRACK_FRAME,EGG_PUSH_FRAME,
                                    EGG_SCARE_FRAME,EGG_HOLD_FRAME};

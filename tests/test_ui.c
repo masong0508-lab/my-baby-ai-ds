@@ -60,6 +60,11 @@ int main(void){
  assert(ui_roughhouse_touch(48,160)==1); /* select SLAP */
  assert(ui_roughhouse_touch(191,160)==2); /* select KICK */
  assert(ui_roughhouse_touch(130,109)==4); /* use selected toy */
+ assert(ui_roughhouse_touch(95,83)==4);
+ assert(ui_roughhouse_touch(159,134)==4);
+ assert(ui_roughhouse_touch(94,110)==0); /* margins never slap doll */
+ assert(ui_roughhouse_touch(160,110)==0);
+ assert(ui_roughhouse_touch(38,110)==0);
  assert(ui_roughhouse_touch(128,182)==3); /* back */
  assert(ui_roughhouse_touch(128,67)==0);
  assert(ui_arcade_select_page(35,92,0)==0);
@@ -95,6 +100,13 @@ int main(void){
   verify_coverage();
   foot=fingerprint();
   assert(hand!=foot); /* SELECTED mode must be unmistakable */
+  ui_draw(&g,&a,8,69,0,0,1,"TOYBOX"); /* one hit plus first stress */
+  verify_coverage();
+  assert(foot!=fingerprint());
+  foot=fingerprint();
+  ui_draw(&g,&a,8,(4<<6)|43,0,0,1,"TOYBOX"); /* stage-two crack */
+  verify_coverage();
+  assert(foot!=fingerprint());
   ui_draw(&g,&a,9,EGG_PUSH_FRAME,0,0,1,"EGG");
   verify_coverage();
   ui_draw(&g,&a,9,EGG_SCARE_FRAME,0,0,1,"EGG");
