@@ -24,6 +24,9 @@ static Game baby;
 static Arcade arc;
 static int storage_ok,view=5,selected,album_page,reset_step,last_ending,pose;
 static uint32_t pose_age;
+/* Transient room-tour state: save schema stays exactly the same. */
+static int room_focus=-1,room_previous=-1,room_daylight,room_lamp=1;
+static uint32_t room_camera_age=16u;
 static int three_d_ready;
 static TouchGate gesture;
 static VirtualStylus vpen;
@@ -90,7 +93,9 @@ int main(void){
  /* Always show a visible title before touching the filesystem or heavy 3D.
   * Some older emulators hang during their emulated DLDI/FAT setup. */
  ui_draw(&baby,&arc,view,view==6?album_page:view==8?((int)rag.charge|(toy_tool==ROUGHHOUSE_KICK?32:0)|((int)rag.hits<<6)|
-           (sfx_is_enabled()?(1<<16):0)):view==9?((int)egg_frame|(egg_paused?EGG_FILM_PAUSED_FLAG:0)):selected,last_ending,reset_step,storage_ok,message);
+           (sfx_is_enabled()?(1<<16):0)):view==9?((int)egg_frame|(egg_paused?EGG_FILM_PAUSED_FLAG:0)):
+           view==10?((room_focus&3)|(room_daylight?8:0)|
+                     (room_lamp?16:0)):selected,last_ending,reset_step,storage_ok,message);
  /* Sound starts only AFTER the title is visibly present. Small hardware
   * PSG cues are synthesized at the ARM9 game tick; no sample bank/heap. */
  sfx_init();
@@ -138,7 +143,13 @@ int main(void){
   }
   if(view==0){
    int action=-1;
-   if(((down&KEY_X)&&(held&KEY_R))||
+   if((tap&&ui_room_entry_touch(touch.px,touch.py))||
+      (!vpen.enabled&&(down&KEY_DOWN))){
+    /* Room Tour uses its own four large native touch cards. The care
+     * buttons, Toybox and save/end-day shortcuts remain unchanged. */
+    view=10;room_previous=-1;room_focus=0;room_camera_age=0;
+    message="TOUCH A PROP, OR B TO RETURN.";dirty=1;
+   }else if(((down&KEY_X)&&(held&KEY_R))||
       (tap&&ui_prank_entry_touch(touch.px,touch.py))){
     view=8;toy_tool=ROUGHHOUSE_SLAP;
     message="SELECT A TOY, THEN TAP THE DOLL.";dirty=1;
@@ -449,6 +460,44 @@ int main(void){
    }
   }else if(view==7){
    if(down&(KEY_B|KEY_SELECT|KEY_START)){view=5;dirty=1;}
+  }else if(view==10){
+   int picked=-1;
+   if(down&(KEY_B|KEY_START)){
+    room_previous=room_focus;room_focus=-1;room_camera_age=0;
+    view=0;message="BACK IN BABY'S NURSERY.";dirty=1;
+   }else{
+    if(tap)picked=ui_room_touch(touch.px,touch.py);
+    else if(!vpen.enabled){
+     /* D-pad selects/uses the pictured objects without a touchscreen. */
+     if(down&KEY_UP)picked=0;
+     else if(down&KEY_RIGHT)picked=1;
+     else if(down&KEY_LEFT)picked=2;
+     else if(down&KEY_DOWN)picked=3;
+     else if(down&KEY_A)picked=room_focus;
+    }
+    if(picked==4){
+     room_previous=room_focus;room_focus=-1;room_camera_age=0;
+     view=0;message="BACK IN BABY'S NURSERY.";dirty=1;
+    }else if(picked>=0&&picked<=3){
+     if(picked!=room_focus){
+      room_previous=room_focus;room_focus=picked;room_camera_age=0;
+     }
+     if(picked==0){
+      room_daylight^=1;
+      message=room_daylight?"THE WINDOW SHOWS A NEW DAY.":"THE MOON IS WATCHING AGAIN.";
+     }else if(picked==1){
+      room_lamp^=1;
+      message=room_lamp?"LAMP ON. BUDGET APPROVED.":"LIGHTS OUT. OVERTIME DENIED.";
+     }else if(picked==2){
+      care(PLAY);
+      message="TEDDY RECEIVED A PROMOTION.";
+     }else{
+      care(NAP);
+      message="CRIB NAP: BOARD APPROVED.";
+     }
+     dirty=1;
+    }
+   }
   }
   /* Delay the lightweight top portrait until AFTER the bottom title has
    * been visible for 16 frames. It keeps boot safe on older DS emulators. */
@@ -467,6 +516,10 @@ int main(void){
    else if(view==9)world_draw_secret(&baby,egg_frame,&rag);
    else if(view==8||(view==0&&rag.moving))
     world_draw_roughhouse(&baby,frame,&rag);
+   else if(view==0||view==10)
+    world_draw_nursery(&baby,frame,pose,pose_age,
+                       room_focus,room_previous,room_camera_age,
+                       room_daylight,room_lamp);
    else world_draw_care(&baby,frame,pose,pose_age);
   }
   /* Keep bitmap VRAM writes off the hot path unless UI state changed. */
@@ -488,6 +541,7 @@ int main(void){
    if(pose_age<56u)pose_age++;
    else {pose=0;pose_age=0;}
   }
+  if(room_camera_age<16u)room_camera_age++;
   frame++;
  }
  return 0;
