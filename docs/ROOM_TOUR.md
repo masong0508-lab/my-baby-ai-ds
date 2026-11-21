@@ -22,3 +22,9 @@ Bedtime is now a small, playable room puzzle: tap WINDOW until the moonlight is 
 ## Uninterrupted 3D camera journeys
 
 Selecting a new prop before the previous 16-tick camera move ends no longer restarts the lens at the previous preset. The game captures its exact six-component camera position and gaze target at the interruption, then eases to the new landmark. Pressing BACK during a move uses the same continuity rule. This avoids a visible teleport or artificial scene cut when tapping quickly, with no added vertices, textures or framebuffers. The settled camera is returned directly from its preset so idle drawing requires no interpolation arithmetic.
+
+## Camera art-direction pass
+
+ROOM now uses closer-to-frontal two-subject compositions rather than turning the camera so far left that empty sage wall consumes most of the top DS screen. The window, lamp, Teddy and crib remain real fixed landmarks in the same geometry, and the usual baby is kept recognizable in shot. A tiny five-quad framed moon painting adds real visual storytelling to the left interior wall; it uses no imported image, sprite or texture memory and avoids thin horizontal lines that caused previous rendering glitches.
+
+When WINDOW switches to day, the wall, floor and furniture also receive one or two 5-bit brightness steps, so the lighting actually tells a daytime story rather than changing only the glass color. Night/lamp-off remains the dimmest preset, preserving the quiet crib care bonus. This is a temporary renderer palette adjustment; the baby's material palette, Toybox and secret egg cinematic are restored immediately after each room draw. Native tests check a right-wall region outside the window and require a visible daylight difference.
