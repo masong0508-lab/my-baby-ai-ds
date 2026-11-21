@@ -607,6 +607,17 @@ def test_actual_game(path: Path, output: Path) -> dict:
     stylus_tap(emu, 176, 91)  # enter selected cabinet
     frames(emu, 12)  # capture a settled frame, not an intermediate VRAM write
     diaper = picture(emu, output, "game_diaper_start")
+    # The legacy 4-tick redraw captured a half-painted scene with only
+    # the pink wall and truncated STEP heading; verify the illustrated
+    # changing mat is actually committed to VRAM before continuing.
+    def diaper_art_colors(image):
+        art = image.crop((48, 192 + 81, 208, 192 + 162))
+        return len(set(art.get_flattened_data()))
+    diaper_start_colors = diaper_art_colors(diaper)
+    assert diaper_start_colors >= 9, (
+        "Diaper changing mat is absent/partially repainted on the native "
+        f"256x192 lower screen ({diaper_start_colors} colors)"
+    )
     # The first frame used to photograph a blank panel while UI drew into
     # VRAM. Enforce the presence of the actual 2x "DIAPER DASH" heading.
     title_crop = diaper.crop((14, 192 + 35, 162, 192 + 51))
@@ -632,11 +643,17 @@ def test_actual_game(path: Path, output: Path) -> dict:
     emu.input.touch_release()
     frames(emu, 10)
     diaper_step2 = picture(emu, output, "game_diaper_after_wipe")
+    diaper_next_colors = diaper_art_colors(diaper_step2)
+    assert diaper_next_colors >= 9, (
+        "Diaper Dash cleared its changing mat during WIPE stage change "
+        f"({diaper_next_colors} colors)"
+    )
     step_changed = difference(
-        diaper, diaper_step2, (0, 192 + 48, 256, 192 + 80)
+        diaper, diaper_step2, (0, 192 + 33, 256, 192 + 72)
     )
     assert step_changed > 30, (
-        f"Diaper Dash did not advance after WIPE touch ({step_changed})"
+        f"Diaper Dash did not visually advance after WIPE touch "
+        f"(header changed={step_changed})"
     )
     # DRAG a clean diaper from the tray onto the baby.
     emu.input.touch_set_pos(35, 155)
@@ -1017,6 +1034,8 @@ def test_actual_game(path: Path, output: Path) -> dict:
         "arcade_paid_requirement_changed_pixels": arcade_goal_change,
         "arcade_paid_requirement_visible_ink": readable_goal_pixels,
         "diaper_heading_ink_pixels": dark_ink,
+        "diaper_start_illustration_colors": diaper_start_colors,
+        "diaper_after_wipe_illustration_colors": diaper_next_colors,
         "title_to_diagnostic_changed_pixels": new_screen,
         "KEY_TOUCH_status_changed_pixels": status,
         "coordinates_on_press_changed_pixels": xy1,
