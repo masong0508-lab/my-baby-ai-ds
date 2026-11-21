@@ -344,7 +344,8 @@ static void teddy(void){
  * previous dark bob, gaping mouth/teeth, flaring jeans and detached facial
  * layers were the main reason the character looked frightening at 256x192.
  * Only ROM-native primitive meshes; no texture or framebuffer allocation. */
-static void baby_model(const Game *s,uint32_t frame,int action){
+static void baby_model(const Game *s,uint32_t frame,int action,
+                       const Roughhouse *rag){
  unsigned beat=frame%120u,arms=frame%104u;
  const unsigned hop=frame%36u;
  /* Behavior-driven, joint-consistent low-cost posing, never a free-floating
@@ -352,16 +353,21 @@ static void baby_model(const Game *s,uint32_t frame,int action){
  const float bob=((float)(beat<60u?beat:120u-beat)-30.f)*.00028f+
                  (action==3?(float)(hop<18u?hop:36u-hop)*.0022f:0.f);
  const float wave=((float)(arms<52u?arms:104u-arms)-26.f)*.0011f;
+ /* Primary body rotation comes from the fixed-point toy simulation. The
+  * secondary shoulder/neck reactions are tiny and remain physically
+  * connected to the parent model rather than becoming floating parts. */
+ const float swing=rag&&rag->moving?(float)rag->vr*.0022f:0.f;
+ const float settle=rag?(float)rag->impact*.0025f:0.f;
  const float left_pose=wave+(action==2?.065f:action==3?.075f:
-                              action==4?-.035f:action==5?-.145f:0.f);
+                              action==4?-.035f:action==5?-.145f:0.f)+swing;
  const float right_pose=-wave+(action==1?.07f:action==3?.075f:
-                                action==4?-.035f:action==5?.145f:0.f);
+                                action==4?-.035f:action==5?.145f:0.f)-swing;
  const int blink=(frame%173u)<5u||action==4;
  const int happy=s->mood>35;
  const int glitch=game_glitch_tier(s)>=2&&!s->safe_visuals&&
                   (frame%151u)<12u;
  glPushMatrix();
- glTranslatef(-.12f,bob,.23f);
+ glTranslatef(-.12f,bob-settle,.23f);
  /* Footed one-piece romper, short legs and soft shoes: no adult denim. */
  ellipse(0,-.75f,-.07f,.46f,.31f,.34f,19,26,27);
  ellipse(-.32f,-.93f,.14f,.245f,.22f,.27f,18,25,27);
@@ -381,12 +387,25 @@ static void baby_model(const Game *s,uint32_t frame,int action){
  soft_mark(0,-.38f,.332f,.044f,.027f,30,25,14);
  /* Sleeves overlap the torso and the skin overlaps each sleeve; hands
   * always remain attached while the animation cycles. */
- tilted_ellipse(-.45f,-.21f,-.025f,.205f,.22f,.195f,-20,19,26,27);
- tilted_ellipse(.45f,-.21f,-.025f,.205f,.22f,.195f,20,19,26,27);
+ tilted_ellipse(-.45f,-.21f+swing*.45f,-.025f,
+                .205f,.22f,.195f,-20,19,26,27);
+ tilted_ellipse(.45f,-.21f-swing*.45f,-.025f,
+                .205f,.22f,.195f,20,19,26,27);
  tilted_ellipse(-.55f,-.37f+left_pose,.15f,.14f,.18f,.14f,-26,31,23,19);
  tilted_ellipse(.55f,-.37f+right_pose,.15f,.14f,.18f,.14f,26,31,23,19);
  ellipse(-.63f,-.46f+left_pose,.28f,.13f,.125f,.13f,31,24,20);
  ellipse(.63f,-.46f+right_pose,.28f,.13f,.125f,.13f,31,24,20);
+ /* Neck pivot moves the entire face, eyes, cheeks, hair, and mouth AS ONE.
+  * The free head briefly lags the shell's rolling body by at most 16deg. */
+ glPushMatrix();
+ if(rag&&rag->moving){
+  int neck=-rag->vr/3;
+  if(neck>16)neck=16;
+  if(neck< -16)neck=-16;
+  glTranslatef(0,.10f,0);
+  glRotateZ(degreesToAngle(neck));
+  glTranslatef(0,-.10f,0);
+ }
  /* Rounded unified face. No second oversized jaw shell, no floating teeth. */
  soft_head(0,.54f,.045f,.61f,.615f,.45f,30,22,19);
  ellipse(-.575f,.49f,.065f,.105f,.145f,.09f,31,23,19);
@@ -422,7 +441,8 @@ static void baby_model(const Game *s,uint32_t frame,int action){
   soft_mark(0,.251f,.454f,.081f,.017f,18,9,11);
   soft_mark(.065f,.278f,.444f,.052f,.017f,18,9,11);
  }else soft_mark(0,.259f,.451f,.084f,.015f,18,9,11);
- glPopMatrix(1);
+ glPopMatrix(1); /* attached face and hair pivot */
+ glPopMatrix(1); /* whole model */
 }
 void world_init(void){
  glInit();
@@ -444,7 +464,7 @@ void world_draw(const Game *s,uint32_t frame,int activity){
  frame_vertices=0;frame_polygons=0;
  room();
  flat_floor(-.10f,-1.105f,.34f,.96f,.32f,17,22,12);
- baby_model(s,frame,activity);
+ baby_model(s,frame,activity,0);
  teddy();
  glFlush(0);
 }
@@ -482,7 +502,7 @@ void world_draw_roughhouse(const Game *s,uint32_t frame,const Roughhouse *r){
   glRotateX(degreesToAngle((int)r->pitch/4));
   glRotateY(degreesToAngle((int)r->yaw/4));
  }
- baby_model(s,frame,r&&r->moving?5:0);
+ baby_model(s,frame,r&&r->moving?5:0,r);
  if(r&&r->charge>=6){
   /* First fracture: the hospital-pastel chest pocket conceals a seam. */
   soft_mark(-.12f,-.27f,.565f,.029f,.20f,11,13,14);
@@ -536,6 +556,19 @@ void world_draw_secret(const Game *s,uint32_t frame,const Roughhouse *r){
    * Fracture marks are drawn IN FRONT of the shell, not as random pixels. */
   ellipse(0,-.15f,.02f,.70f,.88f,.48f,16,24,21);
   ellipse(0,-.21f,.35f,.57f,.69f,.22f,24,26,17);
+  /* Overlapping asymmetric shell plates visibly PART as the lens moves in.
+   * Two 8-sided segments and a few raised green growth ridges replace the
+   * earlier single featureless eggshell with no extra textures or buffers. */
+  {
+   float opened=frame>=EGG_PUSH_FRAME?
+        (float)(frame-EGG_PUSH_FRAME)/(float)(EGG_SCARE_FRAME-EGG_PUSH_FRAME):0.f;
+   if(opened>1.f)opened=1.f;
+   ellipse(-.31f-opened*.11f,-.14f,.482f,.26f,.61f,.072f,22,28,20);
+   ellipse(.31f+opened*.11f,-.11f,.483f,.26f,.58f,.072f,20,26,19);
+   soft_mark(-.48f-opened*.10f,-.25f,.558f,.055f,.24f,12,28,9);
+   soft_mark(.47f+opened*.09f,.13f,.56f,.048f,.19f,9,26,12);
+   soft_mark(-.34f-opened*.08f,.31f,.558f,.058f,.15f,16,30,10);
+  }
   soft_mark(0,-.05f,.562f,.18f,.55f,6,8,12);
   soft_mark(-.14f,-.09f,.568f,.10f,.24f,5,10,14);
   soft_mark(.16f,.12f,.568f,.08f,.29f,5,10,14);
