@@ -26,7 +26,7 @@ static int storage_ok,view=5,selected,album_page,reset_step,last_ending,pose;
 static uint32_t pose_age;
 /* Transient room-tour state: save schema stays exactly the same. */
 static int room_focus=-1,room_previous=-1,room_daylight,room_lamp=1;
-static uint32_t room_camera_age=16u;
+static uint32_t room_camera_age=16u,room_prop_age=40u;
 static int three_d_ready;
 static TouchGate gesture;
 static VirtualStylus vpen;
@@ -145,6 +145,7 @@ int main(void){
     /* Room Tour uses its own four large native touch cards. The care
      * buttons, Toybox and save/end-day shortcuts remain unchanged. */
     view=10;room_previous=-1;room_focus=0;room_camera_age=0;
+    room_prop_age=40u;
     message="TOUCH A PROP, OR B TO RETURN.";dirty=1;
    }else if(((down&KEY_X)&&(held&KEY_R))||
       (tap&&ui_prank_entry_touch(touch.px,touch.py))){
@@ -479,6 +480,7 @@ int main(void){
      if(picked!=room_focus){
       room_previous=room_focus;room_focus=picked;room_camera_age=0;
      }
+     room_prop_age=0u; /* every tap restarts an interaction, not a loop */
      if(picked==0){
       room_daylight^=1;
       message=room_daylight?"THE WINDOW SHOWS A NEW DAY.":"THE MOON IS WATCHING AGAIN.";
@@ -490,7 +492,10 @@ int main(void){
       message="TEDDY RECEIVED A PROMOTION.";
      }else{
       care(NAP);
-      message="CRIB NAP: BOARD APPROVED.";
+      if(game_room_quiet_rest(&baby,room_daylight,room_lamp)){
+       message="QUIET NIGHT: BONUS +8 REST, LESS CHAOS.";
+       persist(); /* persist BOTH care and conditional quiet benefit */
+      }else message="CRIB NAP: BOARD APPROVED.";
      }
      dirty=1;
     }
@@ -516,7 +521,7 @@ int main(void){
    else if(view==0||view==10)
     world_draw_nursery(&baby,frame,pose,pose_age,
                        room_focus,room_previous,room_camera_age,
-                       room_daylight,room_lamp);
+                       room_daylight,room_lamp,room_prop_age);
    else world_draw_care(&baby,frame,pose,pose_age);
   }
   /* Keep bitmap VRAM writes off the hot path unless UI state changed. */
@@ -546,6 +551,7 @@ int main(void){
    else {pose=0;pose_age=0;}
   }
   if(room_camera_age<16u)room_camera_age++;
+  if(room_prop_age<40u)room_prop_age++;
   frame++;
  }
  return 0;
