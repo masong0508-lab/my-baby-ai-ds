@@ -67,6 +67,9 @@ int main(void){
  ui_draw(&g,&a,2,0,0,0,1,"GO!");
  a.id=0;a.timer=600;a.balance=12;a.hold_frames=45;
  ui_draw(&g,&a,2,0,0,0,1,"BOTTLE");
+ /* No more fake vertical-edge glitch strips on each playfield. */
+ assert(screen[45u*256u+2u]==screen[90u*256u+2u]);
+ assert(screen[45u*256u+253u]==screen[90u*256u+253u]);
  a.id=1;a.timer=140;a.stage=0;a.target=3;
  ui_draw(&g,&a,2,0,0,0,1,"DIAPER");
  a.id=2;a.timer=120;a.target=3;a.round=2;
