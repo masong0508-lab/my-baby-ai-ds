@@ -74,7 +74,45 @@ static void test_good_endings(void){
  assert(game_end_day(&s)==END_GRADUATION);
  assert(s.dollars==65535&&s.favors==65535);
 }
-/* Forge checksum-correct but invalid state, simulating logical corruption
+/* A bad run cannot permanently strand the player: all eight starter
+ * cabinets remain free. Earning wins and favors by actually completing
+ * free rounds must eventually unlock every paid cabinet, even at maximum
+ * corruption and with no initial cash. Do NOT hand-set the unlock mask. */
+static void test_arcade_economy_recovery(void){
+ Game g;
+ Arcade a;
+ unsigned req_wins,req_cash,req_favors,total_wins=0;
+ int id,i,retries;
+ game_init(&g);
+ g.dollars=0;g.favors=0;
+ g.hunger=100;g.energy=0;g.mood=0;g.chaos=100;g.corruption=100;
+ assert(!game_unlock_requirements(0,&req_wins,&req_cash,&req_favors));
+ assert(!game_unlock_requirements(7,&req_wins,&req_cash,&req_favors));
+ assert(!game_unlock_requirements(16,&req_wins,&req_cash,&req_favors));
+ for(id=8;id<MBAI_GAMES;id++){
+  assert(game_unlock_requirements(id,&req_wins,&req_cash,&req_favors));
+  assert(req_wins==(unsigned)(id-7)*2u);
+  assert(req_cash==(unsigned)(10+(id-8)*2));
+  assert(req_favors==(unsigned)((id-8)/2+1));
+  for(retries=0;retries<256&&!game_unlock(&g,id);retries++){
+   /* Sock Market is one of the original free cabinets. All its rounds
+    * are fully played through the real gameplay engine. */
+   assert(game_unlocked(&g,5));
+   game_arcade_start(&g,&a,5);
+   assert(a.active);
+   for(i=0;i<MBAI_ROUNDS;i++){
+    assert(a.active);
+    game_arcade_input(&g,&a,game_arcade_expected(&a));
+   }
+   assert(!a.active&&a.finished==1);
+   total_wins++;
+  }
+  assert(retries<256&&game_unlocked(&g,id));
+ }
+ assert(g.unlocked==0xffffu && total_wins>=32u);
+ assert(g.dollars<=65535u && g.favors<=65535u);
+}
+ /* Forge checksum-correct but invalid state, simulating logical corruption
  * that a simple digest check would otherwise accept. */
 typedef struct {
  uint32_t magic;
@@ -142,6 +180,7 @@ int main(void){
  const char *base="/tmp/my_baby_ai_testslot";
  test_room_quiet_rest();
  test_good_endings();
+ test_arcade_economy_recovery();
  test_save_integrity();
  save_erase(base);game_init(&g);
  assert(g.unlocked==255&&!game_reset_unlocked(&g));
