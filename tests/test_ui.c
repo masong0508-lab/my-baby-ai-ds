@@ -194,6 +194,26 @@ int main(void){
    ui_draw(&g,&a,(int)view,0,END_GRADUATION,0,1,"DISPLAY TEST");
    verify_coverage();
   }
+  /* Both confirmation stages, both outcome types and save indicators must
+   * be visually distinct even though all use the same screen geometry. */
+  ui_draw(&g,&a,3,0,0,0,1,"RESET");
+  verify_coverage();
+  hashes[0]=fingerprint();
+  ui_draw(&g,&a,3,0,0,1,1,"RESET");
+  verify_coverage();
+  assert(fingerprint()!=hashes[0]);
+  ui_draw(&g,&a,4,0,END_BOTTLE,0,1,"ENDING");
+  verify_coverage();
+  hashes[0]=fingerprint();
+  ui_draw(&g,&a,4,0,END_GRADUATION,0,1,"ENDING");
+  verify_coverage();
+  assert(fingerprint()!=hashes[0]);
+  ui_draw(&g,&a,5,0,0,0,0,"RAM MODE");
+  verify_coverage();
+  hashes[0]=fingerprint();
+  ui_draw(&g,&a,5,0,0,0,1,"RAM MODE");
+  verify_coverage();
+  assert(fingerprint()!=hashes[0]);
   for(id=0;id<16;id++){
    game_arcade_start(&g,&a,(int)id);
    assert(a.active);
