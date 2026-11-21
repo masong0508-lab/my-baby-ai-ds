@@ -145,6 +145,17 @@ int main(void){
  ui_draw(&g,&a,4,0,END_GRADUATION,0,1,"CONTINUE");
  ui_draw(&g,&a,3,0,0,1,1,"RESET?");
  ui_draw(&g,&a,5,0,0,0,1,"START");
+ /* The title portrait must have several distinct facial/romper colors and
+  * no uninitialized VRAM columns in the baby icon's 40x36 pixel patch. */
+ {
+  uint16_t seen[12]={0};unsigned unique=0,x,y,k;
+  for(y=78;y<112;y++)for(x=109;x<148;x++){
+   uint16_t pix=screen[y*256+x];
+   for(k=0;k<unique&&k<12;k++)if(seen[k]==pix)break;
+   if(k==unique&&unique<12)seen[unique++]=pix;
+  }
+  assert(unique>=7);
+ }
  ui_draw(&g,&a,6,0,0,0,1,"ALBUM");
  ui_touch_observe(1,120,130,3);
  ui_draw(&g,&a,7,0,0,0,1,"TOUCH DEBUG");
