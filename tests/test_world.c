@@ -152,6 +152,22 @@ int main(void){
   assert(b.z-c.z<.05f); /* no teleport at push transition */
   assert(d.z>1.35f && d.z<1.45f);
   assert(e.z>2.5f); /* single intentional jump-scare cut */
+  assert(e.look_y<-.09f&&e.look_y>-.15f); /* jaw visible, not cropped */
+ }
+ /* Connected lower jaw: the tongue and fangs open together and settle
+  * without strobing, repeat surprise cuts or frame-dependent randomness. */
+ assert(world_egg_jaw_angle(EGG_SCARE_FRAME-1u)==0);
+ assert(world_egg_jaw_angle(EGG_SCARE_FRAME)==0);
+ assert(world_egg_jaw_angle(EGG_SCARE_FRAME+9u)==18);
+ assert(world_egg_jaw_angle(EGG_SCARE_FRAME+22u)==8);
+ {
+  unsigned f;
+  for(f=EGG_SCARE_FRAME+1u;f<EGG_TOTAL_FRAMES;f++){
+   int jaw=world_egg_jaw_angle(f);
+   int prev=world_egg_jaw_angle(f-1u);
+   assert(jaw>=0&&jaw<=18);
+   assert(jaw-prev<=2&&prev-jaw<=2);
+  }
  }
  /* The creature lunges ONCE after the final hard camera cut, then settles
   * into extremely small movement. All features use the SAME matrix. */
