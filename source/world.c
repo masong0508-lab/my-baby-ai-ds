@@ -648,33 +648,42 @@ void world_init(void){
  * Every preset looks into the SAME actual 3D nursery, not a picture
  * carousel or a second low-detail room. A 16-tick smoothstep dolly avoids
  * hard teleports when tapping around the furniture. */
-EggCamera world_nursery_camera(int focus,int previous,uint32_t age){
- static const EggCamera presets[5]={
+/* All views share one physical nursery; a fixed preset table describes
+ * eye and target position only. There is no alternate scene geometry. */
+static EggCamera nursery_preset(int focus){
+ static const EggCamera preset[5]={
   {.97f,1.05f,3.43f,-.12f,.035f,.17f},  /* baby / default */
   {.75f,1.22f,3.38f,-1.55f,.95f,-1.95f},/* window / moon */
   {.66f,1.01f,3.23f,-2.24f,.38f,-.28f},/* lamp / dresser */
   {.84f,.74f,3.27f,-.88f,-.48f,.33f},  /* teddy / playmat */
   {1.44f,1.21f,3.18f,1.57f,-.15f,-1.14f} /* crib */
  };
- EggCamera a,b,c;
- float t;
- int i=focus>=0&&focus<4?focus+1:0;
- int j=previous>=0&&previous<4?previous+1:0;
- a=presets[j];b=presets[i];
- t=age>=16u?1.f:(float)age/16.f;
+ return preset[focus>=0&&focus<4?focus+1:0];
+}
+/* Blend FROM the camera's exact current position, not the previous
+ * preset. Rapid WINDOW->TEDDY->CRIB taps must never teleport the lens.
+ * The whole motion remains a single smooth 16-tick continuous journey. */
+EggCamera world_nursery_camera_from(EggCamera from,int focus,uint32_t age){
+ EggCamera to=nursery_preset(focus),c;
+ float t=age>=16u?1.f:(float)age/16.f;
  t=t*t*(3.f-2.f*t);
- c.x=a.x+(b.x-a.x)*t;c.y=a.y+(b.y-a.y)*t;
- c.z=a.z+(b.z-a.z)*t;
- c.look_x=a.look_x+(b.look_x-a.look_x)*t;
- c.look_y=a.look_y+(b.look_y-a.look_y)*t;
- c.look_z=a.look_z+(b.look_z-a.look_z)*t;
+ c.x=from.x+(to.x-from.x)*t;c.y=from.y+(to.y-from.y)*t;
+ c.z=from.z+(to.z-from.z)*t;
+ c.look_x=from.look_x+(to.look_x-from.look_x)*t;
+ c.look_y=from.look_y+(to.look_y-from.look_y)*t;
+ c.look_z=from.look_z+(to.look_z-from.look_z)*t;
  return c;
+}
+EggCamera world_nursery_camera(int focus,int previous,uint32_t age){
+ return world_nursery_camera_from(nursery_preset(previous),focus,age);
 }
 void world_draw_nursery(const Game *s,uint32_t frame,int activity,
                         uint32_t action_age,int focus,int from,
                         uint32_t camera_age,int daylight,int lamp,
-                        uint32_t prop_age){
- EggCamera camera=world_nursery_camera(focus,from,camera_age);
+                        uint32_t prop_age,const EggCamera *camera_start){
+ EggCamera camera=camera_start?
+   world_nursery_camera_from(*camera_start,focus,camera_age):
+   world_nursery_camera(focus,from,camera_age);
  glMatrixMode(GL_MODELVIEW);glLoadIdentity();
  gluLookAt(camera.x,camera.y,camera.z,
            camera.look_x,camera.look_y,camera.look_z,0,1,0);
@@ -707,7 +716,7 @@ void world_draw_nursery(const Game *s,uint32_t frame,int activity,
 }
 void world_draw_care(const Game *s,uint32_t frame,int activity,
                      uint32_t action_age){
- world_draw_nursery(s,frame,activity,action_age,-1,-1,16u,0,1,40u);
+ world_draw_nursery(s,frame,activity,action_age,-1,-1,16u,0,1,40u,NULL);
 }
 /* Compatibility for existing host callers and noninteractive views: they
  * sample the deliberately posed hold, while live gameplay uses action age. */
