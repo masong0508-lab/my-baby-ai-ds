@@ -9,6 +9,13 @@ on:
 permissions:
   contents: read
 
+# One full ARM9+ARM7 build, packaging and DeSmuME walkthrough per current
+# pull-request revision. Superseded commits should not keep expensive
+# emulator jobs queued while the player waits for the latest ROM.
+concurrency:
+  group: baby-ai-blocksds-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   blocksds:
     name: Build original DS ROM with BlocksDS
