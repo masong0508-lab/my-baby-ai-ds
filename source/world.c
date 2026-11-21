@@ -435,6 +435,22 @@ static int smooth8(uint32_t age,uint32_t length){
  t=age*256u/length;
  return (int)((t*t*(768u-2u*t)+32768u)/65536u);
 }
+/* Action-driven teddy bow: ease in, hold briefly, recover to rest.
+ * Never run an endless loop just because TEDDY remains selected. */
+int world_teddy_bow_angle(uint32_t age){
+ if(age<8u)return -(12*smooth8(age,8u)/256);
+ if(age<18u)return -12;
+ if(age<40u)return -(12*smooth8(40u-age,22u)/256);
+ return 0;
+}
+/* Both eyes, cheeks and hair track the selected furniture together.
+ * Small yaw angles avoid oversized profile distortions on 256x192. */
+int world_baby_attention_angle(int focus,uint32_t age){
+ static const int gazes[4]={-6,-7,-5,6};
+ int scale=age>=16u?256:smooth8(age,16u);
+ if(focus<0||focus>=4)return 0;
+ return gazes[focus]*scale/256;
+}
 int world_baby_care_weight(uint32_t age){
  if(age<12u)return smooth8(age,12u);
  if(age<30u)return 256;
@@ -483,7 +499,8 @@ static void baby_arm(int direction,int angle,int forward){
  * layers were the main reason the character looked frightening at 256x192.
  * Only ROM-native primitive meshes; no texture or framebuffer allocation. */
 static void baby_model(const Game *s,uint32_t frame,int action,
-                       const Roughhouse *rag,uint32_t action_age){
+                       const Roughhouse *rag,uint32_t action_age,
+                       int attention){
  unsigned beat=frame%120u,arms=action_age%36u;
  const unsigned hop=action_age%36u;
  /* Rig motion is staged in one short action. Lower-body bounce, shoulder
@@ -566,6 +583,7 @@ static void baby_model(const Game *s,uint32_t frame,int action,
   * Avoid large yaw: low-poly eyes/ears remain recognizable in profile. */
  if(action==2||action==3)
   glRotateYi(model_angle((action==2?3:-2)*weight/256));
+ if(attention)glRotateYi(model_angle(attention));
  /* Rounded unified face. No second oversized jaw shell, no floating teeth. */
  soft_head(0,.54f,.045f,.61f,.615f,.45f,30,22,19);
  ellipse(-.575f,.49f,.065f,.105f,.145f,.09f,31,23,19);
@@ -654,7 +672,8 @@ EggCamera world_nursery_camera(int focus,int previous,uint32_t age){
 }
 void world_draw_nursery(const Game *s,uint32_t frame,int activity,
                         uint32_t action_age,int focus,int from,
-                        uint32_t camera_age,int daylight,int lamp){
+                        uint32_t camera_age,int daylight,int lamp,
+                        uint32_t prop_age){
  EggCamera camera=world_nursery_camera(focus,from,camera_age);
  glMatrixMode(GL_MODELVIEW);glLoadIdentity();
  gluLookAt(camera.x,camera.y,camera.z,
@@ -672,14 +691,14 @@ void world_draw_nursery(const Game *s,uint32_t frame,int activity,
  tour_daylight=0;
  tour_lamp_on=1;
  flat_floor(-.10f,-1.124f,.31f,.84f,.255f,18,16,23);
- baby_model(s,frame,activity,0,action_age);
- if(focus==2){
-  int beat=(int)(frame%48u);
-  int tilt=beat<24?beat:48-beat;
-  /* Touching Teddy starts a tiny, connected stuffed-bear bow. */
+ baby_model(s,frame,activity,0,action_age,
+            world_baby_attention_angle(focus,camera_age));
+ if(focus==2&&prop_age<40u){
+  /* One *finite* teddy bow. Arms, face and plush fabric remain attached
+   * beneath the exact same parent transform. */
   glPushMatrix();
   glTranslatef(-1.28f,-.87f,.52f);
-  glRotateZi(model_angle((tilt-12)/5));
+  glRotateZi(model_angle(world_teddy_bow_angle(prop_age)));
   glTranslatef(1.28f,.87f,-.52f);
   teddy();
   glPopMatrix(1);
@@ -688,7 +707,7 @@ void world_draw_nursery(const Game *s,uint32_t frame,int activity,
 }
 void world_draw_care(const Game *s,uint32_t frame,int activity,
                      uint32_t action_age){
- world_draw_nursery(s,frame,activity,action_age,-1,-1,16u,0,1);
+ world_draw_nursery(s,frame,activity,action_age,-1,-1,16u,0,1,40u);
 }
 /* Compatibility for existing host callers and noninteractive views: they
  * sample the deliberately posed hold, while live gameplay uses action age. */
@@ -729,7 +748,7 @@ void world_draw_roughhouse(const Game *s,uint32_t frame,const Roughhouse *r){
   glRotateXi(model_angle((int)r->pitch/4));
   glRotateYi(model_angle((int)r->yaw/4));
  }
- baby_model(s,frame,r&&r->moving?5:0,r,0u);
+ baby_model(s,frame,r&&r->moving?5:0,r,0u,0);
  if(r&&r->charge>=6){
   /* First fracture: the hospital-pastel chest pocket conceals a seam. */
   soft_mark(-.12f,-.27f,.565f,.029f,.20f,11,13,14);
