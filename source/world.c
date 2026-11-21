@@ -946,9 +946,12 @@ void world_draw_secret(const Game *s,uint32_t frame,const Roughhouse *r){
   /* Lower fangs, gums and tongue all rotate around one cheek-level hinge.
    * They therefore cannot float apart when the head lunges. */
   glPushMatrix();
-  glTranslatef(0.f,-.30f,.82f);
-  glRotateX(degreesToAngle(world_egg_jaw_angle(frame)));
-  glTranslatef(0.f,.30f,-.82f);
+  /* A large X rotation pushes the lower gums INTO the dark mouth plane
+   * and makes them flash as a bright floating bar on DeSmuME. Keep the
+   * lower-jaw assembly in front of the throat and let it drop as ONE
+   * connected unit. The visible pitch is deliberately subtle. */
+  glTranslatef(0.f,-(float)world_egg_jaw_angle(frame)*.003f,.004f);
+  glRotateX(degreesToAngle(-world_egg_jaw_angle(frame)/6));
   ellipse(0,-.68f,.931f,.195f,.079f,.019f,22,6,13);
   soft_mark(-.04f,-.692f,.952f,.080f,.018f,30,14,21);
   ellipse(0,-.65f,.930f,.195f,.074f,.018f,19,5,13);
