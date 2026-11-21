@@ -137,7 +137,9 @@ static void rattle(void){
  }
  assert(a.finished==1&&g.wins==1);
  game_arcade_start(&g,&a,7);
- for(i=0;i<3&&a.active;i++){
+ while(a.active&&a.mistakes==0)game_arcade_tick(&g,&a);
+ assert(a.active&&a.mistakes==1&&a.timer==a.hold_frames);
+ for(i=1;i<3&&a.active;i++){
   while(a.active&&a.mistakes==(unsigned)i)game_arcade_tick(&g,&a);
  }
  assert(a.finished==2);
