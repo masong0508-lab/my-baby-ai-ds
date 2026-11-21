@@ -1577,7 +1577,7 @@ void ui_draw(const Game *s,const Arcade *a,int view,int selection,
  else screen_title=view==0?"CARE":view==1?"ARCADE":
          view==3?"RESET":view==4?"ENDING":view==5?"WELCOME":
          view==6?"ALBUM":view==7?"TOUCH TEST":
-         view==8?"PRANK LAB":"INCUBATOR";
+         view==8?"TOYBOX":"INCUBATOR";
  /* Every screen paints its own content band (y=27..175), and header/foot
   * repaint the other two bands. The previous blanket 256x192 clear was
   * 49,152 redundant 16-bit VRAM writes on every animation refresh. */
