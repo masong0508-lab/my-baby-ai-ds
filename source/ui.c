@@ -1208,31 +1208,41 @@ static void title_screen(const Game *s,int storage_ok,const char *status){
 }
 /* Collection stamps carry ONE readable label apiece instead of two
  * crowded microtext lines. Color indicates discovered good/bad endings. */
-static void ending_album(const Game *s){
+/* Scrapbook uses two calm 2x2 pages, not eight 22px-high strips.
+ * Each keepsake has readable number, title and discovery state. */
+static void ending_album(const Game *s,int page){
  static const char *const names[8]={
-  "BOTTLE TAX","BABY CEO","REBOOT","INTERN STRIKE",
-  "GRADUATION","ARCADE CHAMP","GLITCH TAMER","SECOND CHANCE"
+  "BOTTLE TAX","BABY CEO","REBOOT","INTERN RISE",
+  "GRADUATION","ARCADE STAR","GLITCH HERO","SECOND LIFE"
  };
- int row,col,id,x,y,seen=0;char tmp[40];
+ int row,col,id,x,y,seen=0;char tmp[36];
+ page=page?1:0;
  solid(0,27,256,149,IVORY);
  for(id=1;id<=8;id++)if(s->ending_mask&(1u<<id))seen++;
- panel(8,32,240,26,WHITE,PURPLE);
- fit(17,42,"ENDING SCRAPBOOK",PURPLE,25);
- snprintf(tmp,sizeof(tmp),"%d / 8",seen);
- fit(200,42,tmp,TEAL,8);
- for(row=0;row<4;row++)for(col=0;col<2;col++){
+ capsule(9,32,55,28,SKY,TEAL);
+ fit(17,42,"< PREV",INK,8);
+ capsule(192,32,55,28,SKY,TEAL);
+ fit(201,42,"NEXT >",INK,8);
+ snprintf(tmp,sizeof(tmp),"PAGE %d/2",page+1);
+ fit(93,38,tmp,PURPLE,12);
+ snprintf(tmp,sizeof(tmp),"%d / 8 FOUND",seen);
+ fit(96,52,tmp,TEAL,11);
+ for(row=0;row<2;row++)for(col=0;col<2;col++){
   int saved,good;
-  id=1+row+col*4;x=9+col*123;y=65+row*25;
+  id=page*4+row*2+col+1;
+  x=9+col*123;y=68+row*53;
   saved=(s->ending_mask&(1u<<id))!=0;good=id>=5;
-  capsule(x,y,114,22,saved?(good?MINT:LEMON):GRAY,
+  panel(x,y,114,47,saved?WHITE:GRAY,saved?(good?GREEN:GOLD):PURPLE);
+  capsule(x+5,y+6,35,34,saved?(good?MINT:LEMON):SILVER,
           saved?(good?GREEN:GOLD):PURPLE);
   snprintf(tmp,sizeof(tmp),"%02d",id);
-  fit(x+7,y+8,tmp,PURPLE,2);
-  fit(x+28,y+8,saved?names[id-1]:"UNDISCOVERED",INK,14);
-  solid(x+4,y+4,2,4,saved?TEAL:MUTED);
+  label(x+10,y+14,tmp,PURPLE,2,2);
+  fit(x+44,y+13,saved?names[id-1]:"???",INK,11);
+  fit(x+44,y+30,saved?(good?"GOOD END":"BAD END"):"NOT FOUND",
+      saved?(good?GREEN:ROSE):MUTED,11);
  }
  foot(PURPLE);
- fit(12,181,"B BACK    MEMORY KEPT",WHITE,35);
+ fit(12,181,"B BACK   L/R CHANGE PAGE",WHITE,39);
 }
 /* No touchscreen activation on reset. The only destructive path remains
  * the deliberately difficult L+R+X hardware gesture after A review. */
@@ -1305,7 +1315,7 @@ void ui_draw(const Game *s,const Arcade *a,int view,int selection,
  case 3:reset_screen(reset_step);break;
  case 4:finale(s,ending);break;
  case 5:title_screen(s,can_save,message);break;
- case 6:ending_album(s);break;
+ case 6:ending_album(s,selection);break;
  case 7:touch_diagnostic();break;
  }
 }
@@ -1318,6 +1328,12 @@ int ui_nursery_touch(int x,int y){
 int ui_home_navigation(int x,int y){
  if(y<176||y>=192)return 0;
  return x<128?1:2;
+}
+int ui_album_page_touch(int x,int y){
+ if(y<32||y>=61)return 0;
+ if(x>=9&&x<64)return -1;
+ if(x>=192&&x<247)return 1;
+ return 0;
 }
 int ui_arcade_page_touch(int x,int y){
  if(y<32||y>=55)return 0;
