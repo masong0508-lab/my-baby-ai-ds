@@ -687,6 +687,37 @@ static void egg_lip_ichor(int side,float opened){
  glEnd();
  frame_vertices+=12;frame_polygons+=5;
 }
+
+/* Eight hand-placed triangular planes sculpt the brow, cheeks and lower
+ * jaw. Deliberate asymmetric light makes the face feel carved instead of a
+ * flat turquoise emoji. Native GL vertex colors supply a cheap fake rim
+ * light, while the shell/eye palette carries the neon contrast. */
+static void alien_face_facets(void){
+ glBegin(GL_TRIANGLES);
+ /* Brow planes sweep down toward the fixed eye sockets. */
+ color(9,20,17,1);glVertex3f(-.72f,.53f,.720f);
+ color(16,25,19,2);glVertex3f(-.38f,.65f,.790f);
+ color(7,15,16,-2);glVertex3f(-.42f,.42f,.856f);
+ color(9,20,17,1);glVertex3f(.72f,.53f,.720f);
+ color(16,25,19,2);glVertex3f(.38f,.65f,.790f);
+ color(7,15,16,-2);glVertex3f(.42f,.42f,.856f);
+ /* Back cheek planes bridge the broad head to the mouth corners. */
+ color(7,17,17,-2);glVertex3f(-.89f,.06f,.612f);
+ color(12,24,18,1);glVertex3f(-.62f,.06f,.819f);
+ color(4,10,12,-2);glVertex3f(-.54f,-.38f,.800f);
+ color(7,17,17,-2);glVertex3f(.89f,.06f,.612f);
+ color(12,24,18,1);glVertex3f(.62f,.06f,.819f);
+ color(4,10,12,-2);glVertex3f(.54f,-.38f,.800f);
+ /* Lower jaw panels keep teeth and tongue visually attached to skull. */
+ color(6,16,15,0);glVertex3f(-.66f,-.30f,.70f);
+ color(12,22,16,1);glVertex3f(-.49f,-.70f,.78f);
+ color(4,10,12,-2);glVertex3f(-.23f,-.90f,.69f);
+ color(6,16,15,0);glVertex3f(.66f,-.30f,.70f);
+ color(12,22,16,1);glVertex3f(.49f,-.70f,.78f);
+ color(4,10,12,-2);glVertex3f(.23f,-.90f,.69f);
+ glEnd();
+ frame_vertices+=18;frame_polygons+=6;
+}
 /* Purpose-built visual hierarchy for the secret BAD ending:
  *   porcelain shell / shadowed inner lip / black incubation chamber /
  *   clearly silhouetted parasite / thin luminous green ichor.
@@ -838,6 +869,7 @@ void world_draw_secret(const Game *s,uint32_t frame,const Roughhouse *r){
   glTranslatef(0.f,0.f,world_egg_creature_depth(frame));
   soft_head(0,.085f,.34f,1.00f,1.08f,.51f,5,10,12);
   soft_head(0,.68f,.36f,.66f,.29f,.28f,7,15,14);
+  alien_face_facets();
   /* Raised brow masses visually lock the sockets to the head. */
   tilted_ellipse(-.37f,.51f,.79f,.34f,.105f,.055f,-12,8,18,16);
   tilted_ellipse(.38f,.50f,.79f,.34f,.105f,.055f,12,8,18,16);
