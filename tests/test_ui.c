@@ -100,6 +100,9 @@ int main(void){
   verify_coverage();
   foot=fingerprint();
   assert(hand!=foot); /* SELECTED mode must be unmistakable */
+  ui_draw(&g,&a,8,37|(1<<16),0,0,1,"TOYBOX");
+  verify_coverage();
+  assert(foot!=fingerprint()); /* SFX ON/OFF has visible UI feedback */
   ui_draw(&g,&a,8,69,0,0,1,"TOYBOX"); /* one hit plus first stress */
   verify_coverage();
   assert(foot!=fingerprint());
