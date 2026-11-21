@@ -353,9 +353,9 @@ static void baby_model(const Game *s,uint32_t frame,int action){
                  (action==3?(float)(hop<18u?hop:36u-hop)*.0022f:0.f);
  const float wave=((float)(arms<52u?arms:104u-arms)-26.f)*.0011f;
  const float left_pose=wave+(action==2?.065f:action==3?.075f:
-                              action==4?-.035f:0.f);
+                              action==4?-.035f:action==5?-.145f:0.f);
  const float right_pose=-wave+(action==1?.07f:action==3?.075f:
-                                action==4?-.035f:0.f);
+                                action==4?-.035f:action==5?.145f:0.f);
  const int blink=(frame%173u)<5u||action==4;
  const int happy=s->mood>35;
  const int glitch=game_glitch_tier(s)>=2&&!s->safe_visuals&&
@@ -448,6 +448,125 @@ void world_draw(const Game *s,uint32_t frame,int activity){
  glFlush(0);
 }
 
+/* The character is a synthetic toy shell, never a real child. The same
+ * mesh swings its attached limbs as it tumbles; the integer simulation
+ * supplies 1/256-world-unit motion, so it stays deterministic on DS. */
+void world_draw_roughhouse(const Game *s,uint32_t frame,const Roughhouse *r){
+ int tilt;
+ float elevation=0.f;
+ glMatrixMode(GL_MODELVIEW);glLoadIdentity();
+ gluLookAt(.97f,1.05f,3.43f,-.12f,.035f,.17f,0,1,0);
+ glPolyFmt(POLY_ALPHA(31)|POLY_CULL_NONE);
+ frame_vertices=0;frame_polygons=0;
+ room();
+ glPushMatrix();
+ if(r){
+  tilt=r->roll<0?-r->roll:r->roll;
+  if(tilt>90)elevation=.46f;
+  glTranslatef((float)r->x/256.f,(float)r->y/256.f+elevation,
+               (float)r->z/256.f);
+  glRotateZ(degreesToAngle((int)r->roll/4));
+  glRotateX(degreesToAngle((int)r->pitch/4));
+  glRotateY(degreesToAngle((int)r->yaw/4));
+ }
+ baby_model(s,frame,r&&r->moving?5:0);
+ glPopMatrix(1);
+ teddy();
+ glFlush(0);
+}
+/* Cosmic-horror reveal: the SYNTHETIC outer shell is filled with luminous
+ * poisonous-green extraterrestrial ichor, not human blood. A few opaque
+ * hardware quads form viscous dripping rivulets; no particles, alpha sort,
+ * extra framebuffer, textures, or per-frame allocations. The jump scare is
+ * a single sudden camera cut with no repeating flashes. */
+void world_draw_secret(const Game *s,uint32_t frame,const Roughhouse *r){
+ float eye_z;
+ unsigned phase;
+ int i;
+ if(frame<EGG_CRACK_FRAME){
+  world_draw_roughhouse(s,frame,r);
+  return;
+ }
+ phase=frame<EGG_PUSH_FRAME?1u:frame<EGG_SCARE_FRAME?2u:3u;
+ glMatrixMode(GL_MODELVIEW);glLoadIdentity();
+ if(phase==1u){
+  gluLookAt(0,.18f,4.30f,0,0,.0f,0,1,0);
+ }else if(phase==2u){
+  float camera=4.30f-(float)(frame-EGG_PUSH_FRAME)*.016f;
+  if(camera<2.06f)camera=2.06f;
+  gluLookAt(0,.11f,camera,0,.08f,.13f,0,1,0);
+ }else{
+  /* Keep full head within view rather than clipping into giant flat planes. */
+  gluLookAt(0,.10f,2.70f,0,.10f,.37f,0,1,0);
+ }
+ glPolyFmt(POLY_ALPHA(31)|POLY_CULL_NONE);
+ frame_vertices=0;frame_polygons=0;
+ block(0,0,-2.8f,11,8,.08f,4,4,11);
+ if(phase<3u){
+  /* A single intact alien-egg core, with splitting synthetic plates.
+   * Fracture marks are drawn IN FRONT of the shell, not as random pixels. */
+  ellipse(0,-.15f,.02f,.70f,.88f,.48f,16,24,21);
+  ellipse(0,-.21f,.35f,.57f,.69f,.22f,24,26,17);
+  soft_mark(0,-.05f,.562f,.18f,.55f,6,8,12);
+  soft_mark(-.14f,-.09f,.568f,.10f,.24f,5,10,14);
+  soft_mark(.16f,.12f,.568f,.08f,.29f,5,10,14);
+  ellipse(0,-.05f,.58f,.23f,.35f,.038f,5,8,15);
+  ellipse(0,-.06f,.62f,.14f,.22f,.020f,25,8,13);
+  ellipse(0,-.075f,.643f,.055f,.14f,.011f,29,22,7);
+  /* Fracture fluid pools INSIDE the alien shell opening before leaking out.
+   * Staggered static shades create thick, wet, luminous green ichor. */
+  soft_mark(-.105f,.064f,.664f,.065f,.36f,6,28,10);
+  soft_mark(-.062f,-.065f,.666f,.059f,.32f,9,31,7);
+  soft_mark(.115f,.057f,.664f,.065f,.28f,5,27,13);
+  soft_mark(.168f,-.051f,.665f,.042f,.21f,12,31,9);
+  soft_mark(-.020f,-.224f,.667f,.17f,.067f,4,25,8);
+  /* Gravity makes the alien ichor creep farther down the eggshell while the
+   * camera approaches, using deterministic staggered pixel-world quads. */
+  if(frame>=EGG_PUSH_FRAME){
+   float drip=(float)(frame-EGG_PUSH_FRAME)/(float)(EGG_SCARE_FRAME-EGG_PUSH_FRAME);
+   if(drip>1.f)drip=1.f;
+   soft_mark(-.10f,-.25f-drip*.22f,.653f,.070f,.18f+drip*.30f,4,28,7);
+   soft_mark(.17f,-.19f-drip*.12f,.649f,.058f,.10f+drip*.23f,8,30,5);
+   soft_mark(-.10f,-.44f-drip*.27f,.650f,.060f,.06f,14,31,8);
+   soft_mark(.17f,-.36f-drip*.25f,.648f,.045f,.06f,16,31,8);
+   /* Sickly pooling at the base, visible in the slow push-in. */
+   ellipse(-.10f,-.76f,.49f,.25f,.045f,.048f,9,28,9);
+   ellipse(.18f,-.76f,.48f,.17f,.032f,.047f,14,31,10);
+  }
+  if(frame>=EGG_PUSH_FRAME){
+   /* A barely visible creature waits INSIDE while the camera peers in. */
+   soft_mark(-.09f,.045f,.652f,.07f,.03f,30,9,20);
+   soft_mark(.09f,.045f,.652f,.07f,.03f,30,9,20);
+  }
+ }else{
+  /* One sudden shot from the inside of the egg: enormous asymmetric
+   * crescent skull, unnatural eyes, and a layered black vocal aperture. */
+  soft_head(0,.08f,.37f,.92f,1.10f,.59f,6,11,15);
+  ellipse(-.38f,.34f,.84f,.26f,.13f,.06f,31,14,17);
+  ellipse(.38f,.31f,.84f,.26f,.13f,.06f,31,14,17);
+  ellipse(-.35f,.34f,.905f,.08f,.095f,.016f,31,31,21);
+  ellipse(.36f,.32f,.905f,.08f,.095f,.016f,31,31,21);
+  ellipse(0,-.38f,.83f,.42f,.42f,.050f,1,2,6);
+  ellipse(0,-.36f,.887f,.25f,.29f,.029f,18,5,10);
+  eye_z=.92f;
+  for(i=0;i<5;i++){
+   soft_mark(-.24f+(float)i*.12f,-.20f,eye_z,
+             .047f,.15f,29,28,22);
+  }
+  soft_mark(0,-.66f,.905f,.28f,.09f,30,11,19);
+  /* The thing behind the shell still carries streaks of bright green
+   * ichor; it is unmistakably alien when it fills the camera. */
+  soft_mark(-.70f,-.38f,.86f,.070f,.49f,7,30,9);
+  soft_mark(.70f,-.29f,.86f,.066f,.34f,13,31,8);
+  soft_mark(-.62f,-.66f,.91f,.22f,.078f,5,25,7);
+  soft_mark(.61f,-.53f,.92f,.14f,.065f,9,29,9);
+  if(frame<EGG_SCARE_FRAME+5u){
+   /* A SINGLE sharp highlight on the first reveal, not rapid flashing. */
+   soft_mark(0,.71f,.88f,.74f,.055f,31,29,25);
+  }
+ }
+ glFlush(0);
+}
 /* Tiny boot/title scene: do not submit the full ~1800-polygon nursery before
  * the player confirms the program reached its first interactive screen. */
 /* The lightweight pregame portrait uses the SAME baby design language as

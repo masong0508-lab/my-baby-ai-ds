@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "ui.h"
+#include "roughhouse.h"
 #define W 256
 #define H 192
 #define RGB(r,g,b) ((uint16_t)(0x8000u | (r) | ((g)<<5) | ((b)<<10)))
@@ -300,9 +301,17 @@ static void home(const Game *s,int can_save,const char *message){
  capsule(132,143,116,30,PINK,ROSE);
  icon_nap(135,145);label(172,146,"NAP",INK,2,3);
  fit(172,163,"ENERGY +25",PURPLE,11);
+ /* Talking-Tom-style three-choice bottom dock. Choose TOYBOX before
+  * any slapstick interaction: CARE and GAME stay separate and accessible. */
  foot(PURPLE);
- fit(12,181,"START  ARCADE",WHITE,20);
- fit(157,181,"END  DAY",WHITE,14);
+ capsule(7,178,80,13,NIGHT,TEAL);
+ fit(20,183,"ARCADE",WHITE,10);
+ capsule(93,178,70,13,LEMON,GOLD);
+ solid(99,182,8,7,PINK);
+ solid(100,180,6,3,WHITE);
+ fit(112,183,"TOYBOX",INK,9);
+ capsule(169,178,80,13,NIGHT,TEAL);
+ fit(189,183,"END DAY",WHITE,10);
  (void)can_save;
 }
 /* Five-character art-directed wordmarks can occupy a genuine 2x font,
@@ -1275,6 +1284,24 @@ static void challenge(const Game *s,const Arcade *a){
 /* The ending is an actual keepsake: clean character art, one dominant
  * outcome label, one sentence of reward and a single continue affordance. */
 static void finale(const Game *s,int ending){
+ if(ending==END_EGG){
+  solid(0,27,256,149,NIGHT);
+  panel(10,34,236,138,PURPLE,ROSE);
+  capsule(23,42,210,27,NIGHT,ROSE);
+  label(63,49,"BAD ENDING",WHITE,2,10);
+  /* Original alien-egg seal: a synthetic casing, not human gore. */
+  capsule(94,75,68,44,MINT,TEAL);
+  capsule(108,78,42,38,NIGHT,PURPLE);
+  solid(123,88,8,22,LEMON);
+  solid(114,94,30,5,ROSE);
+  fit(28,124,"THE NURSERY IS AN INCUBATOR",WHITE,36);
+  fit(49,140,"FILE 09: UNSEALED",LEMON,28);
+  fit(36,155,"MEMORY SAVED. BABY RETURNS.",PINK,36);
+  foot(PURPLE);
+  fit(15,182,"A CONTINUE      B CONTINUE",WHITE,37);
+  (void)s;
+  return;
+ }
  int good=game_is_good_ending(ending);
  uint16_t edge=good?GREEN:ROSE;
  char count[36];
@@ -1293,6 +1320,78 @@ static void finale(const Game *s,int ending){
  fit(24,154,count,MUTED,28);
  foot(PURPLE);
  fit(15,182,"A CONTINUE      B CONTINUE",WHITE,37);
+}
+/* Synthetic-only slapstick lab: no realistic injury or gore, just
+ * a toy shell that rebounds and develops an ominous stress signal. */
+/* Talking-Tom-like tool selection on the DS's *lower* touch display:
+ * select SLAP/KICK on the dock, then tap the doll to apply the selected
+ * impulse. The upper DS 3D screen is intentionally not a touchscreen. */
+static void roughhouse_screen(int encoded){
+ int selected=encoded>=32?ROUGHHOUSE_KICK:ROUGHHOUSE_SLAP;
+ int charge=encoded%32;
+ int filled=charge*208/(int)ROUGHHOUSE_CRACK_CHARGE;
+ if(filled>208)filled=208;
+ solid(0,27,256,149,IVORY);
+ panel(9,31,238,45,WHITE,ROSE);
+ label(14,36,"TOYBOX",PURPLE,2,6);
+ fit(139,42,"SELECT A TOOL",MUTED,16);
+ fit(15,57,"SHELL STRESS",ROSE,18);
+ solid(15,68,219,5,GRAY);
+ solid(19,69,filled,3,ROSE);
+ panel(10,79,236,62,WHITE,LILAC);
+ capsule(95,83,65,52,LEMON,GOLD);
+ sprite(111,87,2,spr_baby,18);
+ label(21,97,"TAP",INK,2,3);
+ fit(20,115,"TO USE",PURPLE,9);
+ label(184,97,"DOLL",INK,2,4);
+ fit(184,115,"BOING!",ROSE,9);
+ capsule(9,145,115,29,selected==ROUGHHOUSE_SLAP?PINK:GRAY,
+         selected==ROUGHHOUSE_SLAP?ROSE:PURPLE);
+ /* A mitten/hand is the selection icon, not a violent depiction. */
+ solid(20,151,7,11,WHITE);
+ solid(21,148,5,5,WHITE);
+ solid(28,156,3,7,WHITE);
+ label(46,153,"SLAP",INK,2,4);
+ capsule(132,145,115,29,selected==ROUGHHOUSE_KICK?LEMON:GRAY,
+         selected==ROUGHHOUSE_KICK?GOLD:PURPLE);
+ /* Boot-shaped tool icon remains an 8-polygon fixed bitmap primitive. */
+ solid(143,151,7,10,WHITE);
+ solid(148,159,13,5,WHITE);
+ solid(157,161,3,3,PURPLE);
+ label(171,153,"KICK",INK,2,4);
+ foot(PURPLE);
+ fit(12,181,"A USE   L/R TOOL   B BACK",WHITE,40);
+}
+static void egg_scene_screen(int frame){
+ int phase=frame<(int)EGG_CRACK_FRAME?0:
+           frame<(int)EGG_PUSH_FRAME?1:
+           frame<(int)EGG_SCARE_FRAME?2:3;
+ int i;
+ solid(0,27,256,149,NIGHT);
+ panel(10,35,236,130,phase==3?ROSE:PURPLE,phase==3?PINK:LILAC);
+ capsule(21,45,214,28,NIGHT,ROSE);
+ label(phase==3?43:55,52,phase==3?"IT CAN SEE YOU":"NO SIGNAL",WHITE,2,14);
+ if(phase==0){
+  fit(34,88,"THE SHELL WAS NEVER SKIN.",WHITE,35);
+  fit(52,110,"INTERNAL SEAL: FAIL",LEMON,27);
+ }else if(phase==1){
+  fit(37,88,"INCUBATION CHAMBER 09",WHITE,35);
+  fit(67,110,"SOMETHING MOVED",PINK,25);
+  fit(48,124,"ALIEN ICHOR DETECTED",GREEN,30);
+ }else if(phase==2){
+  fit(49,88,"SLOWLY LOOK INSIDE",WHITE,29);
+  fit(66,110,"DO NOT BLINK",LEMON,24);
+  fit(56,124,"GREEN FLUID LEAK",GREEN,28);
+ }else{
+  fit(36,88,"THE EGG REMEMBERS YOU",WHITE,35);
+  fit(68,110,"IT WAS LISTENING",LEMON,28);
+ }
+ /* Four discreet signal segments give the player a cinematic heartbeat.
+  * They also let emulator regression tests identify ACTUAL film phases
+  * rather than incorrectly timestamping frames at variable DS FPS. */
+ for(i=0;i<4;i++)solid(27+i*52,136,45,3,i<=phase?LEMON:GRAY);
+ foot(PURPLE);
+ fit(23,181,"B SKIP  /  A CONTINUE",WHITE,39);
 }
 /* Redraw diagnostic panel once on entry, then update only tiny regions.
  * Repainting 256x192 VRAM every stylus-held frame was tearing/flickering
@@ -1390,16 +1489,39 @@ static void ending_album(const Game *s,int page){
   "GRADUATION","ARCADE STAR","GLITCH HERO","SECOND LIFE"
  };
  int row,col,id,x,y,seen=0;char tmp[36];
- page=page?1:0;
+ if(page>2)page=2;
+ if(page<0)page=0;
+ if(page==2){
+  int discovered=(s->ending_mask&(1u<<END_EGG))!=0;
+  solid(0,27,256,149,NIGHT);
+  capsule(9,32,55,28,SKY,TEAL);
+  fit(17,42,"< PREV",INK,8);
+  capsule(192,32,55,28,SKY,TEAL);
+  fit(201,42,"NEXT >",INK,8);
+  fit(95,40,"PAGE 3/3",WHITE,12);
+  panel(19,67,218,101,discovered?PURPLE:GRAY,ROSE);
+  capsule(103,78,50,48,discovered?MINT:SILVER,TEAL);
+  capsule(113,82,30,38,NIGHT,PURPLE);
+  if(discovered){
+   fit(34,130,"09  THE INCUBATOR WAS ALIVE",WHITE,36);
+   fit(68,148,"TAP TO REPLAY",LEMON,30);
+  }else{
+   fit(51,130,"09  ???  SEALED",INK,30);
+   fit(42,148,"SECRET MEMORY NOT FOUND",MUTED,35);
+  }
+  foot(PURPLE);
+  fit(11,181,"B BACK   L/R CHANGE PAGE",WHITE,40);
+  return;
+ }
  solid(0,27,256,149,IVORY);
  for(id=1;id<=8;id++)if(s->ending_mask&(1u<<id))seen++;
  capsule(9,32,55,28,SKY,TEAL);
  fit(17,42,"< PREV",INK,8);
  capsule(192,32,55,28,SKY,TEAL);
  fit(201,42,"NEXT >",INK,8);
- snprintf(tmp,sizeof(tmp),"PAGE %d/2",page+1);
+ snprintf(tmp,sizeof(tmp),"PAGE %d/3",page+1);
  fit(93,38,tmp,PURPLE,12);
- snprintf(tmp,sizeof(tmp),"%d / 8 FOUND",seen);
+ snprintf(tmp,sizeof(tmp),"%d / 9 FOUND",seen+((s->ending_mask&(1u<<END_EGG))?1:0));
  fit(96,52,tmp,TEAL,11);
  for(row=0;row<2;row++)for(col=0;col<2;col++){
   int saved,good;
@@ -1455,11 +1577,13 @@ void ui_draw(const Game *s,const Arcade *a,int view,int selection,
  else if(view==4)screen_accent=game_is_good_ending(ending)?MINT:ROSE;
  else if(view==5)screen_accent=PINK;
  else if(view==6)screen_accent=SKY;
+ else if(view==8||view==9)screen_accent=ROSE;
  else screen_accent=TEAL;
  if(view==2&&a)screen_title="MINIGAME";
  else screen_title=view==0?"CARE":view==1?"ARCADE":
          view==3?"RESET":view==4?"ENDING":view==5?"WELCOME":
-         view==6?"ALBUM":"TOUCH TEST";
+         view==6?"ALBUM":view==7?"TOUCH TEST":
+         view==8?"TOYBOX":"INCUBATOR";
  /* Every screen paints its own content band (y=27..175), and header/foot
   * repaint the other two bands. The previous blanket 256x192 clear was
   * 49,152 redundant 16-bit VRAM writes on every animation refresh. */
@@ -1491,7 +1615,24 @@ void ui_draw(const Game *s,const Arcade *a,int view,int selection,
  case 5:title_screen(s,can_save,message);break;
  case 6:ending_album(s,selection);break;
  case 7:touch_diagnostic();break;
+ case 8:roughhouse_screen(selection);break;
+ case 9:egg_scene_screen(selection);break;
  }
+}
+int ui_prank_entry_touch(int x,int y){
+ return x>=93&&x<163&&y>=176&&y<192;
+}
+/* Tool selection is separate from activation (4). Never trigger physics
+ * when a user only meant to switch to the other cartoon instrument. */
+int ui_roughhouse_touch(int x,int y){
+ if(x<0||x>=256||y<0||y>=192)return 0;
+ if(y>=176)return 3;
+ if(y>=145&&y<174){
+  if(x>=9&&x<124)return ROUGHHOUSE_SLAP;
+  if(x>=132&&x<247)return ROUGHHOUSE_KICK;
+ }
+ if(y>=79&&y<141&&x>=10&&x<246)return 4;
+ return 0;
 }
 int ui_nursery_touch(int x,int y){
  if(x<7||x>=249)return -1;
@@ -1500,8 +1641,10 @@ int ui_nursery_touch(int x,int y){
  return -1;
 }
 int ui_home_navigation(int x,int y){
- if(y<176||y>=192)return 0;
- return x<128?1:2;
+ if(x<0||x>=256||y<176||y>=192)return 0;
+ if(x<89)return 1;
+ if(x>=167)return 2;
+ return 0; /* selected Toybox lives in the center of the dock */
 }
 int ui_album_page_touch(int x,int y){
  if(y<32||y>=61)return 0;

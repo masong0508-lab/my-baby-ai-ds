@@ -10,6 +10,7 @@
 #include "ui.h"
 #include "touch_input.h"
 #include "virtual_stylus.h"
+#include "roughhouse.h"
 #if defined(__BLOCKSDS__)
 /* BlocksDS main loop convention: traditional foreground VBlank loop. */
 #define GAME_LOOP_ACTIVE() 1
@@ -24,6 +25,9 @@ static int storage_ok,view=5,selected,album_page,reset_step,last_ending,pose;
 static int three_d_ready;
 static TouchGate gesture;
 static VirtualStylus vpen;
+static Roughhouse rag;
+static uint32_t egg_frame;
+static int toy_tool=ROUGHHOUSE_SLAP;
 static const char *message="WELCOME TO DAYCARE 2.0";
 static void persist(void){if(storage_ok)(void)save_write(SAVE_BASE,&baby);}
 static void care(Care action){
@@ -66,6 +70,7 @@ int main(void){
  uint32_t frame=0;
  int dirty=1;
  game_init(&baby);
+ roughhouse_init(&rag);
  touch_gate_init(&gesture);
  virtual_stylus_init(&vpen);
  lcdMainOnTop();
@@ -80,7 +85,7 @@ int main(void){
  }
  /* Always show a visible title before touching the filesystem or heavy 3D.
   * Some older emulators hang during their emulated DLDI/FAT setup. */
- ui_draw(&baby,&arc,view,view==6?album_page:selected,last_ending,reset_step,storage_ok,message);
+ ui_draw(&baby,&arc,view,view==6?album_page:view==8?(int)rag.charge+(toy_tool==ROUGHHOUSE_KICK?32:0):view==9?(int)egg_frame:selected,last_ending,reset_step,storage_ok,message);
  /* Stay in RAM-only mode until the player explicitly requests save access.
   * New and old .nds game saves remain compatible when FAT is available. */
  while(GAME_LOOP_ACTIVE()){
@@ -120,25 +125,31 @@ int main(void){
   }
   if(view==0){
    int action=-1;
-   if(down&KEY_A)action=FEED;
-   else if(down&KEY_B)action=CHAT;
-   else if(down&KEY_X)action=PLAY;
-   else if(down&KEY_Y)action=NAP;
-   else if(tap)action=ui_nursery_touch(touch.px,touch.py);
-   if(action>=0){care((Care)action);dirty=1;}
-   else if(down&KEY_START){view=1;message="WELCOME TO THE ARCADE.";dirty=1;}
-   else if(down&KEY_SELECT){end_day();dirty=1;}
-   else if(tap){
-    int nav=ui_home_navigation(touch.px,touch.py);
-    if(nav==1){view=1;message="WELCOME TO THE ARCADE.";dirty=1;}
-    else if(nav==2){end_day();dirty=1;}
-   }else if((held&(KEY_L|KEY_R))==(KEY_L|KEY_R)&&game_reset_unlocked(&baby)){
-    view=3;reset_step=0;dirty=1;
-   }else if(down&KEY_L){view=6;album_page=0;dirty=1;}
-   else if(down&KEY_R){
-    baby.safe_visuals^=1;
-    message=baby.safe_visuals?"QUIET GRAPHICS, SAME GAMEPLAY.":"VISUAL GLITCHES RESTORED.";
-    persist();dirty=1;
+   if(((down&KEY_X)&&(held&KEY_R))||
+      (tap&&ui_prank_entry_touch(touch.px,touch.py))){
+    view=8;toy_tool=ROUGHHOUSE_SLAP;
+    message="SELECT A TOY, THEN TAP THE DOLL.";dirty=1;
+   }else{
+    if(down&KEY_A)action=FEED;
+    else if(down&KEY_B)action=CHAT;
+    else if(down&KEY_X)action=PLAY;
+    else if(down&KEY_Y)action=NAP;
+    else if(tap)action=ui_nursery_touch(touch.px,touch.py);
+    if(action>=0){care((Care)action);dirty=1;}
+    else if(down&KEY_START){view=1;message="WELCOME TO THE ARCADE.";dirty=1;}
+    else if(down&KEY_SELECT){end_day();dirty=1;}
+    else if(tap){
+     int nav=ui_home_navigation(touch.px,touch.py);
+     if(nav==1){view=1;message="WELCOME TO THE ARCADE.";dirty=1;}
+     else if(nav==2){end_day();dirty=1;}
+    }else if((held&(KEY_L|KEY_R))==(KEY_L|KEY_R)&&game_reset_unlocked(&baby)){
+     view=3;reset_step=0;dirty=1;
+    }else if(down&KEY_L){view=6;album_page=0;dirty=1;}
+    else if(down&KEY_R){
+     baby.safe_visuals^=1;
+     message=baby.safe_visuals?"QUIET GRAPHICS, SAME GAMEPLAY.":"VISUAL GLITCHES RESTORED.";
+     persist();dirty=1;
+    }
    }
   }else if(view==1){
    if(down&KEY_UP){selected=(selected&~3)|((selected+2)&3);dirty=1;}
@@ -294,16 +305,53 @@ int main(void){
     }
     if(arc.finished){leave_game();dirty=1;}
    }
+  }else if(view==8){
+   int hit=tap?ui_roughhouse_touch(touch.px,touch.py):0;
+   if((down&(KEY_B|KEY_START))||hit==3){
+    view=0;message="BACK TO THE NURSERY.";dirty=1;
+   }else if(hit==ROUGHHOUSE_SLAP||(down&KEY_L)){
+    toy_tool=ROUGHHOUSE_SLAP;dirty=1;
+   }else if(hit==ROUGHHOUSE_KICK||(down&(KEY_R|KEY_X))){
+    toy_tool=ROUGHHOUSE_KICK;dirty=1;
+   }else if((down&KEY_A)||hit==4){
+    if(roughhouse_strike(&rag,toy_tool)){
+     pose=0;
+     message=toy_tool==ROUGHHOUSE_KICK?
+             "BOING! THE SYNTHETIC SHELL BOUNCES.":
+             "BONK! THAT WAS AN UNNATURAL SOUND.";
+     dirty=1;
+     if(roughhouse_cracked(&rag)){
+      (void)game_secret_egg(&baby);
+      persist();
+      view=9;egg_frame=0;last_ending=END_EGG;
+      message="INCUBATION FILE 09 OPENED.";dirty=1;
+     }
+    }
+   }
+  }else if(view==9){
+   if(down&(KEY_B|KEY_START)){
+    view=4;last_ending=END_EGG;dirty=1;
+   }else{
+    egg_frame++;
+    if(egg_frame==EGG_CRACK_FRAME||egg_frame==EGG_PUSH_FRAME||
+       egg_frame==EGG_SCARE_FRAME||egg_frame==EGG_HOLD_FRAME)dirty=1;
+    if(egg_frame>=EGG_TOTAL_FRAMES){
+     view=4;last_ending=END_EGG;dirty=1;
+    }
+   }
   }else if(view==3){
    if(down&KEY_B){view=0;reset_step=0;message="RESET CANCELED.";dirty=1;}
    else if(!reset_step){if(down&KEY_A){reset_step=1;dirty=1;}}
    else if((down&KEY_X)&&(held&(KEY_L|KEY_R))==(KEY_L|KEY_R)){
     if(storage_ok&&!save_erase(SAVE_BASE)){message="SAVE ERASE FAILED. NO RESET.";}
-    else{game_init(&baby);message="COLD BOOT. WHO AM I?";}
+    else{game_init(&baby);roughhouse_init(&rag);message="COLD BOOT. WHO AM I?";}
     view=0;reset_step=0;dirty=1;
    }
   }else if(view==4){
    if((down&(KEY_A|KEY_B|KEY_START))||tap){
+    /* Don't strand the toy selectors after secret #9. Ragdoll state is
+     * deliberately transient; unlocked endings stay in persistent Game. */
+    if(last_ending==END_EGG)roughhouse_init(&rag);
     view=0;message="BACK TO DAYCARE. SAME SAVE!";dirty=1;
    }
   }else if(view==5){
@@ -327,15 +375,27 @@ int main(void){
     dirty=1;
    }
   }else if(view==6){
-   if(down&(KEY_B|KEY_START|KEY_A)){
+   if(down&(KEY_B|KEY_START)){
     view=0;message="COLLECTION CLOSED.";dirty=1;
-   }else if(down&(KEY_LEFT|KEY_L)){album_page=0;dirty=1;}
-   else if(down&(KEY_RIGHT|KEY_R)){album_page=1;dirty=1;}
-   else if(tap){
+   }else if((down&KEY_A)&&album_page==2&&
+            (baby.ending_mask&(1u<<END_EGG))){
+    view=9;egg_frame=0;last_ending=END_EGG;dirty=1;
+   }else if(down&KEY_A){
+    view=0;message="COLLECTION CLOSED.";dirty=1;
+   }else if(down&(KEY_LEFT|KEY_L)){
+    if(album_page>0)album_page--;
+    dirty=1;
+   }else if(down&(KEY_RIGHT|KEY_R)){
+    if(album_page<2)album_page++;
+    dirty=1;
+   }else if(tap){
     int page=ui_album_page_touch(touch.px,touch.py);
-    if(page<0){album_page=0;dirty=1;}
-    else if(page>0){album_page=1;dirty=1;}
-    else if(touch.py>=176){
+    if(page<0){if(album_page>0)album_page--;dirty=1;}
+    else if(page>0){if(album_page<2)album_page++;dirty=1;}
+    else if(album_page==2&&touch.py>=67&&touch.py<169&&
+            (baby.ending_mask&(1u<<END_EGG))){
+     view=9;egg_frame=0;last_ending=END_EGG;dirty=1;
+    }else if(touch.py>=176){
      view=0;message="COLLECTION CLOSED.";dirty=1;
     }
    }
@@ -347,14 +407,18 @@ int main(void){
   if(!three_d_ready&&frame>=16u){
    videoSetMode(MODE_0_3D);world_init();three_d_ready=1;
   }
+  if(view==8||(view==0&&rag.moving))roughhouse_step(&rag);
   if(three_d_ready){
    if(view==5||view==7)world_draw_title(frame);
+   else if(view==9)world_draw_secret(&baby,egg_frame,&rag);
+   else if(view==8||(view==0&&rag.moving))
+    world_draw_roughhouse(&baby,frame,&rag);
    else world_draw(&baby,frame,pose);
   }
   /* Keep bitmap VRAM writes off the hot path unless UI state changed. */
   if(dirty||previous!=view||
      (view==2&&frame%arcade_redraw_period(&arc)==0u)){
-   ui_draw(&baby,&arc,view,view==6?album_page:selected,last_ending,reset_step,storage_ok,message);
+   ui_draw(&baby,&arc,view,view==6?album_page:view==8?(int)rag.charge+(toy_tool==ROUGHHOUSE_KICK?32:0):view==9?(int)egg_frame:selected,last_ending,reset_step,storage_ok,message);
    dirty=0;
   }
   if(view==7)ui_touch_diag_update();

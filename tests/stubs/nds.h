@@ -28,6 +28,8 @@
 #define glTranslatef(x,y,z) ((void)(x),(void)(y),(void)(z))
 #define degreesToAngle(n) (n)
 #define glRotateZ(n) ((void)(n))
+#define glRotateX(n) ((void)(n))
+#define glRotateY(n) ((void)(n))
 #define glBegin(mode) ((void)(mode))
 #define glEnd() ((void)0)
 #define glColor(value) ((void)(value))

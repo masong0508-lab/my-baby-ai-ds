@@ -31,7 +31,7 @@ int game_unlock(Game *s,int id){
  if(s->wins<(unsigned)((level+1)*2)||s->dollars<cost||s->favors<favors)return 0;
  s->dollars-=cost;s->favors-=favors;s->unlocked|=(uint16_t)(1u<<id);return 1;
 }
-/* Ending IDs 1..4 are bad, IDs 5..8 are good. The existing 16-bit
+/* Ending IDs 1..4 and secret 9 are bad, IDs 5..8 are good. The existing 16-bit
  * ending_mask records both categories without changing on-disk save layout. */
 static uint16_t add_currency(uint16_t value,unsigned amount){
  return (uint16_t)(value>65535u-amount?65535u:value+amount);
@@ -82,9 +82,17 @@ int game_end_day(Game *s){
  s->days++;
  return e;
 }
+int game_secret_egg(Game *s){
+ if(!s)return 0;
+ if(s->ending_mask&(1u<<END_EGG))return 0;
+ s->ending_mask|=(uint16_t)(1u<<END_EGG);
+ if(s->bad_endings<65535u)s->bad_endings++;
+ s->corruption=clamp(s->corruption+20);
+ return 1;
+}
 int game_reset_unlocked(const Game *s){
  /* Count only distinct BAD endings. Good endings must not unlock a wipe. */
- uint16_t x=(uint16_t)(s->ending_mask&0x001eu);int unique=0;
+ uint16_t x=(uint16_t)(s->ending_mask&0x021eu);int unique=0;
  while(x){unique+=(x&1u);x>>=1;}
  return s->bad_endings>=5||unique>=3;
 }
@@ -98,6 +106,7 @@ const char *game_ending_name(int e){
  case END_ARCADE_CHAMP:return "RATTLE ARCADE CHAMPION";
  case END_GLITCH_TAMER:return "BUGS BECOME FEATURES";
  case END_SECOND_CHANCE:return "SECOND-CHANCE DAYCARE";
+ case END_EGG:return "THE INCUBATION WAS NEVER HUMAN";
  default:return "A NORMAL DAY. SUSPICIOUS.";
  }
 }

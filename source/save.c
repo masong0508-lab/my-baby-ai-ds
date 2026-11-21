@@ -13,7 +13,7 @@ static int newer(uint32_t a,uint32_t b){
 static int valid_game(const Game *g){
  return g->days!=0&&g->rng!=0&&
         (g->unlocked&255u)==255u&&
-        (g->ending_mask&~0x01feu)==0&&
+        (g->ending_mask&~0x03feu)==0&&
         g->hunger<=100&&g->mood<=100&&g->energy<=100&&
         g->chaos<=100&&g->corruption<=100&&g->safe_visuals<=1;
 }

@@ -6,7 +6,8 @@
 typedef enum { FEED=0, CHAT=1, PLAY=2, NAP=3 } Care;
 typedef enum {
  END_OK=0, END_BOTTLE=1, END_CEO=2, END_REBOOT=3, END_INTERN=4,
- END_GRADUATION=5, END_ARCADE_CHAMP=6, END_GLITCH_TAMER=7, END_SECOND_CHANCE=8
+ END_GRADUATION=5, END_ARCADE_CHAMP=6, END_GLITCH_TAMER=7, END_SECOND_CHANCE=8,
+ END_EGG=9 /* non-gory synthetic-shell reveal */
 } Ending;
 typedef struct {
  uint32_t sequence, rng, days, wins, losses;
@@ -38,6 +39,8 @@ const char *game_ending_name(int ending);
 int game_reset_unlocked(const Game *s);
 int game_is_good_ending(int ending);
 int game_good_ending_count(const Game *s);
+/* Persistent ninth, optional BAD ending without changing the save struct. */
+int game_secret_egg(Game *s);
 void game_arcade_start(Game *s,Arcade *a,int id);
 int game_arcade_expected(const Arcade *a);
 void game_arcade_input(Game *s,Arcade *a,int dir);

@@ -375,6 +375,156 @@ def test_actual_game(path: Path, output: Path) -> dict:
         f"Four native stylus diaper tasks did not finish and award currency "
         f"(screen={returned}, reward={reward})"
     )
+    # Regression: the optional Talking-Tom-style tool mode is SELECTED
+    # from the home dock. Its icons must NOT themselves strike the doll.
+    emu.input.keypad_add_key(keymask(Keys.KEY_B))
+    frames(emu, 6)
+    emu.input.keypad_rm_key(keymask(Keys.KEY_B))
+    frames(emu, 12)
+    stylus_tap(emu, 128, 183)  # middle TOYBOX dock tab
+    toybox = picture(emu, output, "game_toybox_select_hand")
+    toy_opened = difference(
+        won, toybox, (0, 192 + 31, 256, 192 + 175)
+    )
+    assert toy_opened > 500, (
+        f"Touching the center Toybox tab did not enter selectable mode ({toy_opened})"
+    )
+    stylus_tap(emu, 184, 159)  # choose boot/KICK without impact
+    selected_kick = picture(emu, output, "game_toybox_select_boot")
+    tool_selected = difference(
+        toybox, selected_kick, (9, 192 + 145, 247, 192 + 174)
+    )
+    assert tool_selected > 80, (
+        f"Talking-Tom-style KICK tool did not visibly highlight ({tool_selected})"
+    )
+    # Only touching the doll activates a selected tool.
+    stylus_tap(emu, 126, 110)
+    first_bounce = picture(emu, output, "game_toybox_first_kick")
+    bounce_motion = difference(
+        selected_kick, first_bounce, (10, 8, 244, 180)
+    )
+    assert bounce_motion > 35, (
+        f"Ragdoll did not visibly bounce after tapping doll ({bounce_motion})"
+    )
+    for _ in range(5):
+        frames(emu, 12)  # stress slower 20-30 FPS gameplay; allow debounce
+        stylus_tap(emu, 126, 110)
+    egg_begin = picture(emu, output, "game_egg_shell_fracture")
+    fracture_changed = difference(
+        selected_kick, egg_begin, (0, 192 + 32, 256, 192 + 174)
+    )
+    assert fracture_changed > 400, (
+        f"Six toy impacts did not trigger secret egg ending ({fracture_changed})"
+    )
+    # Sample the REAL 4-stage signal meter, not a guessed frame count.
+    # DeSmuME's VBlank pace can differ from game logic tick throughput.
+    bar_y = 192 + 137
+    bar_x = (31, 83, 135, 187)
+    lit = egg_begin.getpixel((bar_x[0], bar_y))
+    dim = egg_begin.getpixel((bar_x[1], bar_y))
+    assert lit != dim, "Egg film's signal meter failed to render"
+
+    def movie_stage(img) -> int:
+        values = [img.getpixel((x, bar_y)) for x in bar_x]
+        if not all(v in (lit, dim) for v in values):
+            return -1  # A different screen, such as the ending postcard.
+        n = sum(1 for v in values if v == lit)
+        return n - 1 if values == [lit] * n + [dim] * (4 - n) else -1
+
+    assert movie_stage(egg_begin) == 0, (
+        "The egg film did not start with the shell fracture prologue"
+    )
+
+    def seek_phase(target: int, name: str):
+        for _ in range(100):
+            frames(emu, 12)
+            sample = emu.screenshot().convert("RGB")
+            current = movie_stage(sample)
+            if current == target:
+                return picture(emu, output, name)
+            if current > target:
+                raise AssertionError(
+                    f"Film skipped phase {target} and advanced to {current}"
+                )
+        raise AssertionError(f"Egg film never reached phase {target}")
+
+    egg_green = seek_phase(1, "game_egg_green_ichor")
+    # Exclude the nursery's *green rug*. The upper-screen background must
+    # now be the dark, isolated alien egg; green fluid must exist in its core.
+    top_green = egg_green.crop((64, 30, 194, 168))
+    green_ichor_pixels = sum(
+        1 for r, g, b in top_green.get_flattened_data()
+        if g > r + 28 and g > b + 19 and g > 80
+    )
+    assert green_ichor_pixels >= 12, (
+        f"Alien-green ichor not visible in actual egg film ({green_ichor_pixels})"
+    )
+    assert movie_stage(egg_green) == 1, "Wrong image labeled green alien egg"
+
+    egg_push = seek_phase(2, "game_egg_slow_push")
+    frames(emu, 52)  # linger inside the longer camera-approach interval
+    egg_push = picture(emu, output, "game_egg_slow_push")
+    assert movie_stage(egg_push) == 2, "Approach shot advanced too soon"
+
+    egg_scare = seek_phase(3, "game_egg_jump_scare")
+    scare_difference = difference(
+        egg_push, egg_scare, (8, 7, 248, 182)
+    )
+    assert scare_difference > 300, (
+        f"Egg film did not display its one hard-cut alien face ({scare_difference})"
+    )
+    assert movie_stage(egg_scare) == 3, (
+        "The jump-scare image was captured in the wrong cinematic phase"
+    )
+
+    finale_heading_ink = 0
+    for _ in range(100):
+        frames(emu, 12)
+        sample = emu.screenshot().convert("RGB")
+        if movie_stage(sample) == -1:
+            # A title-band switch can arrive BEFORE the rest of the 256x192
+            # bitmap has finished drawing on a busy DS frame. Require the
+            # actual completed 2x BAD ENDING heading, not a blank card.
+            heading = sample.crop((35, 192 + 40, 218, 192 + 77))
+            finale_heading_ink = sum(
+                1 for r, g, b in heading.get_flattened_data()
+                if r >= 216 and g >= 216 and b >= 216
+            )
+            if finale_heading_ink > 45:
+                frames(emu, 8)  # settled, visually inspectable capture
+                egg_final = picture(emu, output, "game_egg_secret_bad_ending")
+                break
+    else:
+        raise AssertionError(
+            "Alien egg did not finish rendering its actual BAD ENDING postcard"
+        )
+    finale_difference = difference(
+        egg_begin, egg_final, (5, 192 + 35, 251, 192 + 173)
+    )
+    assert finale_difference > 350, (
+        f"Alien-egg cutscene did not resolve to final ending ({finale_difference})"
+    )
+    # Do not allow a screenshot labeled "ending" that is still a film
+    # frame; the real bad-ending postcard uses a fresh ending UI layout.
+    finale_header = difference(
+        egg_scare, egg_final, (0, 192 + 3, 256, 192 + 26)
+    )
+    assert finale_header > 75, (
+        f"Egg cutscene did not exit into collectible BAD ENDING ({finale_header})"
+    )
+    # The egg is an unlock, NOT a permanent disable of the toy controls.
+    # Exit through the real ending UI, reselect the dock and strike again.
+    stylus_tap(emu, 122, 106)
+    stylus_tap(emu, 128, 183)
+    fresh_toybox = picture(emu, output, "game_toybox_after_egg_replay")
+    stylus_tap(emu, 126, 110)
+    replay_bounce = picture(emu, output, "game_toybox_reusable_after_egg")
+    replay_movement = difference(
+        fresh_toybox, replay_bounce, (10, 8, 244, 180)
+    )
+    assert replay_movement > 35, (
+        f"Toybox controls stayed locked after secret ending ({replay_movement})"
+    )
     return {
         "3D_top_screen_distinct_colors": hero_colors,
         "3D_top_screen_full_height_dark_stripes": len(full_height_stripes),
@@ -400,6 +550,19 @@ def test_actual_game(path: Path, output: Path) -> dict:
         "touch_DIAPER_changed_pixels": diaper_changed,
         "touch_DIAPER_stage_changed_pixels": step_changed,
         "touch_DIAPER_win_reward_changed_pixels": reward,
+        "Toybox_entry_changed_pixels": toy_opened,
+        "Toybox_selected_tool_changed_pixels": tool_selected,
+        "Toybox_first_bounce_changed_pixels": bounce_motion,
+        "Toybox_egg_trigger_changed_pixels": fracture_changed,
+        "Alien_green_ichor_pixels": green_ichor_pixels,
+        "Alien_jump_scare_changed_pixels": scare_difference,
+        "Alien_ending_finale_changed_pixels": finale_difference,
+        "Egg_green_stage": movie_stage(egg_green),
+        "Egg_push_stage": movie_stage(egg_push),
+        "Egg_jump_scare_stage": movie_stage(egg_scare),
+        "Alien_ending_header_changed_pixels": finale_header,
+        "Alien_finale_readable_ink_pixels": finale_heading_ink,
+        "Toybox_post_ending_replay_changed_pixels": replay_movement,
         "result": "PASS",
     }
 
