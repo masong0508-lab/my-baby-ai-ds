@@ -385,6 +385,10 @@ static void teddy(void){
  * shoulder transform; no independent bobbing parts and no new polygons.
  * A horizontal PLAY reach or CHAT gesture is visible from the front,
  * while NAP naturally folds both arms toward the torso. */
+int world_baby_arm_reach(int action){
+ return action==3?57:action==2?45:action==1?28:
+        action==4?-8:action==5?-6:7;
+}
 static void baby_arm(int direction,int angle){
  float side=(float)direction;
  glPushMatrix();
@@ -417,8 +421,7 @@ static void baby_model(const Game *s,uint32_t frame,int action,
  const float settle=rag?(float)rag->impact*.0025f:0.f;
  /* Care IDs: FEED=1, CHAT=2, PLAY=3, NAP=4. Each reaches using
   * a shared shoulder pivot, not isolated upward-moving arm balls. */
- const int base_reach=action==3?57:action==2?45:action==1?28:
-                      action==4?-8:action==5?-6:7;
+ const int base_reach=world_baby_arm_reach(action);
  const int wave_deg=(int)(wave*160.f);
  const int recoil=rag&&rag->moving?(rag->vr>0?5:-5):0;
  const int blink=(frame%173u)<5u||action==4;
@@ -782,10 +785,15 @@ void world_draw_secret(const Game *s,uint32_t frame,const Roughhouse *r){
   ellipse(.36f,.28f,.832f,.286f,.192f,.048f,1,3,6);
   ellipse(-.36f,.276f,.887f,.195f,.117f,.022f,17,31,7);
   ellipse(.36f,.276f,.887f,.195f,.117f,.022f,17,31,7);
-  ellipse(-.346f,.278f,.918f,.062f,.117f,.010f,1,4,5);
-  ellipse(.374f,.278f,.918f,.062f,.117f,.010f,1,4,5);
-  soft_mark(-.398f,.325f,.934f,.044f,.031f,31,31,24);
-  soft_mark(.324f,.325f,.934f,.044f,.031f,31,31,24);
+  /* Pupils subtly converge toward the camera during the one-shot
+   * lunge while remaining wholly inside their parent eye sockets. */
+  {
+   float focus=world_egg_creature_depth(frame)*.08f;
+   ellipse(-.346f+focus,.278f,.918f,.062f,.117f,.010f,1,4,5);
+   ellipse(.374f-focus,.278f,.918f,.062f,.117f,.010f,1,4,5);
+   soft_mark(-.398f+focus,.325f,.934f,.044f,.031f,31,31,24);
+   soft_mark(.324f-focus,.325f,.934f,.044f,.031f,31,31,24);
+  }
   /* Nose bridge and cheek masses define where the mouth belongs. */
   soft_mark(0,-.002f,.879f,.074f,.26f,14,22,15);
   ellipse(-.60f,-.18f,.71f,.19f,.17f,.055f,7,16,13);
@@ -794,6 +802,12 @@ void world_draw_secret(const Game *s,uint32_t frame,const Roughhouse *r){
    * gum line, not a red rectangle or detached floating teeth. */
   ellipse(0,-.47f,.820f,.425f,.415f,.070f,16,5,11);
   ellipse(0,-.47f,.892f,.340f,.344f,.034f,1,2,4);
+  /* Layer the oral cavity INTO the face, not a detached overlay: dark
+   * throat at back, rosy tongue lower down and a single wet highlight.
+   * All parts share the SAME scare-lunge parent transform. */
+  ellipse(0,-.50f,.925f,.17f,.212f,.020f,3,1,5);
+  ellipse(0,-.68f,.931f,.195f,.079f,.019f,22,6,13);
+  soft_mark(-.04f,-.692f,.952f,.080f,.018f,30,14,21);
   ellipse(0,-.65f,.930f,.195f,.074f,.018f,19,5,13);
   for(i=0;i<5;i++){
    float x=-.245f+(float)i*.122f;
