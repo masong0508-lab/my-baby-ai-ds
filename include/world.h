@@ -31,6 +31,9 @@ int world_egg_nursery_ambient(uint32_t frame);
 /* Coherent, bounded 3D animation; pure frame samplers for film replay. */
 float world_egg_creature_depth(uint32_t frame);
 float world_egg_embryo_breath(uint32_t frame);
+/* Visual-only egg chamber breathing and a bounded pre-scare retreat. */
+float world_egg_membrane_pulse(uint32_t frame);
+float world_egg_embryo_retreat(uint32_t frame);
 /* Deterministic anticipation: dim-to-bright eyes and shallow forward lean. */
 int world_egg_eye_glow(uint32_t frame);
 float world_egg_embryo_approach(uint32_t frame);
