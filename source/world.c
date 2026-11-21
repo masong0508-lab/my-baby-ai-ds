@@ -306,7 +306,9 @@ static void room(void){
 static void teddy(void){
  /* Readable stuffed-bear silhouette: chest, light muzzle, dark stitched face.
   * Limbs overlap the body, with their axes angled outward. */
- const float x=.02f,y=-.79f,z=1.27f;
+ /* Keep the plush clearly beside the baby, not centered in front of its
+  * legs and romper. Seat it on the floor near the nursery dresser. */
+ const float x=-1.28f,y=-.87f,z=.52f;
  ellipse(x,y-.04f,z,.30f,.32f,.24f,27,16,5);
  ellipse(x,y+.17f,z+.01f,.245f,.235f,.215f,28,17,6);
  ellipse(x,y+.38f,z+.05f,.255f,.265f,.23f,28,17,5);
@@ -345,26 +347,26 @@ static void baby_model(const Game *s,uint32_t frame,int action){
  glPushMatrix();
  glTranslatef(-.12f,bob,.23f);
  /* Footed one-piece romper, short legs and soft shoes: no adult denim. */
- ellipse(0,-.75f,-.07f,.46f,.31f,.34f,21,28,27);
- ellipse(-.32f,-.93f,.14f,.245f,.22f,.27f,20,27,27);
- ellipse(.32f,-.93f,.14f,.245f,.22f,.27f,20,27,27);
+ ellipse(0,-.75f,-.07f,.46f,.31f,.34f,19,26,27);
+ ellipse(-.32f,-.93f,.14f,.245f,.22f,.27f,18,25,27);
+ ellipse(.32f,-.93f,.14f,.245f,.22f,.27f,18,25,27);
  ellipse(-.365f,-1.08f,.36f,.235f,.13f,.24f,30,28,23);
  ellipse(.365f,-1.08f,.36f,.235f,.13f,.24f,30,28,23);
  /* Curved mint romper and cream collar meet behind the head. */
- soft_head(0,-.32f,-.08f,.49f,.46f,.36f,23,29,27);
+ soft_head(0,-.32f,-.08f,.49f,.46f,.36f,19,27,27);
  ellipse(0,.09f,.0f,.22f,.10f,.205f,31,26,21);
  ellipse(0,-.39f,.284f,.245f,.25f,.035f,29,30,26);
  soft_mark(0,-.31f,.329f,.11f,.048f,glitch?25:30,glitch?17:18,21);
  /* Sleeves overlap the torso and the skin overlaps each sleeve; hands
   * always remain attached while the animation cycles. */
- tilted_ellipse(-.45f,-.21f,-.025f,.205f,.22f,.195f,-20,21,28,27);
- tilted_ellipse(.45f,-.21f,-.025f,.205f,.22f,.195f,20,21,28,27);
+ tilted_ellipse(-.45f,-.21f,-.025f,.205f,.22f,.195f,-20,19,26,27);
+ tilted_ellipse(.45f,-.21f,-.025f,.205f,.22f,.195f,20,19,26,27);
  tilted_ellipse(-.55f,-.37f+wave,.15f,.14f,.18f,.14f,-26,31,23,19);
  tilted_ellipse(.55f,-.37f-wave,.15f,.14f,.18f,.14f,26,31,23,19);
  ellipse(-.63f,-.46f+wave,.28f,.13f,.125f,.13f,31,24,20);
  ellipse(.63f,-.46f-wave,.28f,.13f,.125f,.13f,31,24,20);
  /* Rounded unified face. No second oversized jaw shell, no floating teeth. */
- soft_head(0,.54f,.045f,.61f,.615f,.45f,31,24,20);
+ soft_head(0,.54f,.045f,.61f,.615f,.45f,30,22,19);
  ellipse(-.575f,.49f,.065f,.105f,.145f,.09f,31,23,19);
  ellipse(.575f,.49f,.065f,.105f,.145f,.09f,31,23,19);
  /* Chestnut cap and two small swept tufts; old long side hair removed. */
@@ -391,8 +393,12 @@ static void baby_model(const Game *s,uint32_t frame,int action){
  soft_mark(-.205f,.734f,.459f,.105f,.014f,17,11,9);
  soft_mark(.205f,.734f,.459f,.105f,.014f,17,11,9);
  ellipse(0,.375f,.467f,.047f,.034f,.019f,31,23,20);
- soft_mark(0,.259f,.449f,happy?.132f:.095f,.024f,18,9,11);
- soft_mark(0,.275f,.455f,happy?.091f:.059f,.011f,31,20,19);
+ if(happy){
+  /* Three shallow strokes make a smile, not a heavy straight frown. */
+  soft_mark(-.065f,.278f,.444f,.052f,.017f,18,9,11);
+  soft_mark(0,.251f,.454f,.081f,.017f,18,9,11);
+  soft_mark(.065f,.278f,.444f,.052f,.017f,18,9,11);
+ }else soft_mark(0,.259f,.451f,.084f,.015f,18,9,11);
  glPopMatrix(1);
 }
 void world_init(void){
