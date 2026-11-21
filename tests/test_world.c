@@ -49,12 +49,17 @@ int main(void){
   assert(world_vertex_count()<=5000);
   assert(world_polygon_count()<=1850);
  }
- for(i=0;i<5;i++){
-  static const uint32_t frames[]={0u,EGG_CRACK_FRAME,EGG_PUSH_FRAME,
-                                   EGG_SCARE_FRAME,EGG_HOLD_FRAME};
+ for(i=0;i<6;i++){
+  static const uint32_t frames[]={0u,EGG_CRACK_FRAME,
+             EGG_PUSH_FRAME-1u,EGG_PUSH_FRAME,
+             EGG_SCARE_FRAME-1u,EGG_SCARE_FRAME};
   world_draw_secret(&s,frames[i],&r);
   assert(world_vertex_count()<=5000);
   assert(world_polygon_count()<=1850);
+  if(frames[i]>=EGG_CRACK_FRAME&&frames[i]<EGG_SCARE_FRAME){
+   /* Two shell plates, green ridges, and no new memory buffers */
+   assert(world_polygon_count()>=120);
+  }
  }
  /* Visual glitch tiers must never summon stray cubes or consume extra
   * polygons; corrupted/safe visual modes alter only existing colors. */
