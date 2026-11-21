@@ -1459,16 +1459,39 @@ static void ending_album(const Game *s,int page){
   "GRADUATION","ARCADE STAR","GLITCH HERO","SECOND LIFE"
  };
  int row,col,id,x,y,seen=0;char tmp[36];
- page=page?1:0;
+ if(page>2)page=2;
+ if(page<0)page=0;
+ if(page==2){
+  int discovered=(s->ending_mask&(1u<<END_EGG))!=0;
+  solid(0,27,256,149,NIGHT);
+  capsule(9,32,55,28,SKY,TEAL);
+  fit(17,42,"< PREV",INK,8);
+  capsule(192,32,55,28,SKY,TEAL);
+  fit(201,42,"NEXT >",INK,8);
+  fit(95,40,"PAGE 3/3",WHITE,12);
+  panel(19,67,218,101,discovered?PURPLE:GRAY,ROSE);
+  capsule(103,78,50,48,discovered?MINT:SILVER,TEAL);
+  capsule(113,82,30,38,NIGHT,PURPLE);
+  if(discovered){
+   fit(34,130,"09  THE INCUBATOR WAS ALIVE",WHITE,36);
+   fit(68,148,"TAP TO REPLAY",LEMON,30);
+  }else{
+   fit(51,130,"09  ???  SEALED",INK,30);
+   fit(42,148,"SECRET MEMORY NOT FOUND",MUTED,35);
+  }
+  foot(PURPLE);
+  fit(11,181,"B BACK   L/R CHANGE PAGE",WHITE,40);
+  return;
+ }
  solid(0,27,256,149,IVORY);
  for(id=1;id<=8;id++)if(s->ending_mask&(1u<<id))seen++;
  capsule(9,32,55,28,SKY,TEAL);
  fit(17,42,"< PREV",INK,8);
  capsule(192,32,55,28,SKY,TEAL);
  fit(201,42,"NEXT >",INK,8);
- snprintf(tmp,sizeof(tmp),"PAGE %d/2",page+1);
+ snprintf(tmp,sizeof(tmp),"PAGE %d/3",page+1);
  fit(93,38,tmp,PURPLE,12);
- snprintf(tmp,sizeof(tmp),"%d / 8 FOUND",seen);
+ snprintf(tmp,sizeof(tmp),"%d / 9 FOUND",seen+((s->ending_mask&(1u<<END_EGG))?1:0));
  fit(96,52,tmp,TEAL,11);
  for(row=0;row<2;row++)for(col=0;col<2;col++){
   int saved,good;
