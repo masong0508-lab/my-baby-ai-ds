@@ -713,11 +713,14 @@ static void baby_model(const Game *s,uint32_t frame,int action,
   float gasp=.42f+(float)rag->impact/9.f*.48f;
   ellipse(0,.252f,.451f,.094f,.085f*gasp,.020f,12,4,9);
   soft_mark(0,.212f,.476f,.095f,.025f*gasp,30,15,19);
- }else if(happy&&(action==2||action==3)&&weight>40){
-  /* Syllabic CHAT jaw, or one broad PLAY smile. Both return to the
-   * original closed grin after the one-shot action recovery. */
+ }else if((action==2||(happy&&action==3))&&weight>40){
+  /* CHAT syllables must remain visible when the baby is unhappy, too:
+   * the nursery PSG voice still babbles at low mood. A smaller grim
+   * aperture communicates the changed personality without losing
+   * sound/mouth synchronization. Happy PLAY retains its wide grin. */
   float speech=action==2?(float)world_baby_speech_open(action_age)/256.f:1.f;
-  float open=.26f+.74f*speech;
+  float open=action==2?
+              .12f+(happy?.88f:.59f)*speech:1.f;
   ellipse(0,.252f,.451f,.094f,.085f*open,.020f,12,4,9);
   soft_mark(0,.212f,.476f,.095f,.025f*open,30,15,19);
  }else if(happy){
