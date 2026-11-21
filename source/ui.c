@@ -877,7 +877,7 @@ static void arcade_list(const Game *s,int selection){
  }
  foot(PURPLE);
  fit(12,181,"A PLAY",WHITE,10);
- fit(101,181,"X UNLOCK",WHITE,14);
+ fit(101,181,game_unlocked(s,selection)?"X OWNED":"X UNLOCK",WHITE,14);
  fit(199,181,"B BACK",WHITE,10);
 }
 static void sparkle(int x,int y,uint16_t color){
