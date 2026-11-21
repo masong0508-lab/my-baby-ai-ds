@@ -11,8 +11,12 @@ static const float cz[8]={0,.7071f,1,.7071f,0,-.7071f,-1,-.7071f};
 static const float h[4]={-1,-.54f,.54f,1};
 static const float w[4]={0,.842f,.842f,0};
 static int limit(int v){return v<0?0:v>31?31:v;}
+/* Draw-time-only room lighting: no extra geometry, textures or VRAM. */
+static int nursery_ambient;
 static void color(int r,int g,int b,int shift){
- glColor(RGB15(limit(r+shift),limit(g+shift),limit(b+shift)));
+ glColor(RGB15(limit(r+shift+nursery_ambient),
+               limit(g+shift+nursery_ambient),
+               limit(b+shift+nursery_ambient)));
 }
 static void face(float a,float b,float c,float d,float e,float f,
                  float g,float i,float j,float k,float l,float m){
@@ -549,6 +553,16 @@ static void fang(float x,float y,float z,float width,float height,int upper){
  * floor retain their positions. A continuous lateral dolly creates real
  * parallax; only the final scare intentionally hard-cuts. Camera arithmetic
  * is constant-time and never allocates a new scene or framebuffer. */
+/* The room gradually loses light as the egg is approached, but never
+ * vanishes: recognizable objects stay in their original 3D positions.
+ * A five-step 5-bit palette dim is cheap and leaves contrast for geometry. */
+int world_egg_nursery_ambient(uint32_t frame){
+ uint32_t elapsed,span;
+ if(frame<=EGG_CRACK_FRAME||frame>=EGG_SCARE_FRAME)return 0;
+ span=EGG_SCARE_FRAME-EGG_CRACK_FRAME-1u;
+ elapsed=frame-EGG_CRACK_FRAME;
+ return -(int)((elapsed*5u+span/2u)/span);
+}
 EggCamera world_secret_camera(uint32_t frame){
  EggCamera c;
  float travel,settle;
@@ -592,8 +606,11 @@ void world_draw_secret(const Game *s,uint32_t frame,const Roughhouse *r){
  /* Keep the real nursery where the player last saw it: the patterned
   * rug, window and crib provide persistent parallax behind the synthetic
   * shell. Final scare still cuts to a stark silhouette for contrast. */
- if(phase<3u)room();
- else block(0,0,-2.8f,11,8,.08f,3,5,9);
+ if(phase<3u){
+  nursery_ambient=world_egg_nursery_ambient(frame);
+  room();
+  nursery_ambient=0; /* don't dim the specimen or subsequent normal views */
+ }else block(0,0,-2.8f,11,8,.08f,3,5,9);
  if(phase<3u){
   if(phase==2u){
    opened=(float)(frame-EGG_PUSH_FRAME)/
