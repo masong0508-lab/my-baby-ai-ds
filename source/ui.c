@@ -1377,7 +1377,10 @@ static void egg_scene_screen(int frame){
  solid(0,27,256,149,NIGHT);
  panel(10,35,236,130,phase==3?ROSE:PURPLE,phase==3?PINK:LILAC);
  capsule(21,45,214,28,NIGHT,ROSE);
- label(phase==3?43:55,52,phase==3?"IT CAN SEE YOU":"NO SIGNAL",WHITE,2,14);
+ label(phase==3?43:phase==2?57:phase==1?59:55,52,
+       phase==3?"IT CAN SEE YOU":
+       phase==2?"COME CLOSER":
+       phase==1?"DO NOT OPEN":"NO SIGNAL",WHITE,2,14);
  if(phase==0){
   fit(34,88,"THE SHELL WAS NEVER SKIN.",WHITE,35);
   fit(52,110,"INTERNAL SEAL: FAIL",LEMON,27);
