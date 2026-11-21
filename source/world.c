@@ -743,7 +743,10 @@ EggCamera world_secret_camera(uint32_t frame){
  if(frame<EGG_CRACK_FRAME)frame=EGG_CRACK_FRAME;
  if(frame>=EGG_SCARE_FRAME){
   c.x=0.f;c.y=.05f;c.z=2.63f;
-  c.look_x=0.f;c.look_y=.03f;c.look_z=.40f;
+  /* The previous upward aim cropped the LOWER jaw off the tiny top LCD.
+   * Aim nearer the final dolly's low target; both eyes and lower fangs
+   * stay inside the 192-pixel display when the head lunges. */
+  c.look_x=0.f;c.look_y=-.11f;c.look_z=.40f;
   return c;
  }
  travel=(float)(frame-EGG_CRACK_FRAME)/
