@@ -774,6 +774,23 @@ def test_actual_game(path: Path, output: Path) -> dict:
         f"Alien forehead has a straight fluorescent streak "
         f"({brightest_streak}px) instead of short brow highlights"
     )
+    # The old flat slime rectangles created 46-pixel and 36-pixel
+    # vertical luminous runs in the cropped native render. Organic
+    # tapered cheek rivulets should not look like GPU seam artifacts.
+    longest_vertical_ichor = 0
+    for xx in list(range(20, 62)) + list(range(194, 237)):
+        run = 0
+        for yy in range(90, 173):
+            red, green, blue = egg_scare.getpixel((xx, yy))
+            if green > 155 and green > red + 65 and green > blue + 35:
+                run += 1
+                longest_vertical_ichor = max(longest_vertical_ichor, run)
+            else:
+                run = 0
+    assert longest_vertical_ichor < 40, (
+        f"Bright vertical cheek slime ruler survived "
+        f"({longest_vertical_ichor}px)"
+    )
     # Regress against the old isolated polygon head: retain two PALE
     # porcelain halves beside the alien when the final scare camera cuts.
     left_wing = egg_scare.crop((18, 25, 83, 167))
@@ -932,6 +949,7 @@ def test_actual_game(path: Path, output: Path) -> dict:
         "Egg_visible_porcelain_pixels": ivory_shell_pixels,
         "Alien_jump_scare_changed_pixels": scare_difference,
         "Alien_earliest_reveal_brow_streak_pixels": brightest_streak,
+        "Alien_vertical_ichor_streak_pixels": longest_vertical_ichor,
         "Egg_pre_scare_motion_changed_pixels": recoil_changed,
         "Jump_scare_porcelain_left_pixels": scare_shell_left,
         "Jump_scare_porcelain_right_pixels": scare_shell_right,
