@@ -492,7 +492,7 @@ void world_draw_secret(const Game *s,uint32_t frame,const Roughhouse *r){
  if(phase==1u){
   gluLookAt(0,.18f,4.30f,0,0,.0f,0,1,0);
  }else if(phase==2u){
-  float camera=4.30f-(float)(frame-EGG_PUSH_FRAME)*.029f;
+  float camera=4.30f-(float)(frame-EGG_PUSH_FRAME)*.016f;
   if(camera<2.06f)camera=2.06f;
   gluLookAt(0,.11f,camera,0,.08f,.13f,0,1,0);
  }else{
