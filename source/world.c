@@ -1011,6 +1011,35 @@ static void alien_face_facets(void){
  glEnd();
  frame_vertices+=18;frame_polygons+=6;
 }
+/* Tapered organic cheek rivulets in a single connected facial rig.
+ * The earlier long screen-aligned bright rectangles read like graphical
+ * glitches in native 256x192 DeSmuME. Three small triangles per side
+ * produce asymmetric, shaded attachments with no streak-like strip,
+ * heap allocation, sprite atlas, framebuffer, or trigonometry. */
+static void alien_ichor_rivulet(int side){
+ float s=(float)side,dy=side<0?0.f:.035f;
+ glBegin(GL_TRIANGLES);
+ color(7,26,11,0);
+ glVertex3f(s*.625f,-.205f+dy,.798f);
+ color(11,27,12,0);
+ glVertex3f(s*.707f,-.240f+dy,.795f);
+ color(4,15,8,0);
+ glVertex3f(s*.745f,-.615f+dy,.776f);
+ color(5,18,10,0);
+ glVertex3f(s*.660f,-.290f+dy,.803f);
+ color(8,26,12,0);
+ glVertex3f(s*.731f,-.330f+dy,.793f);
+ color(3,13,8,0);
+ glVertex3f(s*.792f,-.465f+dy,.761f);
+ color(14,29,13,0);
+ glVertex3f(s*.680f,-.218f+dy,.811f);
+ color(9,22,10,0);
+ glVertex3f(s*.697f,-.232f+dy,.811f);
+ color(4,14,8,0);
+ glVertex3f(s*.736f,-.375f+dy,.799f);
+ glEnd();
+ frame_vertices+=9;frame_polygons+=3;
+}
 /* Purpose-built visual hierarchy for the secret BAD ending:
  *   porcelain shell / shadowed inner lip / black incubation chamber /
  *   clearly silhouetted parasite / thin luminous green ichor.
@@ -1343,10 +1372,10 @@ void world_draw_secret(const Game *s,uint32_t frame,const Roughhouse *r){
    * measured a 28-pixel fluorescent ruler at y=8 with exact RGB15
    * (11,27,12). The broad brow masses and two compact reveal glints
    * already establish the intended skull shape without this artifact. */
-  /* Sickly reflective slime follows the facial contour rather than
-   * obscuring pupils and teeth with arbitrary green rectangles. */
-  soft_mark(-.77f,-.40f,.764f,.068f,.39f,8,29,11);
-  soft_mark(.77f,-.30f,.765f,.061f,.31f,9,28,10);
+  /* Tapered cheek fluid, rather than two bright vertical rulers. The
+   * shorter under-cheek reflections connect the rivulets to the skull. */
+  alien_ichor_rivulet(-1);
+  alien_ichor_rivulet(1);
   soft_mark(-.67f,-.64f,.793f,.19f,.062f,10,31,11);
   soft_mark(.67f,-.56f,.793f,.16f,.054f,11,31,12);
   /* Two short highlights follow the curved brow instead of the old
