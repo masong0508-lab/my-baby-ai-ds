@@ -776,6 +776,18 @@ float world_egg_creature_depth(uint32_t frame){
 }
 /* A barely perceptible pulse inside the shell; the embryonic eyes and
  * mouth share one pivot so nothing floats away from the skull. */
+/* One physical lower-jaw hinge, not individually bouncing teeth.
+ * The mouth opens on the first lunge, then rests partially agape. This is
+ * deterministic, so pause, replay and frame skipping stay coherent. */
+int world_egg_jaw_angle(uint32_t frame){
+ uint32_t elapsed,beat;
+ if(frame<EGG_SCARE_FRAME)return 0;
+ elapsed=frame-EGG_SCARE_FRAME;
+ if(elapsed<=9u)return (int)elapsed*2;
+ if(elapsed<=22u)return 18-(int)((elapsed-9u)*10u/13u);
+ beat=(elapsed-22u)%40u;
+ return 8+(int)(beat<20u?beat/10u:(40u-beat)/10u);
+}
 float world_egg_embryo_breath(uint32_t frame){
  uint32_t phase=frame%64u;
  return (float)(phase<32u?phase:64u-phase)*.0005f;
@@ -925,18 +937,26 @@ void world_draw_secret(const Game *s,uint32_t frame,const Roughhouse *r){
    * throat at back, rosy tongue lower down and a single wet highlight.
    * All parts share the SAME scare-lunge parent transform. */
   ellipse(0,-.50f,.925f,.17f,.212f,.020f,3,1,5);
-  ellipse(0,-.68f,.931f,.195f,.079f,.019f,22,6,13);
-  soft_mark(-.04f,-.692f,.952f,.080f,.018f,30,14,21);
-  ellipse(0,-.65f,.930f,.195f,.074f,.018f,19,5,13);
+  /* Upper fangs stay locked to the cranium. */
   for(i=0;i<5;i++){
    float x=-.245f+(float)i*.122f;
    float tip=(i&1)?.18f:.25f;
    fang(x,-.215f,.953f,.085f,tip,0);
   }
+  /* Lower fangs, gums and tongue all rotate around one cheek-level hinge.
+   * They therefore cannot float apart when the head lunges. */
+  glPushMatrix();
+  glTranslatef(0.f,-.30f,.82f);
+  glRotateX(degreesToAngle(world_egg_jaw_angle(frame)));
+  glTranslatef(0.f,.30f,-.82f);
+  ellipse(0,-.68f,.931f,.195f,.079f,.019f,22,6,13);
+  soft_mark(-.04f,-.692f,.952f,.080f,.018f,30,14,21);
+  ellipse(0,-.65f,.930f,.195f,.074f,.018f,19,5,13);
   fang(-.23f,-.75f,.956f,.098f,.19f,1);
   fang(-.08f,-.775f,.956f,.082f,.14f,1);
   fang(.09f,-.775f,.956f,.080f,.15f,1);
   fang(.22f,-.75f,.956f,.092f,.18f,1);
+  glPopMatrix(1);
   /* Attached sickly cheek and forehead plates create a stronger faceted
    * silhouette like the target art, without multiplying face meshes. */
   soft_mark(-.67f,.07f,.790f,.10f,.15f,7,21,16);
