@@ -480,7 +480,12 @@ static void baby_model(const Game *s,uint32_t frame,int action,
                  action==4?-3:0)*weight/256;
  const int reach_forward=(action==1?13:action==2?8:
                           action==3?10:0)*weight/256;
- const int lid=world_baby_lid_open(frame,action,action_age);
+ /* The fractured-baby FILM must show recognizable eyes in its first
+  * shot. Ordinary care keeps natural blinking, including NAP; the
+  * view-only staged damaged doll holds its eyes open for the reveal. */
+ const int lid=rag&&!rag->moving&&
+               rag->charge>=ROUGHHOUSE_CRACK_CHARGE?
+               256:world_baby_lid_open(frame,action,action_age);
  const float lid_height=(float)lid/256.f;
  const int happy=s->mood>35;
  const int glitch=game_glitch_tier(s)>=2&&!s->safe_visuals&&
