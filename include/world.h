@@ -5,6 +5,8 @@
 #include "roughhouse.h"
 void world_init(void);
 void world_draw(const Game *state,uint32_t frame,int pose);
+/* Live gameplay: age since last care tap, for finite easing and recovery. */
+void world_draw_care(const Game *state,uint32_t frame,int pose,uint32_t age);
 void world_draw_title(uint32_t frame);
 void world_draw_roughhouse(const Game *s,uint32_t frame,const Roughhouse *r);
 void world_draw_secret(const Game *s,uint32_t frame,const Roughhouse *r);
@@ -28,6 +30,9 @@ int world_egg_jaw_angle(uint32_t frame);
 /* Deterministic, shared shoulder-joint reach for each care action. */
 int world_baby_arm_reach(int action);
 int world_baby_neck_tilt(int action,uint32_t frame);
+/* Q8 gesture and eye-aperture channels, cheap deterministic samples. */
+int world_baby_care_weight(uint32_t age);
+int world_baby_lid_open(uint32_t frame,int action,uint32_t age);
 /* Submitted frame-budget counters (geometry, not measured FPS). */
 unsigned world_vertex_count(void);
 unsigned world_polygon_count(void);
