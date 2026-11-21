@@ -23,6 +23,17 @@ const char *game_care(Game *s,Care action){
  if(s->chaos>75)s->corruption=clamp(s->corruption+3);
  return dialogue_reply(s,action);
 }
+/* A meaningful, accessible bedroom interaction: when the player has
+ * explicitly chosen moonlight AND switched the lamp off, using the crib
+ * grants a small extra rest and calms the toy's chaotic mood. This is
+ * conditional on the actual Room controls, not random cosmetic text.
+ * The existing game_care(NAP) always runs first and keeps save semantics. */
+int game_room_quiet_rest(Game *s,int daylight,int lamp_on){
+ if(!s||daylight||lamp_on)return 0;
+ s->energy=clamp(s->energy+8);
+ s->chaos=clamp((int)s->chaos-4);
+ return 1;
+}
 int game_unlocked(const Game *s,int id){return id>=0&&id<MBAI_GAMES&&!!(s->unlocked&(1u<<id));}
 int game_unlock(Game *s,int id){
  int level=id-8;unsigned cost,favors;
