@@ -8,6 +8,8 @@ void world_draw(const Game *state,uint32_t frame,int pose);
 void world_draw_title(uint32_t frame);
 void world_draw_roughhouse(const Game *s,uint32_t frame,const Roughhouse *r);
 void world_draw_secret(const Game *s,uint32_t frame,const Roughhouse *r);
+/* View-only damage portrait, normalized independently of Toybox inertia. */
+Roughhouse world_egg_staged_doll(const Roughhouse *source,uint32_t frame);
 /* Camera sampled in one place to keep staged film and native tests aligned. */
 typedef struct {
  float x,y,z,look_x,look_y,look_z;
