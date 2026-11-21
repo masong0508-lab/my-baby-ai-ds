@@ -259,6 +259,21 @@ def test_actual_game(path: Path, output: Path) -> dict:
     assert arcade_changed > 500, (
         f"Touch ARCADE footer did not open cabinet grid ({arcade_changed})"
     )
+    # Inspect pixels INSIDE the selected cabinet icon and its 2x wordmark.
+    # Previously the 16 cards held tiny duplicated glyphs or empty tiles.
+    thumbnail = arcade.crop((15, 192 + 78, 51, 192 + 112))
+    icon_colors = len(set(thumbnail.get_flattened_data()))
+    assert icon_colors >= 6, (
+        f"Cabinet 01 illustration lost its shaded palette ({icon_colors} colors)"
+    )
+    name_pixels = arcade.crop((58, 192 + 81, 107, 192 + 97))
+    name_ink = sum(
+        1 for r, g, b in name_pixels.get_flattened_data()
+        if r < 185 and g < 160
+    )
+    assert name_ink >= 50, (
+        f"Enlarged 2x cabinet name absent or underdrawn ({name_ink} dark pixels)"
+    )
     stylus_tap(emu, 220, 44)  # tap NEXT: second page of four cabinets
     arcade_second_page = picture(emu, output, "game_arcade_page_2")
     page_changed = difference(
@@ -356,6 +371,8 @@ def test_actual_game(path: Path, output: Path) -> dict:
         "album_screen_changed_pixels": album_diff,
         "album_next_page_changed_pixels": album_next_diff,
         "album_previous_page_changed_pixels": album_previous_diff,
+        "cabinet_art_distinct_colors": icon_colors,
+        "cabinet_name_ink_pixels": name_ink,
         "arcade_next_page_changed_pixels": page_changed,
         "arcade_previous_page_changed_pixels": page_returned,
         "diaper_heading_ink_pixels": dark_ink,

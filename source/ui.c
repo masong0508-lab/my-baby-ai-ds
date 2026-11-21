@@ -298,9 +298,11 @@ static void home(const Game *s,int can_save,const char *message){
  fit(157,181,"END  DAY",WHITE,14);
  (void)can_save;
 }
+/* Five-character art-directed wordmarks can occupy a genuine 2x font,
+ * with the full cabinet title displayed in the section above. */
 static const char *const nick[16]={
- "BOTTLE","DIAPER","TAX","KART","BEATS","SOCKS","NAP","RATTLE",
- "CRAWL","DRIFT","CIPHER","BLOCKS","AUDIT","GARDEN","COURT","CEO"
+ "MILK","WIPE","TAX","KART","BEAT","SOCK","NAP","SHAKE",
+ "CRAWL","DRIFT","CODE","STACK","AUDIT","GROW","COURT","CEO"
 };
 static void arrow(int x,int y,int dir,uint16_t fill){
  int i;
@@ -317,77 +319,79 @@ static void arrow(int x,int y,int dir,uint16_t fill){
  * decoder, heap, asset loader, or second framebuffer. */
 /* Shared baby portrait: warm face, small eyes, soft cheeks, chestnut tuft,
  * mint romper. A matching silhouette appears in the DS 3D nursery. */
+/* Warm shaded 20x18 ROM pixel baby shared by the title and all cabinets.
+ * Added hair sheen, cheek contour, bright sclera and a two-tone romper. */
 static const char *const spr_baby[]={
-  ".........hh.........",
-  ".......hhhhhh.......",
-  "......oohhhhoo......",
-  ".....ohhhhhhhho.....",
-  "....ohssssssssho....",
-  "...osssssssssssso...",
-  "...osssssssssssso...",
-  "...osswwsssswwsso...",
-  "ossosswksssskwssosso",
-  "ossossssssssssssosso",
-  "...orrsssrssssrro...",
-  "....ossspsspssso....",
-  "....oosssppsssoo....",
-  "......oossssoo......",
-  ".....obssssssbo.....",
-  ".....obttttttbo.....",
-  ".....obbttttbbo.....",
-  ".....oooooooooo....."
+  ".........dd.........",
+  ".......hdddhh.......",
+  ".....hodddooooh.....",
+  ".....dddsssshho.....",
+  "....osssssssssso....",
+  "...ollsssssssssso...",
+  "...ollhhsssshhsso...",
+  "...olloossssoossoo..",
+  "..oollwksssswkssoso.",
+  ".osollasssssasaaoso.",
+  "..oorrsssvssssrrooo.",
+  "....osssvssvssao....",
+  ".....osssvvssso.....",
+  "......occcccco......",
+  ".....omfcfmcmmo.....",
+  ".....omfbbbbmmo.....",
+  ".....omffmmmmmo.....",
+  ".....oommmmmmoo....."
 };
 static const char *const spr_bottle[]={
- "......oooo......",
- "......owwo......",
- ".....owwwwo.....",
- ".....oppppo.....",
- "....oooooooo....",
- "...owwwwwwwwo...",
- "...owwwwwwwwo...",
- "...owwbbbbwwo...",
- "...owwbbbbwwo...",
- "...owwbbbbwwo...",
- "...owwbbbbwwo...",
- "...owwbbbbwwo...",
- "...owwbbbbwwo...",
- "...owwwwwwwwo...",
- "...owwwppwwwo...",
- "...owwwppwwwo...",
- "....owwwwwwo....",
- ".....oooooo....."
+  "......oooo......",
+  "......owwo......",
+  ".....owwwwo.....",
+  ".....oppppo.....",
+  "....oooooooo....",
+  "...ojjjwwwwwo...",
+  "...ojjjwwwwwo...",
+  "...ojjbbbbwwo...",
+  "...ojjbbbbwwo...",
+  "...ojjbbbbwwo...",
+  "...ojjbbbbwwo...",
+  "...ojjbbbbwwo...",
+  "...ojjbbbbwwo...",
+  "...ojjjwwwwwo...",
+  "...ojjjppwwwo...",
+  "...ojjjppwwwo...",
+  "....owwwwwwo....",
+  ".....oooooo....."
 };
 static const char *const spr_rattle[]={
- "......oooo......",
- "....ooggggoo....",
- "...ogggwwgggo...",
- "..oggggwwggggo..",
- "..oggggwwggggo..",
- "..oggggggggggo..",
- "...oggggggggo...",
- "....ooggggoo....",
- "......oooo......",
- "......otto......",
- "......otto......",
- "......otto......",
- "......otto......",
- "......otto......",
- ".....otttto.....",
- ".....otttto.....",
- "......oooo......"
+  "......oooo......",
+  "....ooggggoo....",
+  "...oyyywwgggo...",
+  "..oyyyywwggggo..",
+  "..oyyyywwggggo..",
+  "..oyyyyyyggggo..",
+  "...oyyyyygggo...",
+  "....ooyyygoo....",
+  "......oooo......",
+  "......otto......",
+  "......otto......",
+  "......otto......",
+  "......otto......",
+  "......otto......",
+  ".....otttto.....",
+  ".....otttto.....",
+  "......oooo......"
 };
 static const char *const spr_diaper[]={
- "...oooooooooooo...",
- "..owwwwwwwwwwwwo..",
- ".owwwwwwwwwwwwwwo.",
- "owwwwwwwwwwwwwwwo",
- "owwppwwwwwwwwppwwo",
- "owwppwwwwwwwwppwwo",
- ".owwwbbbbbbwwwwo.",
- "..owbbbbbbbbwwo..",
- "...owbbbbbbwwo...",
- "....owwwwwwo....",
- ".....oooooo....."
+  "...oooooooooooo...",
+  "..owwwwwwwwwwwwo..",
+  ".ojjjjwwwwwwiiiio.",
+  "ojjjjjwwwwwwiiiio",
+  "ojjppjwwwwwwippiio",
+  "ojjppjwwwwwwippiio",
+  ".ojjjbbbbbbwiiio.",
+  "..ojbbbbbbbbiio..",
+  "...ojbbbbbbwio...",
+  "....owwwwwwo....",
+  ".....oooooo....."
 };
 /* Receipt sheet with inked totals, folded corners and a bright stamp. */
 static const char *const spr_receipt[]={
@@ -432,19 +436,19 @@ static const char *const spr_cone[]={
  ".oooooooooooo."
 };
 static const char *const spr_sock[]={
- "....oooo......",
- "...owwwwo.....",
- "...owwwwo.....",
- "...owwwwo.....",
- "...owwwwo.....",
- "...owwwwo.....",
- "...owwwwo.....",
- "...owwwwwwo....",
- "...owwwwwwwo..",
- "..owwwwwwwwwo.",
- "..owwwwwwwwwo.",
- "..owwwwwwwwwo.",
- "...ooooooooo.."
+  "....oooo......",
+  "...owwwwo.....",
+  "...ojjwwo.....",
+  "...ojjwwo.....",
+  "...ojjwwo.....",
+  "...ojjwwo.....",
+  "...ojjwwo.....",
+  "...ojjwwwbo....",
+  "...ojjwwwbbo..",
+  "..ojjjwwwbbbo.",
+  "..ojjjwwwbbbo.",
+  "..ojjjwwwbbbo.",
+  "...ooooooooo.."
 };
 /* Additional compact original silhouettes for the newly bespoke cabinets. */
 static const char *const spr_stroller[]={
@@ -463,17 +467,17 @@ static const char *const spr_stroller[]={
  ".ooo........ooo..."
 };
 static const char *const spr_cereal[]={
- "...ooooooooo...",
- "..owwwwwwwwwo..",
- ".owwwggggwwwwwo.",
- "owgggwwwwggggwo",
- "owgwwwwwggwwgwo",
- "owgwwggwwwgggwo",
- "owwwggggwwwggwo",
- "owwwwwwwwwwwwo",
- "owwwpppppwwwwwo",
- ".owwwwwwwwwwwo.",
- "..ooooooooooo.."
+  "...ooooooooo...",
+  "..owwwwwwwwwo..",
+  ".owwwggggwwwwwo.",
+  "owyyywwwwggggwo",
+  "owywwwwwggwwgwo",
+  "owywwyywwwgggwo",
+  "owwwyyygwwwggwo",
+  "owwwwwwwwwwwwo",
+  "owwwpppppwwwwwo",
+  ".owwwwwwwwwwwo.",
+  "..ooooooooooo.."
 };
 static const char *const spr_stack[]={
  ".oooooooooooo.",
@@ -515,6 +519,97 @@ static const char *const spr_gavel[]={
  "...owwwwwwwwo.",
  "...oooooooooo."
 };
+/* Original 16x16 miniature assets: beatbox microphone, naptime pillow, office badge, audit clipboard and CEO briefcase with gold crown. Each stays in ROM, never copied to a new framebuffer. */
+static const char *const spr_mic[]={
+  "................",
+  ".......ooo......",
+  ".....oowwpoo....",
+  "..g..owppppo.g..",
+  ".....opwpppo....",
+  ".g...opppppo..g.",
+  ".....opppppo....",
+  ".....oqqqqqo....",
+  "......qqqqq.....",
+  "..g....qwq....g.",
+  ".......qwq......",
+  ".......qwq......",
+  ".....ooooooo....",
+  "....ootttttoo...",
+  "....ooooooooo...",
+  "................"
+};
+static const char *const spr_pillow[]={
+  "................",
+  "...g.......gg...",
+  "...gg.....gy....",
+  "...g......gyy...",
+  "..........gyyyg.",
+  "...........ggg..",
+  "..oooooooooooo..",
+  "..oiiiiiiiiiio..",
+  "..oiuuuuuuuuio..",
+  "..oiuulllluuio..",
+  "..oiuulllluuio..",
+  "..oiuuuuuuuuio..",
+  "..oiiiiiiiiiio..",
+  "..oppooooooppo..",
+  "................",
+  "................"
+};
+static const char *const spr_badge[]={
+  ".......pp.......",
+  ".......pp.......",
+  ".....owwwwo.....",
+  "..oooooooooooo..",
+  "..ojjjjjjjjjjo..",
+  "..ojwwwwwwwwjo..",
+  "..ojjjjooojjjo..",
+  "..ojjjosssojjo..",
+  "..ojjjokskojjo..",
+  "..ojjjosssojjo..",
+  "..ojjjjorojjjo..",
+  "..ojjjjjjjjjjo..",
+  "..ojjwwwwwwjjo..",
+  "..ojjiiiiijjjo..",
+  "..ojjjjjjjjjjo..",
+  "..oooooooooooo.."
+};
+static const char *const spr_audit[]={
+  ".....oooooo.....",
+  ".....oggggo.....",
+  "..ooooggggoooo..",
+  "..owwoooooowwo..",
+  "..owwwwwwwwwwo..",
+  "..owuuuuwqqqwo..",
+  "..owwwwwwwwwwo..",
+  "..owuuuuwqqqwo..",
+  "..owwwwwwwwwwo..",
+  "..owuuuuwqqtwo..",
+  "..owwwwwwwtwwo..",
+  "..owutuuwtqqwo..",
+  "..owwwtwtwwwwo..",
+  "..owwwwtwwwwwo..",
+  "..owwwwwwwwwwo..",
+  "..oooooooooooo.."
+};
+static const char *const spr_ceo[]={
+  "................",
+  ".......y........",
+  "...y........y...",
+  "....y.y.y.y.....",
+  ".....y...y......",
+  "....gggggggg....",
+  "....gyyyyyyg....",
+  "....oooooooo....",
+  "......ollo......",
+  ".oooooolloooooo.",
+  ".ottttooootttto.",
+  ".otmmmmmmmmmmto.",
+  ".otttffggffttto.",
+  ".otttttttttttto.",
+  ".oooooooooooooo.",
+  "................"
+};
 static uint16_t art_ink(char p){
  switch(p){
  case 'o':return INK;
@@ -527,6 +622,19 @@ static uint16_t art_ink(char p){
  case 'g':return GOLD;
  case 't':return TEAL;
  case 'k':return RGB(5,7,11);
+ /* Extended warm baby/material palette, using only 16-bit DS RGB5 colors. */
+ case 'a':return RGB(27,18,16); /* skin shadow */
+ case 'c':return RGB(31,29,25); /* romper collar */
+ case 'd':return RGB(23,14,9);  /* chestnut sheen */
+ case 'f':return RGB(22,30,23); /* mint fabric highlight */
+ case 'i':return RGB(30,27,30); /* pillow ivory */
+ case 'j':return RGB(15,26,29); /* badge sky */
+ case 'l':return RGB(31,27,23); /* face highlight */
+ case 'm':return RGB(12,24,21); /* jade cloth */
+ case 'q':return RGB(12,11,16); /* muted ink */
+ case 'u':return RGB(23,19,27); /* lavender shadow */
+ case 'v':return RGB(21,10,13); /* small smile */
+ case 'y':return RGB(31,28,16); /* sunlit gold */
  default:return 0;
  }
 }
@@ -549,21 +657,27 @@ static void sprite(int x,int y,int scale,const char *const *rows,int count){
 /* Reuse the game's existing ROM-native thumbnails instead of another
  * sprite sheet, decoder or new VRAM allocation. Actual mini-game objects
  * identify each arcade cabinet at a glance. */
+/* Center original art within the 36x34 cabinet icon wells. Doubled
+ * pixel density uses the same horizontal run blitter: no new image data
+ * buffers, texture allocation, or decompression cost. */
 static void cabinet_thumb(int id,int x,int y){
  switch(id){
- case 0:sprite(x,y,1,spr_bottle,18);break;
- case 1:sprite(x-1,y+2,1,spr_diaper,11);break;
- case 2:case 12:sprite(x+1,y+2,1,spr_receipt,13);break;
- case 3:sprite(x,y+2,1,spr_kart,11);break;
- case 4:case 7:sprite(x,y,1,spr_rattle,17);break;
- case 5:sprite(x+1,y+2,1,spr_sock,13);break;
- case 6:case 8:sprite(x-2,y,1,spr_baby,18);break;
- case 9:case 15:sprite(x,y+1,1,spr_stroller,13);break;
- case 10:sprite(x,y+2,1,spr_cereal,11);break;
- case 11:sprite(x,y+4,1,spr_stack,9);break;
- case 13:sprite(x,y+2,1,spr_flower,13);break;
- case 14:sprite(x,y+2,1,spr_gavel,12);break;
- default:break;
+ case 0:sprite(x+2,y-1,2,spr_bottle,18);break;
+ case 1:sprite(x,y+6,2,spr_diaper,11);break;
+ case 2:sprite(x+4,y+4,2,spr_receipt,13);break;
+ case 3:sprite(x+4,y+6,2,spr_kart,11);break;
+ case 4:sprite(x+2,y+1,2,spr_mic,16);break;
+ case 5:sprite(x+4,y+4,2,spr_sock,13);break;
+ case 6:sprite(x+2,y+1,2,spr_pillow,16);break;
+ case 7:sprite(x+2,y,2,spr_rattle,17);break;
+ case 8:sprite(x+2,y+1,2,spr_badge,16);break;
+ case 9:sprite(x,y+4,2,spr_stroller,13);break;
+ case 10:sprite(x+2,y+6,2,spr_cereal,11);break;
+ case 11:sprite(x+4,y+8,2,spr_stack,9);break;
+ case 12:sprite(x+2,y+1,2,spr_audit,16);break;
+ case 13:sprite(x+4,y+4,2,spr_flower,13);break;
+ case 14:sprite(x+4,y+5,2,spr_gavel,12);break;
+ case 15:sprite(x+2,y+1,2,spr_ceo,16);break;
  }
 }
 /* Four generous, readable cabinets per page. The selected index is the
@@ -593,11 +707,12 @@ static void arcade_list(const Game *s,int selection){
   panel(x,y,115,44,fill,edge);
   if(id==selection)solid(x+3,y+3,109,3,ROSE);
   capsule(x+6,y+5,36,34,id==selection?PINK:opened?MINT:SILVER,edge);
-  cabinet_thumb(id,x+14,y+8);
+  cabinet_thumb(id,x+6,y+5);
+  /* The game name is now double-size and selectable at a glance. */
+  label(x+49,y+8,nick[id],INK,2,5);
+  fit(x+49,y+28,opened?"READY":"LOCKED",opened?TEAL:ROSE,10);
   snprintf(num,sizeof(num),"%02d",id+1);
-  fit(x+18,y+32,num,INK,2);
-  fit(x+47,y+10,nick[id],INK,10);
-  fit(x+47,y+26,opened?"READY":"LOCKED",opened?TEAL:ROSE,10);
+  fit(x+99,y+34,num,MUTED,2);
  }
  foot(PURPLE);
  fit(12,181,"A PLAY",WHITE,10);
@@ -655,8 +770,8 @@ static void bottle_challenge(const Arcade *a){
  fit(83,115,text,PURPLE,27);
  capsule(8,144,110,29,SKY,BLUE);
  capsule(138,144,110,29,LEMON,GOLD);
- label(29,153,"< LEFT",INK,1,11);
- label(163,153,"RIGHT >",INK,1,11);
+ label(33,151,"LEFT",INK,2,4);
+ label(160,151,"RIGHT",INK,2,5);
  foot(PURPLE);
  snprintf(text,sizeof(text),"SPILLS %u/3   %u SEC",a->mistakes,(a->timer+59)/60);
  fit(19,181,text,WHITE,36);
@@ -684,8 +799,8 @@ static void teether_challenge(const Arcade *a){
   solid(18+i*18,135,8,3,INK);
   solid(171+i*16,137,6,3,PURPLE);
  }
- fit(26,150,"KEEP",INK,9);
- fit(174,150,"SHRED",INK,9);
+ label(29,145,"KEEP",INK,2,4);
+ label(173,145,"SHRED",INK,2,5);
  sparkle(11,96,LEMON);sparkle(236,100,PINK);
  fit(10,77,a->target==3?"REFUND: SAVE IT!":"JUNK BILL: SHRED!",PURPLE,35);
  foot(PURPLE);
@@ -889,8 +1004,8 @@ static void crawl_challenge(const Arcade *a){
  }
  capsule(10,141,109,31,a->stage==0?LEMON:MINT,TEAL);
  capsule(137,141,109,31,a->stage==2?LEMON:PINK,DEEP_PINK);
- fit(26,153,"JUMP UP",INK,15);
- fit(154,153,"DUCK DOWN",INK,15);
+ label(41,149,"JUMP",INK,2,4);
+ label(168,149,"DUCK",INK,2,4);
  foot(PURPLE);
  fit(10,181,a->target==0?"JUMP OVER THE CRATE!":"DUCK UNDER THE SCANNER!",WHITE,40);
 }
@@ -987,8 +1102,8 @@ static void audit_challenge(const Arcade *a){
  solid(127,89,2,34,LILAC);
  capsule(11,137,109,35,LEMON,GOLD);
  capsule(136,137,109,35,PINK,DEEP_PINK);
- fit(25,152,"APPROVE",INK,12);
- fit(166,152,"FLAG",INK,9);
+ label(25,147,"APPROVE",INK,2,7);
+ label(161,147,"FLAG",INK,2,4);
  sparkle(12,92,LEMON);sparkle(241,110,PINK);
  foot(PURPLE);
  fit(10,181,"MATCHING TOTALS? APPROVE OR FLAG",WHITE,40);
@@ -1047,7 +1162,7 @@ static void court_challenge(const Arcade *a){
  fit(9,181,"TRACE 1 TO 2 TO 3   (L UP R)",WHITE,40);
 }
 static void ceo_challenge(const Arcade *a){
- static const char *const actions[3]={"INVEST","PLAY","NAP"};
+ static const char *const actions[3]={"BANK","PLAY","NAP"};
  char text[40];int i;
  arcade_wall(BLUSH);
  panel(6,31,244,41,WHITE,PURPLE);
@@ -1066,7 +1181,7 @@ static void ceo_challenge(const Arcade *a){
   int x=13+i*82;
   capsule(x,121,66,51,i==0?MINT:i==1?PINK:SKY,PURPLE);
   solid(x+24,130,18,15,i==0?GOLD:i==1?LEMON:WHITE);
-  fit(x+12,153,actions[i],INK,10);
+  label(x+12,149,actions[i],INK,2,4);
  }
  foot(PURPLE);
  fit(9,181,"BALANCE THE BOOKS AND BABY!",WHITE,40);

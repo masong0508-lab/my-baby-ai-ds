@@ -153,3 +153,18 @@ Reference pages: https://www.nintendo.com/en-gb/Games/Nintendo-DS/Cooking-Mama-2
 - Layout acceptance checks are in CI alongside the existing host tests, 3D vertex/polygon limits, DS build, BlocksDS packaging, and native stylus smoke test. No claims of physical DS/DraStic verification or quantified FPS gains.
 
 **Second scrapbook layout pass:** The eight keepsakes now occupy two large 2×2 pages, with legible numbered stamps, short titles, and explicit GOOD END / BAD END / NOT FOUND indicators. Both hardware L/R and touchscreen PREV/NEXT change pages, while B/Start/A or the footer returns to the nursery. The page index is temporary UI state and never alters the persistent save schema or the arcade's selected cabinet. Added native framebuffer and actual DeSmuME navigation assertions for the two scrapbook pages.
+
+## High-fidelity native DS graphics and arcade assets
+
+This pass is a **game-code and asset implementation**, not a concept redesign.
+The new art is original and embedded directly into existing DS ROM source.
+
+- **Character sprite:** Refined the shared 20×18 baby illustration with chestnut highlights, peach skin shading, softer cheeks and a two-tone mint romper. The title and result screens reuse this one canonical sprite.
+- **Sixteen distinct cabinet miniatures:** The four-card arcade pages now display much larger **2× nearest-neighbor artwork** in 36×34-pixel wells, including five entirely new 16×16 icon sprites: microphone (beatbox), pillow/moon (nap), ID badge (crawl), checked clipboard (audit), and crowned briefcase (CEO). Every cabinet has its own asset rather than recycling the same picture.
+- **Five shaded items:** Bottle, rattle, diaper, sock, and cereal are given new glass/fabric/gold tonal shading using the existing static indexed-sprite format. The expanded material palette is 5-bit-per-channel DS BGR15, with no intermediate RGB888 framebuffer or conversion heap.
+- **Interface typography:** All sixteen arcade cards receive genuinely readable 2× short wordmarks. Full game names remain available above the selected card. Bottle, teether, corporate crawl, audit, and CEO actions also gain larger 2× button labels, while touch geometry and gameplay mappings remain identical.
+- **3D nursery:** The window now has layered cloud and distant-greenery quads **behind** its mullions instead of a featureless blue pane. The baby receives a subtly connected foot contact shadow, knitted shoe marks, a tiny stitched romper patch and a swept hair tuft; the title portrait mirrors that tuft.
+- **Budget discipline:** No texture loader, extra static image file, framebuffer, heap allocation, new save data, or new game state; DS bottom display remains 256×192. Lightweight 1–6-quad scene details replace the need for high-triangle scenery. Existing world/title polygon/vertex limits, DS ROM tests and virtual-stylus fallback remain mandatory.
+- **Regression coverage:** Host tests now independently hash the 36×34 **art region** of all 16 selected cabinets to ensure each has truly distinct visible artwork, verify the baby has a multitone rendered palette and assert no writes outside the DS visible surface. Real DeSmuME screenshots must contain a shaded selected-cabinet image and enough actual 2× title-ink pixels.
+
+No measured FPS claim or physical DS/DraStic compatibility claim is made until tested on those devices. Care, arcade, data persistence, and the 16 mini-game mechanics are deliberately unchanged.

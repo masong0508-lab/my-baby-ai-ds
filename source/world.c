@@ -235,12 +235,20 @@ static void room(void){
  block(.04,-1.145,.78,2.62,.045,2.18,25,29,11);
  for(i=0;i<4;i++)flat_floor(-.89f+i*.56f,-1.112f,1.78f,.13f,.035f,18,25,9);
  /* Big stylized flowers, a defining motif of the 2000s reference. */
+ /* Native 1-quad contact shadow grounds the baby's shoes on the rug. */
+ flat_floor(-.10f,-1.105f,.34f,.96f,.32f,17,22,12);
  rug_flower(-.92f,1.32f);
  rug_flower(.92f,1.48f);
  rug_flower(-.33f,1.77f);
  /* Glazed nursery window, mullions, curtains and cornice. */
  block(-1.76,1.15,-3.06,1.95,1.76,.07,29,28,25);
  block(-1.76,1.15,-3.01,1.65,1.51,.04,16,24,29);
+ /* Five sky-hill/cloud quads live between the glass and the mullions. */
+ wall_sticker(-1.76f,.67f,-2.978f,1.52f,.42f,17,25,19);
+ wall_sticker(-1.20f,.85f,-2.977f,.60f,.18f,20,28,22);
+ wall_sticker(-2.20f,1.56f,-2.978f,.46f,.11f,30,31,30);
+ wall_sticker(-2.32f,1.61f,-2.976f,.24f,.10f,31,31,30);
+ wall_sticker(-1.41f,1.75f,-2.976f,.39f,.08f,29,31,31);
  wall_sticker(-1.76,1.15,-2.97,.10,1.57,28,27,24);
  wall_sticker(-1.76,1.15,-2.965,1.71,.10,28,27,24);
  block(-2.63,1.12,-2.81,.27,1.84,.15,25,12,18);
@@ -352,11 +360,17 @@ static void baby_model(const Game *s,uint32_t frame,int action){
  ellipse(.32f,-.93f,.14f,.245f,.22f,.27f,18,25,27);
  ellipse(-.365f,-1.08f,.36f,.235f,.13f,.24f,30,28,23);
  ellipse(.365f,-1.08f,.36f,.235f,.13f,.24f,30,28,23);
+ soft_mark(-.365f,-1.07f,.599f,.10f,.017f,21,27,24);
+ soft_mark(.365f,-1.07f,.599f,.10f,.017f,21,27,24);
  /* Curved mint romper and cream collar meet behind the head. */
  soft_head(0,-.32f,-.08f,.49f,.46f,.36f,19,27,27);
  ellipse(0,.09f,.0f,.22f,.10f,.205f,31,26,21);
- ellipse(0,-.39f,.284f,.245f,.25f,.035f,29,30,26);
- soft_mark(0,-.31f,.329f,.11f,.048f,glitch?25:30,glitch?17:18,21);
+ ellipse(0,-.39f,.284f,.235f,.225f,.035f,29,30,26);
+ /* Four inexpensive stitched glints on the romper's central pocket. */
+ soft_mark(0,-.30f,.330f,.10f,.044f,glitch?24:27,glitch?17:23,10);
+ soft_mark(-.075f,-.34f,.331f,.055f,.026f,30,25,14);
+ soft_mark(.072f,-.34f,.331f,.052f,.026f,30,25,14);
+ soft_mark(0,-.38f,.332f,.044f,.027f,30,25,14);
  /* Sleeves overlap the torso and the skin overlaps each sleeve; hands
   * always remain attached while the animation cycles. */
  tilted_ellipse(-.45f,-.21f,-.025f,.205f,.22f,.195f,-20,19,26,27);
@@ -373,6 +387,7 @@ static void baby_model(const Game *s,uint32_t frame,int action){
  hair_cap(0,.54f,.035f,.625f,.63f,.465f,16,11,8);
  hair_fringe(-.19f,.948f,.44f,.29f,.105f,.045f);
  hair_fringe(.16f,.959f,.438f,.28f,.095f,-.04f);
+ hair_fringe(-.015f,1.008f,.436f,.16f,.077f,-.025f);
  ellipse(-.39f,1.018f,.365f,.075f,.069f,.029f,29,14,20);
  /* Sclera and pupils lie just above the curved facial surface, not
   * stacked .10 units out in space. Each shallow eye has a tiny highlight. */
@@ -455,6 +470,7 @@ void world_draw_title(uint32_t frame){
  hair_cap(0,.045f,-.175f,.76f,.77f,.55f,16,11,8);
  hair_fringe(-.25f,.54f,.30f,.30f,.09f,.025f);
  hair_fringe(.17f,.54f,.29f,.28f,.09f,-.03f);
+ hair_fringe(-.015f,.59f,.305f,.16f,.074f,-.027f);
  ellipse(-.225f,.057f,.335f,.106f,.10f,.020f,30,29,27);
  ellipse(.225f,.057f,.335f,.106f,.10f,.020f,30,29,27);
  ellipse(-.215f,.049f,.354f,.054f,.062f,.015f,5,7,11);
