@@ -258,6 +258,15 @@ static void room(void){
  nursery_light_planes();
  block(0,-1.15,-3.12,6.9,.16,.12,24,22,19);
  block(-3.32,-1.15,0,.12,.16,6.9,24,22,19);
+ /* Handmade framed nursery moon painting on the LEFT interior wall.
+  * It breaks up the otherwise empty 6,000px sage wall in window/lamp
+  * camera angles. Five BROAD quads—no hairline strips, z-fighting, image
+  * assets or large arrays. Distinct x depths avoid coplanar artifacts. */
+ side_wall_mark(-3.290f,1.54f,.81f,1.18f,.85f,18,15,20);
+ side_wall_mark(-3.268f,1.54f,.81f,1.01f,.69f,11,18,26);
+ side_wall_mark(-3.247f,1.61f,.69f,.30f,.30f,30,26,14);
+ side_wall_mark(-3.226f,1.68f,.61f,.21f,.22f,11,18,26);
+ side_wall_mark(-3.246f,1.39f,1.13f,.15f,.16f,28,29,18);
  /* The old .035/.045 tall wainscot strips projected into unstable
   * one-pixel rulers over the dresser at 256x192. Clean broad painted
   * plaster replaces them: no more floating horizontal lines. */
@@ -653,10 +662,13 @@ void world_init(void){
 static EggCamera nursery_preset(int focus){
  static const EggCamera preset[5]={
   {.97f,1.05f,3.43f,-.12f,.035f,.17f},  /* baby / default */
-  {.75f,1.22f,3.38f,-1.55f,.95f,-1.95f},/* window / moon */
-  {.66f,1.01f,3.23f,-2.24f,.38f,-.28f},/* lamp / dresser */
-  {.84f,.74f,3.27f,-.88f,-.48f,.33f},  /* teddy / playmat */
-  {1.44f,1.21f,3.18f,1.57f,-.15f,-1.14f} /* crib */
+  /* Keep the doll and the selected prop in a readable two-subject shot,
+   * rather than turning so far left that the bare green wall fills
+   * half of the already tiny 256x192 DS picture. */
+  {.97f,1.06f,3.43f,-.87f,.88f,-1.83f},/* window + baby */
+  {.96f,1.03f,3.37f,-1.36f,.37f,-.39f},/* lamp + dresser */
+  {.98f,.84f,3.37f,-.65f,-.43f,.39f},  /* teddy + baby */
+  {1.29f,1.12f,3.34f,1.21f,-.15f,-.99f} /* crib + baby */
  };
  return preset[focus>=0&&focus<4?focus+1:0];
 }
@@ -696,7 +708,12 @@ void world_draw_nursery(const Game *s,uint32_t frame,int activity,
  frame_vertices=0;frame_polygons=0;
  tour_daylight=daylight!=0;
  tour_lamp_on=lamp!=0;
- nursery_ambient=tour_lamp_on?0:-2;
+ /* The window is a meaningful daylight source: daylight now gently
+  * illuminates furniture and walls rather than changing only blue glass.
+  * Pitch-black sleep conditions remain distinctly dim, without tinting
+  * the baby or permanently altering care/egg scenes. */
+ nursery_ambient=tour_daylight?(tour_lamp_on?2:1):
+                 (tour_lamp_on?0:-3);
  room();
  /* Reset visual state BEFORE drawing baby: the lamp affects room surfaces,
   * but must not tint the actual baby or leak into Toybox / egg replay. */
