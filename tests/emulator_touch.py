@@ -273,7 +273,18 @@ def test_actual_game(path: Path, output: Path) -> dict:
     frames(emu, 8)
     stylus_tap(emu, 176, 91)  # select Diaper Dash, large second card
     stylus_tap(emu, 176, 91)  # enter selected cabinet
+    frames(emu, 12)  # capture a settled frame, not an intermediate VRAM write
     diaper = picture(emu, output, "game_diaper_start")
+    # The first frame used to photograph a blank panel while UI drew into
+    # VRAM. Enforce the presence of the actual 2x "DIAPER DASH" heading.
+    title_crop = diaper.crop((14, 192 + 35, 162, 192 + 51))
+    dark_ink = sum(
+        1 for r, g, b in title_crop.get_flattened_data()
+        if r < 185 and g < 160
+    )
+    assert dark_ink > 45, (
+        f"Diaper game heading was missing/partially cleared ({dark_ink} pixels)"
+    )
     diaper_changed = difference(
         arcade, diaper, (0, 192 + 30, 256, 192 + 175)
     )
@@ -329,6 +340,7 @@ def test_actual_game(path: Path, output: Path) -> dict:
         "album_screen_changed_pixels": album_diff,
         "arcade_next_page_changed_pixels": page_changed,
         "arcade_previous_page_changed_pixels": page_returned,
+        "diaper_heading_ink_pixels": dark_ink,
         "title_to_diagnostic_changed_pixels": new_screen,
         "KEY_TOUCH_status_changed_pixels": status,
         "coordinates_on_press_changed_pixels": xy1,
