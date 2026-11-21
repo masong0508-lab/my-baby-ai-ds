@@ -506,9 +506,9 @@ def test_actual_game(path: Path, output: Path) -> dict:
     egg_push = picture(emu, output, "game_egg_slow_push")
     assert movie_stage(egg_push) == 2, "Approach shot advanced too soon"
 
-    # Archive the late buildup while the camera is still inside the egg.
-    # Native screenshot review checks the iris reveal and pre-scare shadow,
-    # without mistaking changing perspective for a lighting regression.
+    # Archive a later buildup frame while the lens remains inside the egg.
+    # Give the eye glow enough film ticks to change before taking it.
+    frames(emu, 30)
     egg_anticipation = picture(emu, output, "game_egg_anticipation_close")
     assert movie_stage(egg_anticipation) == 2, (
         "Eye-anticipation frame exited the egg camera sequence"
