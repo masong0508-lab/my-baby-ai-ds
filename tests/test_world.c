@@ -409,6 +409,20 @@ int main(void){
   assert(a.z>b.z && b.z>c.z && c.z>d.z);
   assert(b.z-c.z<.05f); /* no teleport at push transition */
   assert(d.z>1.35f && d.z<1.45f);
+  /* Two-track camera eases settle at the PUSH transition without
+   * changing the actual nursery geometry or losing camera continuity. */
+  {
+   unsigned f;
+   float prior=a.z;
+   for(f=EGG_CRACK_FRAME+1u;f<EGG_SCARE_FRAME;f++){
+    EggCamera next=world_secret_camera(f);
+    float step=prior-next.z;
+    assert(step>=0.f&&step<.035f);
+    if(f==EGG_PUSH_FRAME||f==EGG_PUSH_FRAME+1u)
+     assert(step<.005f);
+    prior=next.z;
+   }
+  }
   assert(e.z>2.5f); /* single intentional jump-scare cut */
   assert(e.look_y<-.09f&&e.look_y>-.15f); /* jaw visible, not cropped */
  }
@@ -453,6 +467,34 @@ int main(void){
   assert(world_egg_embryo_approach(0u)==0.f);
   assert(world_egg_embryo_approach(EGG_PUSH_FRAME)==0.f);
   assert(world_egg_embryo_approach(EGG_TOTAL_FRAMES)>.044f);
+ }
+ /* Active embryo, attached sac and a *single* smooth final withdrawal.
+  * These deterministic samples should never overflow or leave the egg. */
+ {
+  unsigned tick;
+  float last=0.f;
+  assert(world_egg_membrane_pulse(0u)==0.f);
+  assert(world_egg_membrane_pulse(EGG_SCARE_FRAME)==0.f);
+  assert(world_egg_membrane_pulse(EGG_CRACK_FRAME)==0.f);
+  assert(world_egg_membrane_pulse(EGG_CRACK_FRAME+32u)>.027f);
+  assert(world_egg_embryo_retreat(EGG_SCARE_FRAME-18u)==0.f);
+  assert(world_egg_embryo_retreat(EGG_SCARE_FRAME-1u)>.078f);
+  assert(world_egg_embryo_retreat(EGG_SCARE_FRAME)==0.f);
+  for(tick=EGG_CRACK_FRAME;tick<EGG_SCARE_FRAME;tick++){
+   float pulse=world_egg_membrane_pulse(tick);
+   assert(pulse>=0.f&&pulse<=.029f);
+   if(tick>=EGG_SCARE_FRAME-18u){
+    float retreat=world_egg_embryo_retreat(tick);
+    assert(retreat>=last&&retreat<=.080f);
+    assert(retreat-last<.007f);
+    last=retreat;
+   }else assert(world_egg_embryo_retreat(tick)==0.f);
+   /* All incremental visuals, including changing egg wings and lens
+    * movement, stay under the same real DS command budgets. */
+   world_draw_secret(&s,tick,&r);
+   assert(world_vertex_count()<=5000);
+   assert(world_polygon_count()<=1850);
+  }
  }
  /* Smooth physical shell split and restrained one-piece skull sway. */
  assert(world_egg_shell_open(EGG_PUSH_FRAME-1u)==0.f);

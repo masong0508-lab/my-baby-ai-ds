@@ -1042,11 +1042,19 @@ EggCamera world_secret_camera(uint32_t frame){
   c.look_x=0.f;c.look_y=-.11f;c.look_z=.40f;
   return c;
  }
- travel=(float)(frame-EGG_CRACK_FRAME)/
-        (float)(EGG_SCARE_FRAME-EGG_CRACK_FRAME);
- /* Hold the wide shot long enough to identify the original nursery;
-  * start a slow continuous lateral track through the shell opening. */
- settle=travel*travel*(3.f-2.f*travel);
+ /* Two deliberately framed camera beats: a first drift from the actual
+  * nursery into the shell, then a longer, slower invasive push after the
+  * creature wakes. Both segments arrive at rest at PUSH: no lens jerk,
+  * new camera, extra framebuffer or random timing on replay. */
+ if(frame<=EGG_PUSH_FRAME){
+  travel=(float)(frame-EGG_CRACK_FRAME)/
+         (float)(EGG_PUSH_FRAME-EGG_CRACK_FRAME);
+  settle=.30f*travel*travel*(3.f-2.f*travel);
+ }else{
+  travel=(float)(frame-EGG_PUSH_FRAME)/
+         (float)(EGG_SCARE_FRAME-EGG_PUSH_FRAME);
+  settle=.30f+.70f*travel*travel*(3.f-2.f*travel);
+ }
  c.x=.94f-.90f*settle;
  c.y=.93f-.83f*settle;
  c.z=3.46f-2.06f*settle;
@@ -1088,6 +1096,23 @@ float world_egg_embryo_breath(uint32_t frame){
  uint32_t phase=frame%64u;
  return (float)(phase<32u?phase:64u-phase)*.0005f;
 }
+/* A low-frequency cavity membrane motion. The dark sac remains part of
+ * the same fixed geometry; no independent floating object or particles. */
+float world_egg_membrane_pulse(uint32_t frame){
+ uint32_t phase;
+ if(frame<EGG_CRACK_FRAME||frame>=EGG_SCARE_FRAME)return 0.f;
+ phase=(frame-EGG_CRACK_FRAME)%64u;
+ return (float)(phase<=32u?phase:64u-phase)*(.028f/32.f);
+}
+/* The creature pulls back for the last eighteen film ticks. The camera
+ * continues forward and the green eyes dim once before the hard cut.
+ * This motion is smooth, bounded and only affects the whole embryo rig. */
+float world_egg_embryo_retreat(uint32_t frame){
+ float t;
+ if(frame<EGG_SCARE_FRAME-18u||frame>=EGG_SCARE_FRAME)return 0.f;
+ t=(float)(frame-(EGG_SCARE_FRAME-18u))/18.f;
+ return .080f*t*t*(3.f-2.f*t);
+}
 /* The eye glow is a deliberate story beat, not a full-screen flash.
  * Dim during fracture, brighten as the camera finds the cavity, then
  * recede for the final 20 frames before the single surprise cut. */
@@ -1127,11 +1152,14 @@ int world_egg_head_tilt(uint32_t frame){
  return (int)(beat<40u?beat/20u:(80u-beat)/20u)-1;
 }
 float world_egg_embryo_approach(uint32_t frame){
- uint32_t elapsed;
+ float t;
  if(frame<=EGG_PUSH_FRAME)return 0.f;
- elapsed=frame-EGG_PUSH_FRAME;
- if(elapsed>EGG_SCARE_FRAME-EGG_PUSH_FRAME)elapsed=EGG_SCARE_FRAME-EGG_PUSH_FRAME;
- return (float)elapsed*.00032f;
+ if(frame>=EGG_SCARE_FRAME)return .0448f;
+ t=(float)(frame-EGG_PUSH_FRAME)/
+   (float)(EGG_SCARE_FRAME-EGG_PUSH_FRAME);
+ /* Ease both ends instead of snapping from a stationary creature into
+  * an immediately moving one, or abruptly halting mid-breath. */
+ return .0448f*t*t*(3.f-2.f*t);
 }
 /* Stage the fracture as a readable close-to-frontal nursery portrait.
  * A sixth hit might have flung the ragdoll behind the camera or turned its
@@ -1190,7 +1218,8 @@ void world_draw_secret(const Game *s,uint32_t frame,const Roughhouse *r){
   /* The dark backing is a SINGLE continuous incubation sac, not pale
    * geometry blocking the center of the egg. */
   soft_head(0,-.14f,-.015f,.79f,.91f,.42f,12,18,18);
-  soft_head(0,-.15f,.32f,.50f,.76f,.16f,9,24,13);
+  soft_head(0,-.15f,.32f,.50f+world_egg_membrane_pulse(frame),
+            .76f,.16f,9,24,13);
   soft_head(0,-.13f,.42f,.42f,.67f,.20f,1,3,7);
   /* A subtle moving silhouette inside makes the chamber feel inhabited. */
   {
@@ -1198,7 +1227,8 @@ void world_draw_secret(const Game *s,uint32_t frame,const Roughhouse *r){
    int glow=world_egg_eye_glow(frame);
    glPushMatrix();
    glTranslatef(0.f,world_egg_embryo_breath(frame),
-                world_egg_embryo_approach(frame));
+                world_egg_embryo_approach(frame)-
+                world_egg_embryo_retreat(frame));
    soft_head(sway,-.17f,.54f,.23f,.42f,.10f,5,11,12);
    /* Dim eyes awaken gradually as the camera drifts toward the recess.
     * Both irises remain parented to the creature, not floating in room
@@ -1309,16 +1339,23 @@ void world_draw_secret(const Game *s,uint32_t frame,const Roughhouse *r){
    * silhouette like the target art, without multiplying face meshes. */
   soft_mark(-.67f,.07f,.790f,.10f,.15f,7,21,16);
   soft_mark(.67f,.07f,.790f,.10f,.15f,7,21,16);
-  soft_mark(0,.615f,.787f,.22f,.035f,11,27,12);
+  /* Removed the obsolete bright center forehead strip: real DeSmuME
+   * measured a 28-pixel fluorescent ruler at y=8 with exact RGB15
+   * (11,27,12). The broad brow masses and two compact reveal glints
+   * already establish the intended skull shape without this artifact. */
   /* Sickly reflective slime follows the facial contour rather than
    * obscuring pupils and teeth with arbitrary green rectangles. */
   soft_mark(-.77f,-.40f,.764f,.068f,.39f,8,29,11);
   soft_mark(.77f,-.30f,.765f,.061f,.31f,9,28,10);
   soft_mark(-.67f,-.64f,.793f,.19f,.062f,10,31,11);
   soft_mark(.67f,-.56f,.793f,.16f,.054f,11,31,12);
-  /* A single reveal glint, never an eye-burning strobe loop. */
-  if(frame<EGG_SCARE_FRAME+4u)
-   soft_mark(0,.78f,.840f,.65f,.033f,30,31,26);
+  /* Two short highlights follow the curved brow instead of the old
+   * 0.65-unit-wide, subpixel-thin horizontal light ruler. One brief
+   * glint on the reveal, never a repeated full-screen flash. */
+  if(frame<EGG_SCARE_FRAME+4u){
+   soft_mark(-.26f,.735f,.845f,.14f,.065f,28,31,24);
+   soft_mark(.23f,.722f,.845f,.12f,.065f,25,29,22);
+  }
   glPopMatrix(1);
  }
  glFlush(0);

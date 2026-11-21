@@ -670,11 +670,18 @@ def test_actual_game(path: Path, output: Path) -> dict:
         f"({recognizable_features} dark facial/hair pixels)"
     )
 
+    last_approach = None
     def seek_phase(target: int, name: str):
+        nonlocal last_approach
         for _ in range(100):
             frames(emu, 12)
             sample = emu.screenshot().convert("RGB")
             current = movie_stage(sample)
+            if target == 3 and current == 2:
+                # Keep the LAST real pre-scare DS frame. Screenshot at the
+                # normal cadence, rather than estimating film time from
+                # wall-clock FPS or synthesizing a mockup.
+                last_approach = sample
             if current == target:
                 return picture(emu, output, name)
             if current > target:
@@ -729,6 +736,17 @@ def test_actual_game(path: Path, output: Path) -> dict:
         "Eye-anticipation frame exited the egg camera sequence"
     )
     egg_scare = seek_phase(3, "game_egg_jump_scare")
+    assert last_approach is not None, (
+        "Did not observe a late in-egg anticipation frame before scare"
+    )
+    assert movie_stage(last_approach) == 2
+    last_approach.save(output / "game_egg_final_recoil_before_cut.png")
+    recoil_changed = difference(
+        egg_anticipation, last_approach, (55, 18, 200, 172)
+    )
+    assert recoil_changed > 30, (
+        f"Final egg approach/recoil appears visually frozen ({recoil_changed})"
+    )
     scare_difference = difference(
         egg_push, egg_scare, (8, 7, 248, 182)
     )
@@ -737,6 +755,24 @@ def test_actual_game(path: Path, output: Path) -> dict:
     )
     assert movie_stage(egg_scare) == 3, (
         "The jump-scare image was captured in the wrong cinematic phase"
+    )
+    # The old eyebrow glint produced a 28-pixel fluorescent ruler at
+    # the forehead of the REAL 256x192 DeSmuME image. New highlights are
+    # short, broad and spatially separated; protect that improvement.
+    brightest_streak = 0
+    for yy in range(0, 30):
+        continuous = 0
+        for xx in range(75, 177):
+            red, green, blue = egg_scare.getpixel((xx, yy))
+            if green > 150 and green > red + 65 and green > blue + 50:
+                continuous += 1
+                if continuous > brightest_streak:
+                    brightest_streak = continuous
+            else:
+                continuous = 0
+    assert brightest_streak < 24, (
+        f"Alien forehead has a straight fluorescent streak "
+        f"({brightest_streak}px) instead of short brow highlights"
     )
     # Regress against the old isolated polygon head: retain two PALE
     # porcelain halves beside the alien when the final scare camera cuts.
@@ -895,6 +931,8 @@ def test_actual_game(path: Path, output: Path) -> dict:
         "Egg_dark_cavity_pixels": cavity_dark_pixels,
         "Egg_visible_porcelain_pixels": ivory_shell_pixels,
         "Alien_jump_scare_changed_pixels": scare_difference,
+        "Alien_earliest_reveal_brow_streak_pixels": brightest_streak,
+        "Egg_pre_scare_motion_changed_pixels": recoil_changed,
         "Jump_scare_porcelain_left_pixels": scare_shell_left,
         "Jump_scare_porcelain_right_pixels": scare_shell_right,
         "Jump_scare_right_eye_pixels": right_iris_pixels,
