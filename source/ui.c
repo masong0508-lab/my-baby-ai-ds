@@ -1357,6 +1357,9 @@ static void garden_challenge(const Arcade *a){
 static int court_node_x(int node){return node==0?46:node==1?128:210;}
 static int court_node_y(int node){return node==1?92:134;}
 static void court_challenge(const Arcade *a){
+ /* Three clue labels are constant: avoid warning-prone formatting
+  * and per-frame string allocations/formatting work on the DS. */
+ static const char *const clue_numbers[3]={"1","2","3"};
  char text[40];int i,j;
  arcade_wall(LEMON);
  panel(6,31,244,42,WHITE,GOLD);
@@ -1375,10 +1378,8 @@ static void court_challenge(const Arcade *a){
  }
  for(i=0;i<3;i++){
   int x=court_node_x(a->notes[i]),y=court_node_y(a->notes[i]);
-  char num[3];
   capsule(x-19,y-18,38,37,i<a->stage?MINT:PINK,DEEP_PINK);
-  snprintf(num,sizeof(num),"%d",i+1);
-  fit(x-2,y-3,num,INK,1);
+  fit(x-2,y-3,clue_numbers[i],INK,1);
  }
  sprite(14,82,2,spr_gavel,12);
  foot(PURPLE);
