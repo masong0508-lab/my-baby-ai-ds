@@ -493,7 +493,7 @@ int main(void){
      }else{
       care(NAP);
       if(game_room_quiet_rest(&baby,room_daylight,room_lamp)){
-       message="QUIET NIGHT: BONUS +8 REST, LESS CHAOS.";
+       message="QUIET NIGHT: +8 ENERGY, -4 CHAOS.";
        persist(); /* persist BOTH care and conditional quiet benefit */
       }else message="CRIB NAP: BOARD APPROVED.";
      }
