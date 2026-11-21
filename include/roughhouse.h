@@ -9,11 +9,13 @@
 #define ROUGHHOUSE_KICK 2
 /* Each scene tick may take two VBlanks on older DS/DeSmuME, so design
  * anticipation by ACTUAL running-ROM timing, not just 60 Hz arithmetic. */
-#define EGG_CRACK_FRAME 45u
-#define EGG_PUSH_FRAME 95u
-#define EGG_SCARE_FRAME 170u
-#define EGG_HOLD_FRAME 187u
-#define EGG_TOTAL_FRAMES 234u
+/* Runtime-paced, non-strobing 4-act scene: fracture, pause, inward push,
+ * abrupt single reveal, then collectible memory postcard. */
+#define EGG_CRACK_FRAME 72u
+#define EGG_PUSH_FRAME 158u
+#define EGG_SCARE_FRAME 298u
+#define EGG_HOLD_FRAME 322u
+#define EGG_TOTAL_FRAMES 375u
 typedef struct {
  int32_t x,y,z,vx,vy,vz;
  int16_t roll,pitch,yaw,vr,vp,vyaw;
