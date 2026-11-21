@@ -43,6 +43,12 @@ int game_room_quiet_rest(Game *s,int daylight,int lamp_on){
  if(!s||daylight||lamp_on)return 0;
  s->energy=clamp(s->energy+8);
  s->chaos=clamp((int)s->chaos-4);
+ /* A deliberately quiet night can gradually settle acquired glitches.
+  * Without any repeatable recovery, CHAT and arcade mistakes push
+  * corruption upward permanently over a long-lived save. This is
+  * bounded, requires a real moonlit/lamp-off crib interaction and does
+  * not erase an ending record or a player's discovered memories. */
+ s->corruption=clamp((int)s->corruption-2);
  return 1;
 }
 int game_unlocked(const Game *s,int id){return id>=0&&id<MBAI_GAMES&&!!(s->unlocked&(1u<<id));}
@@ -113,7 +119,18 @@ int game_end_day(Game *s){
    s->corruption=clamp(s->corruption-8);
   }
  }
- s->days++;
+ /* The next day brings ordinary bodily needs even if the player only
+  * presses END DAY. This turns the days counter into an actual life cycle,
+  * rather than an exploit to skip to late endings without ever caring.
+  * Post-ending recovery/rewards happen FIRST; attrition applies to every
+  * newly started day, including one following a bad ending. */
+ s->hunger=clamp((int)s->hunger+8);
+ s->energy=clamp((int)s->energy-6);
+ s->mood=clamp((int)s->mood-2);
+ s->chaos=clamp((int)s->chaos+2);
+ /* A pathological multi-billion-day save must never wrap to day zero:
+  * zero is rejected by the same existing save integrity checker. */
+ if(s->days<UINT32_MAX)s->days++;
  return e;
 }
 int game_secret_egg(Game *s){
