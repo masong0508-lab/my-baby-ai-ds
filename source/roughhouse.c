@@ -18,6 +18,12 @@ static int32_t clamp32(int32_t x,int32_t lo,int32_t hi){
  return x<lo?lo:x>hi?hi:x;
 }
 void roughhouse_init(Roughhouse *r){if(r)memset(r,0,sizeof(*r));}
+uint32_t roughhouse_egg_next_act(uint32_t frame){
+ if(frame<EGG_CRACK_FRAME)return EGG_CRACK_FRAME;
+ if(frame<EGG_PUSH_FRAME)return EGG_PUSH_FRAME;
+ if(frame<EGG_SCARE_FRAME)return EGG_SCARE_FRAME;
+ return EGG_TOTAL_FRAMES;
+}
 int roughhouse_cracked(const Roughhouse *r){
  return r&&r->hits>=ROUGHHOUSE_MIN_HITS&&r->charge>=ROUGHHOUSE_CRACK_CHARGE;
 }
