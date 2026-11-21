@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "ui.h"
+#include "roughhouse.h"
 #define W 256
 #define H 192
 #define RGB(r,g,b) ((uint16_t)(0x8000u | (r) | ((g)<<5) | ((b)<<10)))
@@ -1523,11 +1524,13 @@ void ui_draw(const Game *s,const Arcade *a,int view,int selection,
  else if(view==4)screen_accent=game_is_good_ending(ending)?MINT:ROSE;
  else if(view==5)screen_accent=PINK;
  else if(view==6)screen_accent=SKY;
+ else if(view==8||view==9)screen_accent=ROSE;
  else screen_accent=TEAL;
  if(view==2&&a)screen_title="MINIGAME";
  else screen_title=view==0?"CARE":view==1?"ARCADE":
          view==3?"RESET":view==4?"ENDING":view==5?"WELCOME":
-         view==6?"ALBUM":"TOUCH TEST";
+         view==6?"ALBUM":view==7?"TOUCH TEST":
+         view==8?"PRANK LAB":"INCUBATOR";
  /* Every screen paints its own content band (y=27..175), and header/foot
   * repaint the other two bands. The previous blanket 256x192 clear was
   * 49,152 redundant 16-bit VRAM writes on every animation refresh. */
@@ -1559,7 +1562,21 @@ void ui_draw(const Game *s,const Arcade *a,int view,int selection,
  case 5:title_screen(s,can_save,message);break;
  case 6:ending_album(s,selection);break;
  case 7:touch_diagnostic();break;
+ case 8:roughhouse_screen(selection);break;
+ case 9:egg_scene_screen(selection);break;
  }
+}
+int ui_prank_entry_touch(int x,int y){
+ return x>=184&&x<243&&y>=36&&y<60;
+}
+int ui_roughhouse_touch(int x,int y){
+ if(x<0||x>=256||y<0||y>=192)return 0;
+ if(y>=176)return 3;
+ if(y>=146&&y<174){
+  if(x>=9&&x<124)return ROUGHHOUSE_SLAP;
+  if(x>=132&&x<247)return ROUGHHOUSE_KICK;
+ }
+ return 0;
 }
 int ui_nursery_touch(int x,int y){
  if(x<7||x>=249)return -1;
