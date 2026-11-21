@@ -11,6 +11,25 @@ static void verify_coverage(void){
  for(i=0;i<256u*192u;i++)assert(screen[i]&0x8000u);
  for(i=256u*192u;i<256u*256u;i++)assert(screen[i]==0x5a5au);
 }
+/* Current win/Favor balance must be visible above the paid unlock goal. */
+static uint32_t arcade_progress_fingerprint(void){
+ uint32_t hash=2166136261u;
+ int x,y;
+ for(y=33;y<43;y++)for(x=70;x<188;x++){
+  hash^=screen[y*256+x];hash*=16777619u;
+ }
+ return hash;
+}
+/* Isolate the arcade requirement strip, not the nearby cabinet icons.
+ * This catches regressions where the math exists but isn't visible. */
+static uint32_t arcade_goal_fingerprint(void){
+ uint32_t hash=2166136261u;
+ int x,y;
+ for(y=44;y<55;y++)for(x=70;x<188;x++){
+  hash^=screen[y*256+x];hash*=16777619u;
+ }
+ return hash;
+}
 static uint32_t fingerprint(void){
  uint32_t h=2166136261u;
  unsigned i;
@@ -59,6 +78,33 @@ int main(void){
   g.hunger=80;
   ui_draw(&g,&a,0,0,0,0,1,"TELL HR I'M TEETHING.");
   verify_coverage();
+ }
+ /* Selected locked cabinets display exact win/cash/Favor requirements
+  * on the EXISTING 256x192 page, in the free strip between arrows.
+  * Unlocking replaces the prompt with a clear PLAY-ready indicator. */
+ {
+  uint32_t locked,ready;
+  unsigned wins,cash,favors;
+  assert(game_unlock_requirements(8,&wins,&cash,&favors));
+  assert(wins==2u&&cash==10u&&favors==1u);
+  assert(game_unlock_requirements(15,&wins,&cash,&favors));
+  assert(wins==16u&&cash==24u&&favors==4u);
+  ui_draw(&g,&a,1,8,0,0,1,"ARCADE");
+  verify_coverage();locked=arcade_goal_fingerprint();
+  g.unlocked|=(uint16_t)(1u<<8);
+  ui_draw(&g,&a,1,8,0,0,1,"ARCADE");
+  verify_coverage();ready=arcade_goal_fingerprint();
+  assert(locked!=ready);
+  /* Readable current WINS and FAVORS should change as the player earns
+   * rewards, without buying anything or changing the selected cabinet. */
+  g.unlocked=255u;
+  ui_draw(&g,&a,1,8,0,0,1,"ARCADE");
+  verify_coverage();locked=arcade_progress_fingerprint();
+  g.wins+=6u;g.favors+=3u;
+  ui_draw(&g,&a,1,8,0,0,1,"ARCADE");
+  verify_coverage();ready=arcade_progress_fingerprint();
+  assert(locked!=ready);
+  g.wins-=6u;g.favors-=3u;
  }
  assert(ui_nursery_touch(25,131)==FEED);
  assert(ui_nursery_touch(175,131)==CHAT);

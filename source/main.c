@@ -65,7 +65,7 @@ static void end_day(void){
 static void begin_game(void){
  game_arcade_start(&baby,&arc,selected);
  if(arc.active){view=2;message=arc.id==0?"STEADY THE BOTTLE.":arc.id==1?"CHANGE THAT DIAPER!":arc.id==2?"SORT BABY'S TAX BILLS!":arc.id==3?"DODGE CRIB KART CONES!":arc.id==4?"MEMORIZE THE BEAT!":arc.id==5?"MATCH THE BABY SOCKS!":arc.id==6?"TIME THE QUIET LULLABY!":arc.id==7?"CATCH SIX RATTLES!":arc.id==8?"JUMP OR DUCK AT WORK!":arc.id==9?"DRIFT THE STROLLER!":arc.id==10?"SOLVE CEREAL MATH!":arc.id==11?"STACK THOSE BLOCKS!":arc.id==12?"CHECK THE AUDIT NUMBERS!":arc.id==13?"WATER THE RIGHT FLOWER!":arc.id==14?"TRACE THE EVIDENCE!":arc.id==15?"BALANCE THE DAYCARE!":"SIX ROUNDS. THREE STRIKES.";}
- else message="LOCKED CABINET.";
+ else message="LOCKED: CHECK GOALS ABOVE.";
 }
 /* Scene-specific bitmap refresh. Interactive screens retain fluid redraws;
   * still screens repaint only when state changes or the clock ticks, avoiding
@@ -198,7 +198,8 @@ int main(void){
    else if(down&KEY_B){view=0;message="BACK TO THE NURSERY.";dirty=1;}
    else if(down&KEY_X){
     if(game_unlock(&baby,selected)){message="CABINET BOUGHT!";persist();}
-    else message="EARN MORE WINS OR CURRENCY.";
+    else message=game_unlocked(&baby,selected)?
+       "ALREADY OPEN: PRESS A.":"CHECK WINS, $ AND FAVORS.";
     dirty=1;
    }else if(down&KEY_A){begin_game();dirty=1;}
    else if(tap){
@@ -206,7 +207,8 @@ int main(void){
     if(nav==1){begin_game();dirty=1;}
     else if(nav==2){
      if(game_unlock(&baby,selected)){message="CABINET BOUGHT!";persist();}
-     else message="EARN MORE WINS OR CURRENCY.";
+     else message=game_unlocked(&baby,selected)?
+        "ALREADY OPEN: PRESS A.":"CHECK WINS, $ AND FAVORS.";
      dirty=1;
     }else if(nav==3){view=0;message="BACK TO THE NURSERY.";dirty=1;}
     else{

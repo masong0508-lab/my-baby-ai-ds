@@ -838,14 +838,34 @@ static void cabinet_thumb(int id,int x,int y){
  * unlock state never drift apart. Page controls sit above the cards. */
 static void arcade_list(const Game *s,int selection){
  int slot,id,x,y,opened,page=selection/4;
+ unsigned need_wins,need_dollars,need_favors;
  char tmp[40];
  solid(0,27,256,149,IVORY);
  capsule(8,32,55,23,SKY,TEAL);
  fit(20,40,"< PREV",INK,8);
  capsule(193,32,55,23,SKY,TEAL);
  fit(203,40,"NEXT >",INK,8);
- snprintf(tmp,sizeof(tmp),"PAGE %d / 4",page+1);
- fit(89,39,tmp,PURPLE,13);
+ /* The header already shows current dollars. Surface the other two
+  * real resources here, so every paid cabinet can be compared against
+  * the requirement on the NEXT line without hidden menus. 99+ caps
+  * screen text, not inventory; the gameplay totals remain unchanged. */
+ {
+  unsigned w=s->wins>99u?99u:(unsigned)s->wins;
+  unsigned f=s->favors>99u?99u:(unsigned)s->favors;
+  snprintf(tmp,sizeof(tmp),"WINS %u%s FAVORS %u%s",
+           w,s->wins>99u?"+":"",f,s->favors>99u?"+":"");
+  fit(71,34,tmp,PURPLE,20);
+ }
+ /* Two readable lines share the existing empty strip between arrows.
+  * Locked cabinets now explain the precise gameplay goal without opening
+  * another menu or allocating a string/buffer every frame. */
+ if(!game_unlocked(s,selection)&&
+    game_unlock_requirements(selection,&need_wins,
+                             &need_dollars,&need_favors)){
+  snprintf(tmp,sizeof(tmp),"%u WINS $%u %u FAVOR",
+           need_wins,need_dollars,need_favors);
+  fit(71,46,tmp,ROSE,20);
+ }else fit(80,46,"READY TO PLAY",TEAL,23);
  snprintf(tmp,sizeof(tmp),"%s",game_names[selection]);
  fit(12,60,tmp,PURPLE,38);
  for(slot=0;slot<4;slot++){
@@ -869,7 +889,7 @@ static void arcade_list(const Game *s,int selection){
  }
  foot(PURPLE);
  fit(12,181,"A PLAY",WHITE,10);
- fit(101,181,"X UNLOCK",WHITE,14);
+ fit(101,181,game_unlocked(s,selection)?"X OWNED":"X UNLOCK",WHITE,14);
  fit(199,181,"B BACK",WHITE,10);
 }
 static void sparkle(int x,int y,uint16_t color){

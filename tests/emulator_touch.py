@@ -571,6 +571,26 @@ def test_actual_game(path: Path, output: Path) -> dict:
     assert page_returned > 300, (
         f"Arcade PREV failed to restore cabinet cards ({page_returned})"
     )
+    # Two more actual touchscreen NEXT taps reach the first paid page.
+    # Its center header must spell out exact WINS / dollars / FAVOR goals,
+    # not merely show four vague LOCKED labels.
+    stylus_tap(emu, 220, 44)
+    stylus_tap(emu, 220, 44)
+    arcade_locked = picture(emu, output, "game_arcade_paid_unlock_goals")
+    arcade_goal_change = difference(
+        arcade, arcade_locked, (70, 192 + 44, 188, 192 + 55)
+    )
+    goal_ink = arcade_locked.crop((70, 192 + 45, 188, 192 + 55))
+    readable_goal_pixels = sum(
+        1 for red, green, blue in goal_ink.get_flattened_data()
+        if red > green + 55 and blue > green + 20 and red > 130
+    )
+    assert arcade_goal_change > 40 and readable_goal_pixels > 22, (
+        "Locked arcade cabinet has no readable red unlock requirements "
+        f"(changed={arcade_goal_change}, ink={readable_goal_pixels})"
+    )
+    stylus_tap(emu, 34, 44)
+    stylus_tap(emu, 34, 44)
     stylus_tap(emu, 35, 76)  # Bottle Balance is preselected
     bottle = picture(emu, output, "game_bottle_via_touch")
     bottle_changed = difference(
@@ -994,6 +1014,8 @@ def test_actual_game(path: Path, output: Path) -> dict:
         "cabinet_name_ink_pixels": name_ink,
         "arcade_next_page_changed_pixels": page_changed,
         "arcade_previous_page_changed_pixels": page_returned,
+        "arcade_paid_requirement_changed_pixels": arcade_goal_change,
+        "arcade_paid_requirement_visible_ink": readable_goal_pixels,
         "diaper_heading_ink_pixels": dark_ink,
         "title_to_diagnostic_changed_pixels": new_screen,
         "KEY_TOUCH_status_changed_pixels": status,
