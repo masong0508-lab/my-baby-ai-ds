@@ -269,6 +269,16 @@ def test_actual_game(path: Path, output: Path) -> dict:
     assert day_scene_change > 45, (
         f"Window changed text but not 3D daylight ({day_scene_change})"
     )
+    # The bottom status must reflect real prop state. This catches the
+    # original bug where only the boot-time UI call supplied room flags,
+    # leaving the *per-frame* Room panel stuck on MOONLIGHT/WINDOW.
+    day_label_change = difference(
+        room_night, room_day, (85, 192 + 49, 171, 192 + 59)
+    )
+    assert day_label_change > 20, (
+        f"Window became daylight in 3D but Room label stayed stale "
+        f"({day_label_change} label pixels)"
+    )
     stylus_tap(emu, 35, 94)  # reset to the regular moonlit glass
     room_night_again = picture(emu, output, "game_room_tour_moon_return")
     night_scene_change = difference(
@@ -287,6 +297,16 @@ def test_actual_game(path: Path, output: Path) -> dict:
     assert lamp_scene_change > 45, (
         f"Lamp changes only a label, not actual room color ({lamp_scene_change})"
     )
+    lamp_label_change = difference(
+        room_lamp_off, room_lamp_on, (85, 192 + 49, 175, 192 + 59)
+    )
+    assert lamp_label_change > 20, (
+        f"Lamp changes in the room, but the displayed ON/OFF state is stale "
+        f"({lamp_label_change} label pixels)"
+    )
+    assert room_night.getpixel((91, 192 + 95)) != room_lamp_on.getpixel(
+        (91, 192 + 95)
+    ), "Selected WINDOW card stayed highlighted after switching to LAMP"
     stylus_tap(emu, 34, 139)  # TEDDY triggers the connected PLAY gesture
     room_teddy = picture(emu, output, "game_room_tour_teddy_play")
     teddy_scene_change = difference(
@@ -760,6 +780,8 @@ def test_actual_game(path: Path, output: Path) -> dict:
         "3D_nursery_green_shadow_artifact_pixels": olive_artifact,
         "Room_tour_open_changed_pixels": room_opened,
         "Room_daylight_top_changed_pixels": day_scene_change,
+        "Room_daylight_status_changed_pixels": day_label_change,
+        "Room_lamp_status_changed_pixels": lamp_label_change,
         "Room_moon_return_top_changed_pixels": night_scene_change,
         "Room_lamp_top_changed_pixels": lamp_scene_change,
         "Room_teddy_top_changed_pixels": teddy_scene_change,
