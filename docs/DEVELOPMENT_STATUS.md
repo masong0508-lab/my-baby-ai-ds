@@ -168,3 +168,21 @@ The new art is original and embedded directly into existing DS ROM source.
 - **Regression coverage:** Host tests now independently hash the 36×34 **art region** of all 16 selected cabinets to ensure each has truly distinct visible artwork, verify the baby has a multitone rendered palette and assert no writes outside the DS visible surface. Real DeSmuME screenshots must contain a shaded selected-cabinet image and enough actual 2× title-ink pixels.
 
 No measured FPS claim or physical DS/DraStic compatibility claim is made until tested on those devices. Care, arcade, data persistence, and the 16 mini-game mechanics are deliberately unchanged.
+
+## DS interface & character-expressiveness pass — references checked on the web
+
+This round follows original Nintendo DS gameplay examples, without copying their art:
+- *Nintendogs* keeps the pet and care interactions ahead of obstructive status UI: https://www.famitsu.com/serial/gameiscool/201812/25169781.html
+- *Tamagotchi Connection: Corner Shop 3* makes each play activity a distinct illustrated toy/shop rather than uniform menus: https://rawg.io/games/tamagotchi-connection-corner-shop-3
+- *Rhythm Heaven* uses simple visual instructions and a specific rhythmic action: https://www.mobygames.com/game/40335/rhythm-heaven/screenshots/
+- *WarioWare: Touched!* emphasizes readable stylus gestures and clear microgame objectives: https://www.nintendo.com/eu/media/downloads/games_8/emanuals/nintendo_ds_21/Manual_NintendoDS_WarioWareTouched_EN.pdf
+
+Implemented in original game code:
+
+1. **Care screens:** Each FEED / CHAT / PLAY / NAP card now has an explicit two-line hierarchy: 2x large action label and a truthful small gameplay effect (HUNGER -30, MOOD +7, MOOD +10, ENERGY +25). All four original 256x192 touch rectangles, keyboard shortcuts, game mechanics and persistence remain unchanged.
+2. **Beatbox art direction:** Four separate ROM-free, rasterized illustrations (drum/BOOM, hands/CLAP, toy synthesizer/BEEP, bubble/POP) replace generic identical square symbols. The 48x47 pad hitboxes remain exact. The instruction is a readable 2x WATCH or REPEAT state cue.
+3. **CEO stage:** Funding ledger, toy block and sleep-crescent objects identify all three actual decisions instead of indistinguishable flat rectangles. Button captions are concise 2x terms.
+4. **Naptime:** Fixed nearly invisible white instructions over the white cot; the purple TAP IN GREEN and SWEET DREAMS! messages now have sufficient contrast and remain beneath the character portrait.
+5. **Upper-screen character animation:** One stable model reacts to the care action: feeding raises a hand, chatting gestures, play adds gentle bounce, and napping closes the eyes and rests both hands. Existing geometric budgets, animation cadence, sprite assets, and room appearance remain intact.
+
+Tests: native framebuffer test hashes the four Beatbox icon regions and verifies WATCH vs REPEAT output. DeSmuME automation captures actual upper-screen feed and sleeping poses and fails if the baby does not visibly respond. The same host save/scene/touch/arcade regression and both original and BlocksDS ROM workflows are required before merge. No physical DraStic or measured-FPS claim is made.
