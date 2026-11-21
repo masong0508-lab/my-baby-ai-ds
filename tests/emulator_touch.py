@@ -315,8 +315,30 @@ def test_actual_game(path: Path, output: Path) -> dict:
     assert teddy_scene_change > 35, (
         f"Teddy doesn't visibly animate or focus ({teddy_scene_change})"
     )
-    stylus_tap(emu, 180, 139)  # CRIB: triggers actual NAP + 3D focus
+    # Repeated prop selection must not leave Teddy waving endlessly.
+    # After its 40-tick action the plush settles and remains in the room.
+    frames(emu, 58)
+    teddy_settled = picture(emu, output, "game_room_tour_teddy_settled")
+    teddy_recovery_change = difference(
+        room_teddy, teddy_settled, (8, 35, 160, 190)
+    )
+    assert teddy_recovery_change > 12, (
+        f"Teddy never recovered to its rest pose ({teddy_recovery_change})"
+    )
+    # First create the real nighttime-care conditions: WINDOW at moonlight
+    # (already returned to night above) + explicitly switch LAMP OFF.
+    stylus_tap(emu, 180, 94)
+    room_quiet_setup = picture(emu, output, "game_room_tour_quiet_setup")
+    # CRIB now performs normal NAP and a conditional +8 energy/-4 chaos.
+    stylus_tap(emu, 180, 139)
     room_crib = picture(emu, output, "game_room_tour_crib_nap")
+    quiet_bonus_display = difference(
+        room_quiet_setup, room_crib, (18, 192 + 58, 240, 192 + 72)
+    )
+    assert quiet_bonus_display > 30, (
+        "Crib's quiet-night status was not displayed after lamp-off NAP "
+        f"({quiet_bonus_display} changed pixels)"
+    )
     crib_scene_change = difference(
         room_teddy, room_crib, (0, 0, 256, 191)
     )
@@ -785,6 +807,8 @@ def test_actual_game(path: Path, output: Path) -> dict:
         "Room_moon_return_top_changed_pixels": night_scene_change,
         "Room_lamp_top_changed_pixels": lamp_scene_change,
         "Room_teddy_top_changed_pixels": teddy_scene_change,
+        "Room_teddy_recovery_changed_pixels": teddy_recovery_change,
+        "Room_quiet_crib_status_changed_pixels": quiet_bonus_display,
         "Room_crib_top_changed_pixels": crib_scene_change,
         "Room_back_to_care_changed_pixels": room_back_change,
         "3D_care_pose_changed_pixels": pose_changed,

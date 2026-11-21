@@ -20,9 +20,12 @@ EggCamera world_secret_camera(uint32_t frame);
 /* Reuse a single room model with five art-directed camera targets.
  * Smooth camera transition, daytime and lamp are temporary scene state. */
 EggCamera world_nursery_camera(int focus,int previous,uint32_t age);
+/* Interpolate from a captured in-flight view to prevent rapid-switch jumps. */
+EggCamera world_nursery_camera_from(EggCamera from,int focus,uint32_t age);
 void world_draw_nursery(const Game *state,uint32_t frame,int pose,
                         uint32_t action_age,int focus,int previous,
-                        uint32_t camera_age,int daylight,int lamp);
+                        uint32_t camera_age,int daylight,int lamp,
+                        uint32_t prop_age,const EggCamera *camera_start);
 /* 0 normal light, -5 darkest; computed without modifying the nursery mesh. */
 int world_egg_nursery_ambient(uint32_t frame);
 /* Coherent, bounded 3D animation; pure frame samplers for film replay. */
@@ -42,6 +45,9 @@ int world_baby_neck_tilt(int action,uint32_t frame);
 int world_baby_care_weight(uint32_t age);
 int world_baby_lid_open(uint32_t frame,int action,uint32_t age);
 int world_baby_speech_open(uint32_t age);
+/* Finite plush reaction and bounded whole-head furniture attention. */
+int world_teddy_bow_angle(uint32_t age);
+int world_baby_attention_angle(int focus,uint32_t age);
 /* Submitted frame-budget counters (geometry, not measured FPS). */
 unsigned world_vertex_count(void);
 unsigned world_polygon_count(void);

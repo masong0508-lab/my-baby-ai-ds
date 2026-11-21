@@ -99,6 +99,18 @@ int main(void){
   ui_draw(&g,&a,10,2|16,0,0,1,"TEDDY PROMOTED");
   verify_coverage();teddy=fingerprint();
   assert(teddy!=light_on);
+  /* The crib itself explains the conditional bonus, not hidden knowledge.
+   * Compare the SAME crib card under lit and quiet-night conditions. */
+  {
+   uint32_t quiet,day,lit;
+   ui_draw(&g,&a,10,3,0,0,1,"QUIET NIGHT");
+   verify_coverage();quiet=fingerprint();
+   ui_draw(&g,&a,10,3|8,0,0,1,"DAYLIGHT");
+   verify_coverage();day=fingerprint();
+   ui_draw(&g,&a,10,3|16,0,0,1,"LAMP ON");
+   verify_coverage();lit=fingerprint();
+   assert(quiet!=day&&quiet!=lit);
+  }
   ui_draw(&g,&a,0,0,0,0,1,"BACK IN THE NURSERY");
   verify_coverage();
  }
