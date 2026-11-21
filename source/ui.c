@@ -342,56 +342,56 @@ static const char *const spr_baby[]={
   ".....oommmmmmoo....."
 };
 static const char *const spr_bottle[]={
- "......oooo......",
- "......owwo......",
- ".....owwwwo.....",
- ".....oppppo.....",
- "....oooooooo....",
- "...owwwwwwwwo...",
- "...owwwwwwwwo...",
- "...owwbbbbwwo...",
- "...owwbbbbwwo...",
- "...owwbbbbwwo...",
- "...owwbbbbwwo...",
- "...owwbbbbwwo...",
- "...owwbbbbwwo...",
- "...owwwwwwwwo...",
- "...owwwppwwwo...",
- "...owwwppwwwo...",
- "....owwwwwwo....",
- ".....oooooo....."
+  "......oooo......",
+  "......owwo......",
+  ".....owwwwo.....",
+  ".....oppppo.....",
+  "....oooooooo....",
+  "...ojjjwwwwwo...",
+  "...ojjjwwwwwo...",
+  "...ojjbbbbwwo...",
+  "...ojjbbbbwwo...",
+  "...ojjbbbbwwo...",
+  "...ojjbbbbwwo...",
+  "...ojjbbbbwwo...",
+  "...ojjbbbbwwo...",
+  "...ojjjwwwwwo...",
+  "...ojjjppwwwo...",
+  "...ojjjppwwwo...",
+  "....owwwwwwo....",
+  ".....oooooo....."
 };
 static const char *const spr_rattle[]={
- "......oooo......",
- "....ooggggoo....",
- "...ogggwwgggo...",
- "..oggggwwggggo..",
- "..oggggwwggggo..",
- "..oggggggggggo..",
- "...oggggggggo...",
- "....ooggggoo....",
- "......oooo......",
- "......otto......",
- "......otto......",
- "......otto......",
- "......otto......",
- "......otto......",
- ".....otttto.....",
- ".....otttto.....",
- "......oooo......"
+  "......oooo......",
+  "....ooggggoo....",
+  "...oyyywwgggo...",
+  "..oyyyywwggggo..",
+  "..oyyyywwggggo..",
+  "..oyyyyyyggggo..",
+  "...oyyyyygggo...",
+  "....ooyyygoo....",
+  "......oooo......",
+  "......otto......",
+  "......otto......",
+  "......otto......",
+  "......otto......",
+  "......otto......",
+  ".....otttto.....",
+  ".....otttto.....",
+  "......oooo......"
 };
 static const char *const spr_diaper[]={
- "...oooooooooooo...",
- "..owwwwwwwwwwwwo..",
- ".owwwwwwwwwwwwwwo.",
- "owwwwwwwwwwwwwwwo",
- "owwppwwwwwwwwppwwo",
- "owwppwwwwwwwwppwwo",
- ".owwwbbbbbbwwwwo.",
- "..owbbbbbbbbwwo..",
- "...owbbbbbbwwo...",
- "....owwwwwwo....",
- ".....oooooo....."
+  "...oooooooooooo...",
+  "..owwwwwwwwwwwwo..",
+  ".ojjjjwwwwwwiiiio.",
+  "ojjjjjwwwwwwiiiio",
+  "ojjppjwwwwwwippiio",
+  "ojjppjwwwwwwippiio",
+  ".ojjjbbbbbbwiiio.",
+  "..ojbbbbbbbbiio..",
+  "...ojbbbbbbwio...",
+  "....owwwwwwo....",
+  ".....oooooo....."
 };
 /* Receipt sheet with inked totals, folded corners and a bright stamp. */
 static const char *const spr_receipt[]={
@@ -436,19 +436,19 @@ static const char *const spr_cone[]={
  ".oooooooooooo."
 };
 static const char *const spr_sock[]={
- "....oooo......",
- "...owwwwo.....",
- "...owwwwo.....",
- "...owwwwo.....",
- "...owwwwo.....",
- "...owwwwo.....",
- "...owwwwo.....",
- "...owwwwwwo....",
- "...owwwwwwwo..",
- "..owwwwwwwwwo.",
- "..owwwwwwwwwo.",
- "..owwwwwwwwwo.",
- "...ooooooooo.."
+  "....oooo......",
+  "...owwwwo.....",
+  "...ojjwwo.....",
+  "...ojjwwo.....",
+  "...ojjwwo.....",
+  "...ojjwwo.....",
+  "...ojjwwo.....",
+  "...ojjwwwbo....",
+  "...ojjwwwbbo..",
+  "..ojjjwwwbbbo.",
+  "..ojjjwwwbbbo.",
+  "..ojjjwwwbbbo.",
+  "...ooooooooo.."
 };
 /* Additional compact original silhouettes for the newly bespoke cabinets. */
 static const char *const spr_stroller[]={
@@ -467,17 +467,17 @@ static const char *const spr_stroller[]={
  ".ooo........ooo..."
 };
 static const char *const spr_cereal[]={
- "...ooooooooo...",
- "..owwwwwwwwwo..",
- ".owwwggggwwwwwo.",
- "owgggwwwwggggwo",
- "owgwwwwwggwwgwo",
- "owgwwggwwwgggwo",
- "owwwggggwwwggwo",
- "owwwwwwwwwwwwo",
- "owwwpppppwwwwwo",
- ".owwwwwwwwwwwo.",
- "..ooooooooooo.."
+  "...ooooooooo...",
+  "..owwwwwwwwwo..",
+  ".owwwggggwwwwwo.",
+  "owyyywwwwggggwo",
+  "owywwwwwggwwgwo",
+  "owywwyywwwgggwo",
+  "owwwyyygwwwggwo",
+  "owwwwwwwwwwwwo",
+  "owwwpppppwwwwwo",
+  ".owwwwwwwwwwwo.",
+  "..ooooooooooo.."
 };
 static const char *const spr_stack[]={
  ".oooooooooooo.",
