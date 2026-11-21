@@ -18,6 +18,16 @@ static uint32_t fingerprint(void){
  }
  return h;
 }
+/* Thumbnail hashes look ONLY at the 36x34 illustrated wells, not the
+ * labels/page number: all sixteen cabinets need distinct, real artwork. */
+static uint32_t icon_fingerprint(int x,int y){
+ uint32_t h=2166136261u;
+ int dx,dy;
+ for(dy=0;dy<34;dy++)for(dx=0;dx<36;dx++){
+  h^=screen[(y+dy)*256+x+dx];h*=16777619u;
+ }
+ return h;
+}
 int main(void){
  Game g;Arcade a={0};unsigned i,changed=0;
  game_init(&g);ui_init(screen);
@@ -67,6 +77,19 @@ int main(void){
   assert(second!=fingerprint());
   ui_draw(&g,&a,1,12,0,0,1,"ARCADE");
   assert(first!=fingerprint());
+ }
+ /* Test the NEW visual assets independently of labels and page design. */
+ {
+  uint32_t icons[16];
+  unsigned id,k;
+  for(id=0;id<16;id++){
+   int slot=(int)id%4;
+   int x=9+(slot%2)*123+6, y=73+(slot/2)*50+5;
+   ui_draw(&g,&a,1,(int)id,0,0,1,"ARCADE");
+   verify_coverage();
+   icons[id]=icon_fingerprint(x,y);
+   for(k=0;k<id;k++)assert(icons[id]!=icons[k]);
+  }
  }
  ui_draw(&g,&a,2,0,0,0,1,"GO!");
  a.id=0;a.timer=600;a.balance=12;a.hold_frames=45;
@@ -255,8 +278,19 @@ int main(void){
   ui_draw(&g,&a,4,0,END_GRADUATION,0,1,"ENDING");
   verify_coverage();
   assert(fingerprint()!=hashes[0]);
+  /* The main baby's pixel portrait must be genuinely multitone, with
+   * more than a flat hair/skin/clothing tricolor palette. */
   ui_draw(&g,&a,5,0,0,0,0,"RAM MODE");
   verify_coverage();
+  {
+   uint16_t shades[32]={0};unsigned used=0,x,y,k;
+   for(y=72;y<126;y++)for(x=98;x<158;x++){
+    uint16_t pixel=screen[y*256+x];
+    for(k=0;k<used;k++)if(shades[k]==pixel)break;
+    if(k==used&&used<32)shades[used++]=pixel;
+   }
+   assert(used>=10);
+  }
   hashes[0]=fingerprint();
   ui_draw(&g,&a,5,0,0,0,1,"RAM MODE");
   verify_coverage();
@@ -275,6 +309,6 @@ int main(void){
   ui_draw(&g,&a,0,0,0,0,0,"SAFE MODE");
   verify_coverage();
  }
- puts("PASS: 16 unique themed cabinets, full-screen coverage, touch hitboxes, cursor");
+ puts("PASS: 16 unique illustrated cabinets, shaded baby art, full-screen coverage, touch hitboxes, cursor");
  return 0;
 }
