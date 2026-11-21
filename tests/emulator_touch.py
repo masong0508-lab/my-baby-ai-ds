@@ -133,6 +133,21 @@ def test_actual_game(path: Path, output: Path) -> dict:
     assert new_screen > 200, (
         f"SELECT did not enter the game's touch diagnostic ({new_screen} pixels)"
     )
+    # The live geometry numbers are printed only on this optional
+    # diagnostics screen. Verify both counters on an actual DeSmuME
+    # screenshot, not merely a host-side framebuffer mock.
+    def geometry_ink(box):
+        crop = before.crop(box)
+        return sum(
+            1 for red, green, blue in crop.get_flattened_data()
+            if green > red + 60 and blue > red + 60 and green > 140
+        )
+    visible_vertices = geometry_ink((59, 192 + 163, 124, 192 + 174))
+    visible_polygons = geometry_ink((173, 192 + 163, 238, 192 + 174))
+    assert visible_vertices > 12 and visible_polygons > 12, (
+        "DS stylus diagnostic is missing live vertex/polygon counters "
+        f"(vertices={visible_vertices}, polygons={visible_polygons})"
+    )
     emu.input.touch_set_pos(93, 123)
     frames(emu, FRAMES_HOLD)
     pressed = picture(emu, output, "game_touch_diagnostic_pressed")
@@ -488,22 +503,35 @@ def test_actual_game(path: Path, output: Path) -> dict:
     assert recovered_change > 25, (
         f"CHAT never recovered to an idle pose ({recovered_change})"
     )
-    # Exercise exhaustion through real gameplay: four PLAY taps subtract
-    # 48 energy from the starting 72, placing the idle 3D baby below the
-    # 25-energy arm-slump threshold. The action must fully recover before
-    # photographing it, so the difference is NEED-AWARE acting rather
-    # than a still-in-progress PLAY reach gesture.
-    for _ in range(4):
+    # Exercise ACTUAL exhaustion through real gameplay: six PLAY taps
+    # subtract 72 energy from the observed 93-energy post-CHAT state,
+    # reaching 21. This crosses BOTH the gradual eye-lid threshold (55)
+    # and the additional arm-slump threshold (25). A mere four taps
+    # stopped at energy 45 and only verified a subtle eyelid response.
+    # Let the one-shot PLAY reach gesture finish before photographing.
+    for _ in range(6):
         stylus_tap(emu, 66, 160)
         frames(emu, 13)
     frames(emu, 80)
     tired_baby = picture(emu, output, "game_nursery_baby_low_energy")
+    # Verify the gameplay state changed, not merely the baby's looping
+    # breathing animation: the energy meter at x=61..132, y=83..91
+    # MUST be shorter at <25 than the >70 healthy baseline. The sample
+    # is deliberately left of the overlaid numeric counter.
+    exhausted_energy_bar_pixels = difference(
+        chat_recovered, tired_baby,
+        (89, 192 + 85, 107, 192 + 89)
+    )
+    assert exhausted_energy_bar_pixels > 25, (
+        "Exhaustion acting test did not actually drain the baby's "
+        f"ENERGY bar ({exhausted_energy_bar_pixels} changed pixels)"
+    )
     tired_expression_changed = difference(
         chat_recovered, tired_baby, (65, 28, 192, 146)
     )
     assert tired_expression_changed > 45, (
-        "Four normal PLAY actions failed to change the actual top-screen "
-        f"tired baby face/arms ({tired_expression_changed} pixels)"
+        "Six normal PLAY actions failed to change the actual top-screen "
+        f"exhausted baby face/arms ({tired_expression_changed} pixels)"
     )
     # The new 3D emotion/gesture pass must affect the actual TOP display:
     # FEED lifts an arm, while NAP closes both eyes and relaxes the arms.
@@ -1054,6 +1082,7 @@ def test_actual_game(path: Path, output: Path) -> dict:
         "3D_chat_reach_changed_pixels": chat_changed,
         "3D_chat_recovery_changed_pixels": recovered_change,
         "3D_low_energy_baby_changed_pixels": tired_expression_changed,
+        "low_energy_meter_changed_pixels": exhausted_energy_bar_pixels,
         "3D_title_top_screen_colors": title_colors,
         "album_screen_changed_pixels": album_diff,
         "album_next_page_changed_pixels": album_next_diff,
@@ -1068,6 +1097,8 @@ def test_actual_game(path: Path, output: Path) -> dict:
         "diaper_start_illustration_colors": diaper_start_colors,
         "diaper_after_wipe_illustration_colors": diaper_next_colors,
         "title_to_diagnostic_changed_pixels": new_screen,
+        "live_geometry_vertex_label_pixels": visible_vertices,
+        "live_geometry_polygon_label_pixels": visible_polygons,
         "KEY_TOUCH_status_changed_pixels": status,
         "coordinates_on_press_changed_pixels": xy1,
         "coordinates_on_move_changed_pixels": xy2,
