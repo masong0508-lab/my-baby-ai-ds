@@ -110,7 +110,7 @@ static void test_arcade_economy_recovery(void){
   assert(retries<256&&game_unlocked(&g,id));
  }
  assert(g.unlocked==0xffffu && total_wins>=32u);
- assert(g.dollars<=65535u && g.favors<=65535u);
+ assert(g.wins==total_wins);
 }
  /* Forge checksum-correct but invalid state, simulating logical corruption
  * that a simple digest check would otherwise accept. */
