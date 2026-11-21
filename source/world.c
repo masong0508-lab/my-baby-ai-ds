@@ -421,18 +421,29 @@ void world_draw(const Game *s,uint32_t frame,int activity){
 
 /* Tiny boot/title scene: do not submit the full ~1800-polygon nursery before
  * the player confirms the program reached its first interactive screen. */
+/* The lightweight pregame portrait uses the SAME baby design language as
+ * the nursery hero. It must remain inexpensive enough to render at boot. */
 void world_draw_title(uint32_t frame){
  (void)frame;
  glMatrixMode(GL_MODELVIEW);glLoadIdentity();
- gluLookAt(0.0f,0.3f,5.5f,0.0f,0.0f,0.0f,0,1,0);
+ gluLookAt(0.0f,.24f,5.15f,0.0f,-.04f,0.0f,0,1,0);
  glPolyFmt(POLY_ALPHA(31)|POLY_CULL_NONE);
  frame_vertices=0;frame_polygons=0;
- block(0.0f,-.82f,-.9f,3.0f,.22f,1.6f,24,17,20);
- ellipse(0.0f,.05f,-.2f,.85f,.91f,.57f,27,17,12);
- ellipse(-.29f,.12f,.33f,.20f,.24f,.08f,31,30,30);
- ellipse(.29f,.12f,.33f,.20f,.24f,.08f,31,30,30);
- ellipse(-.29f,.12f,.41f,.10f,.14f,.04f,3,2,3);
- ellipse(.29f,.12f,.41f,.10f,.14f,.04f,3,2,3);
- ellipse(0,-.32f,.36f,.20f,.11f,.06f,13,4,6);
+ block(0,-.91f,-.85f,2.6f,.20f,1.35f,24,20,24);
+ ellipse(0,-.80f,-.23f,.57f,.36f,.39f,23,29,27);
+ soft_head(0,.045f,-.18f,.745f,.75f,.53f,31,24,20);
+ hair_cap(0,.045f,-.175f,.76f,.77f,.55f,16,11,8);
+ hair_fringe(-.25f,.54f,.30f,.30f,.09f,.025f);
+ hair_fringe(.17f,.54f,.29f,.28f,.09f,-.03f);
+ ellipse(-.225f,.057f,.335f,.106f,.10f,.020f,30,29,27);
+ ellipse(.225f,.057f,.335f,.106f,.10f,.020f,30,29,27);
+ ellipse(-.215f,.049f,.354f,.054f,.062f,.015f,5,7,11);
+ ellipse(.239f,.049f,.354f,.054f,.062f,.015f,5,7,11);
+ soft_mark(-.23f,.086f,.372f,.024f,.019f,31,31,30);
+ soft_mark(.216f,.086f,.372f,.024f,.019f,31,31,30);
+ soft_mark(-.43f,-.205f,.275f,.138f,.07f,31,18,19);
+ soft_mark(.43f,-.205f,.275f,.138f,.07f,31,18,19);
+ soft_mark(0,-.27f,.337f,.14f,.023f,18,9,11);
+ soft_mark(0,-.254f,.343f,.09f,.013f,31,20,19);
  glFlush(0);
 }
