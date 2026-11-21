@@ -741,6 +741,22 @@ def test_actual_game(path: Path, output: Path) -> dict:
     )
     assert movie_stage(last_approach) == 2
     last_approach.save(output / "game_egg_final_recoil_before_cut.png")
+    # The former phase-2 acid drip was a giant rigid fluorescent bar
+    # along the left edge in native DeSmuME (45 straight pixels).
+    longest_egg_drip_streak = 0
+    for xx in range(0, 31):
+        run = 0
+        for yy in range(110, 192):
+            red, green, blue = last_approach.getpixel((xx, yy))
+            if green > 210 and red < 70 and blue < 105:
+                run += 1
+                longest_egg_drip_streak = max(longest_egg_drip_streak, run)
+            else:
+                run = 0
+    assert longest_egg_drip_streak < 22, (
+        f"Phase-2 shell drip is still a fluorescent rectangle "
+        f"({longest_egg_drip_streak}px)"
+    )
     recoil_changed = difference(
         egg_anticipation, last_approach, (55, 18, 200, 172)
     )
@@ -773,6 +789,23 @@ def test_actual_game(path: Path, output: Path) -> dict:
     assert brightest_streak < 24, (
         f"Alien forehead has a straight fluorescent streak "
         f"({brightest_streak}px) instead of short brow highlights"
+    )
+    # The old flat slime rectangles created 46-pixel and 36-pixel
+    # vertical luminous runs in the cropped native render. Organic
+    # tapered cheek rivulets should not look like GPU seam artifacts.
+    longest_vertical_ichor = 0
+    for xx in list(range(20, 62)) + list(range(194, 237)):
+        run = 0
+        for yy in range(90, 173):
+            red, green, blue = egg_scare.getpixel((xx, yy))
+            if green > 155 and green > red + 65 and green > blue + 35:
+                run += 1
+                longest_vertical_ichor = max(longest_vertical_ichor, run)
+            else:
+                run = 0
+    assert longest_vertical_ichor < 40, (
+        f"Bright vertical cheek slime ruler survived "
+        f"({longest_vertical_ichor}px)"
     )
     # Regress against the old isolated polygon head: retain two PALE
     # porcelain halves beside the alien when the final scare camera cuts.
@@ -932,7 +965,9 @@ def test_actual_game(path: Path, output: Path) -> dict:
         "Egg_visible_porcelain_pixels": ivory_shell_pixels,
         "Alien_jump_scare_changed_pixels": scare_difference,
         "Alien_earliest_reveal_brow_streak_pixels": brightest_streak,
+        "Alien_vertical_ichor_streak_pixels": longest_vertical_ichor,
         "Egg_pre_scare_motion_changed_pixels": recoil_changed,
+        "Egg_rectangular_ichor_streak_pixels": longest_egg_drip_streak,
         "Jump_scare_porcelain_left_pixels": scare_shell_left,
         "Jump_scare_porcelain_right_pixels": scare_shell_right,
         "Jump_scare_right_eye_pixels": right_iris_pixels,

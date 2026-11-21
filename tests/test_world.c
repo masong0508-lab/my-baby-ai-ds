@@ -355,6 +355,10 @@ int main(void){
     * Nursery, split porcelain sides, cavity and attached face all remain
     * submitted after the hard cut, but fit the same DS polygon budget. */
    assert(world_polygon_count()>=650);
+   /* The organic cheek details add four tiny triangles in place of
+    * rectangle strips, while leaving ample DS hardware headroom. */
+   assert(world_vertex_count()<=5000);
+   assert(world_polygon_count()<=1850);
   }
  }
  /* Physics can throw the toy out of frame. The movie introduction is a

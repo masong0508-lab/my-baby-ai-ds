@@ -29,6 +29,7 @@ The camera stops smoothly at the PUSH boundary rather than restarting or telepor
 2. Standard devkitPro build must produce an .nds ROM and pass header checks.
 3. BlocksDS builds and the **actual DeSmuME native touch walkthrough** must pass, including the egg film.
 4. Inspect generated `emulator-proof/game_egg_green_ichor.png`, `game_egg_slow_push.png`, `game_egg_anticipation_close.png`, **`game_egg_final_recoil_before_cut.png`**, `game_egg_jump_scare.png` and `game_egg_creature_lunge.png` at native resolution. Check that the camera genuinely closes in, the mouth stays below both eyes, the shell remains visible, no thin cyan/white streaks span the facial area, and the late recoil is discernible.
-5. No claims of 60 FPS, measured latency, RAM headroom, Android DraStic compatibility or original DS/DS Lite performance until those platforms are actually measured.
+5. Organic acid-fluid QA: `tests/emulator_touch.py` must reject a fluorescent **horizontal brow run ≥24 pixels**, a **vertical cheek run ≥40 pixels**, and a **phase-2 left-edge egg drip run ≥22 pixels**. These regions are sampled directly from the native DeSmuME screenshot, not from a mockup. A ribbon may remain visible as short, tapered fluid, but no unnaturally long rectangular strips should cover the face or shell.
+6. No claims of 60 FPS, measured latency, RAM headroom, Android DraStic compatibility or original DS/DS Lite performance until those platforms are actually measured.
 
 If the native screenshots look worse despite tests passing, **do not merge on tests alone**. Capture a real comparison to the previous main ROM before changing further camera targets or pupil layout.
