@@ -328,6 +328,29 @@ int main(void){
   ui_draw(&g,&a,6,1,0,0,1,"ALBUM");
   verify_coverage();
   assert(hashes[0]!=fingerprint());
+  /* Three-page memory book has actual original egg illustration on
+   * unlock, not two empty rectangles. It must also be visibly different
+   * from its still-sealed state, without repainting beyond VRAM bounds. */
+  ui_draw(&g,&a,6,2,0,0,1,"ALBUM");
+  verify_coverage();
+  hashes[0]=fingerprint();
+  g.ending_mask|=(uint16_t)(1u<<END_EGG);
+  ui_draw(&g,&a,6,2,0,0,1,"ALBUM");
+  verify_coverage();
+  assert(hashes[0]!=fingerprint());
+  ui_draw(&g,&a,4,0,END_EGG,0,1,"ENDING");
+  verify_coverage();
+  /* The egg icon on the standalone ending card uses at least six
+   * separate original colors plus the dark cavity, not a flat box. */
+  {
+   uint16_t shades[32]={0};unsigned used=0,x,y,k;
+   for(y=76;y<118;y++)for(x=97;x<162;x++){
+    uint16_t pixel=screen[y*256+x];
+    for(k=0;k<used;k++)if(shades[k]==pixel)break;
+    if(k==used&&used<32)shades[used++]=pixel;
+   }
+   assert(used>=8);
+  }
   ui_draw(&g,&a,3,0,0,0,1,"RESET");
   verify_coverage();
   hashes[0]=fingerprint();
