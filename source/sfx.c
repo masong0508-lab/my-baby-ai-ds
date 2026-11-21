@@ -9,11 +9,14 @@ void sfx_init(void){
  sfx_backend_init();
  sfx_backend_apply(0,0);
 }
+void sfx_stop(void){
+ current=0;age=0;last_hz=0;last_volume=0;
+ sfx_backend_apply(0,0);
+}
 void sfx_set_enabled(int on){
  enabled=(uint8_t)(on!=0);
  if(!enabled){
-  current=0;age=0;last_hz=0;last_volume=0;
-  sfx_backend_apply(0,0);
+  sfx_stop();
  }
 }
 int sfx_is_enabled(void){return enabled!=0;}
