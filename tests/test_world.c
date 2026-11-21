@@ -94,6 +94,19 @@ int main(void){
   assert(world_vertex_count()<=5000);
   assert(world_polygon_count()<=1850);
  }
+ /* NAP eyelids now mask two *fixed-thickness* eyes using broad, safe
+  * single quads; no progressively collapsed GL_QUAD_STRIP poles that
+  * become giant horizontal pixel rulers at half-closure. */
+ {
+  unsigned age;
+  s.mood=95;
+  for(age=0u;age<=56u;age++){
+   world_draw_nursery(&s,173u+age,4,age,3,-1,16u,
+                      0,1,40u,0);
+   assert(world_vertex_count()<=5000);
+   assert(world_polygon_count()<=1850);
+  }
+ }
  /* A new nursery mobile is physically anchored to the actual crib bar.
   * One 40-tick reaction with no repeating rocking while CRIB is selected.
   * The added meshes must leave headroom below DS 1850-polygon budget. */
