@@ -49,17 +49,55 @@ int main(void){
     last=q.x;
    }
    world_draw_nursery(&s,130u,3,18u,i,-1,16u,
-                      i==0,i!=1);
+                      i==0,i!=1,18u);
    assert(world_vertex_count()<=5000);
    assert(world_polygon_count()<=1850);
   }
   /* Visual-state changes must not alter any saved Game data. */
   {
    Game original=s;
-   world_draw_nursery(&s,132u,0,0u,0,-1,16u,1,0);
+   world_draw_nursery(&s,132u,0,0u,0,-1,16u,1,0,40u);
    assert(memcmp(&original,&s,sizeof(s))==0);
    world_draw(&s,133u,0); /* normal care restores night + lamp */
    assert(world_polygon_count()<=1850);
+  }
+ }
+ /* Natural plush animation: single eased bow, held, then recovery.
+  * A selected toy must NOT animate endlessly or detach its face. */
+ assert(world_teddy_bow_angle(0u)==0);
+ assert(world_teddy_bow_angle(8u)==-12);
+ assert(world_teddy_bow_angle(17u)==-12);
+ assert(world_teddy_bow_angle(40u)==0);
+ assert(world_teddy_bow_angle(80u)==0);
+ {
+  unsigned tick;
+  int old=world_teddy_bow_angle(0u);
+  for(tick=1u;tick<52u;tick++){
+   int v=world_teddy_bow_angle(tick);
+   assert(v<=0&&v>=-12);
+   assert(v-old<=3 && old-v<=3);
+   old=v;
+   world_draw_nursery(&s,300u+tick,0,0u,2,-1,16u,0,1,tick);
+   assert(world_vertex_count()<=5000);
+   assert(world_polygon_count()<=1850);
+  }
+ }
+ /* Gaze targets rotate the whole head, remain legible in profile and
+  * return to neutral on leaving ROOM. */
+ assert(world_baby_attention_angle(-1,16u)==0);
+ assert(world_baby_attention_angle(0,0u)==0);
+ assert(world_baby_attention_angle(0,16u)==-6);
+ assert(world_baby_attention_angle(1,16u)==-7);
+ assert(world_baby_attention_angle(2,16u)==-5);
+ assert(world_baby_attention_angle(3,16u)==6);
+ for(i=0;i<4;i++){
+  int old=0;
+  unsigned tick;
+  for(tick=0u;tick<=16u;tick++){
+   int v=world_baby_attention_angle(i,tick);
+   assert(v>=-7&&v<=6);
+   assert(v-old<=2&&old-v<=2);
+   old=v;
   }
  }
  /* Arm gestures now rotate one connected shoulder-to-hand structure.
