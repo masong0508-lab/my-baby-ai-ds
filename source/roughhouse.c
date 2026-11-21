@@ -22,7 +22,10 @@ int roughhouse_strike(Roughhouse *r,int kind){
  r->vr=(int16_t)(side*(kind==ROUGHHOUSE_KICK?27:21));
  r->vp=(int16_t)(kind==ROUGHHOUSE_KICK?22:-16);
  r->vyaw=(int16_t)(side*16);
- r->cooldown=10;
+ /* Stylus updates at roughly 20-30 logic FPS on some real/emulated DS
+  * builds. Four ticks debounces a press without silently dropping every
+  * other deliberate tap on a slower device. */
+ r->cooldown=4;
  r->moving=1;
  return 1;
 }
