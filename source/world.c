@@ -22,6 +22,10 @@ static int model_angle(int degrees){
 }
 /* Draw-time-only room lighting: no extra geometry, textures or VRAM. */
 static int nursery_ambient;
+/* Only the interactive Room tour modifies the nursery lighting. Defaults
+ * reproduce the approved original care/night composition. */
+static int tour_daylight;
+static int tour_lamp_on=1;
 static void color(int r,int g,int b,int shift){
  glColor(RGB15(limit(r+shift+nursery_ambient),
                limit(g+shift+nursery_ambient),
@@ -276,18 +280,23 @@ static void room(void){
  rug_flower(-.33f,1.77f);
  /* Glazed nursery window, mullions, curtains and cornice. */
  block(-1.76,1.15,-3.06,1.95,1.76,.07,29,28,25);
- block(-1.76,1.15,-3.01,1.65,1.51,.04,6,12,24);
+ block(-1.76,1.15,-3.01,1.65,1.51,.04,
+       tour_daylight?14:6,tour_daylight?23:12,tour_daylight?29:24);
  /* Dark, moonlit glass deliberately contrasts with the amber dresser
   * lamp. The same recognizable frame, blinds and furniture stay put for
   * the full film dolly. All marks are fixed native quads (no texture). */
- wall_sticker(-1.76f,.67f,-2.978f,1.52f,.42f,7,15,19);
- wall_sticker(-1.20f,.85f,-2.977f,.60f,.18f,8,18,21);
+ wall_sticker(-1.76f,.67f,-2.978f,1.52f,.42f,
+              tour_daylight?10:7,tour_daylight?22:15,tour_daylight?23:19);
+ wall_sticker(-1.20f,.85f,-2.977f,.60f,.18f,
+              tour_daylight?12:8,tour_daylight?25:18,tour_daylight?22:21);
  wall_sticker(-2.20f,1.56f,-2.978f,.46f,.11f,11,17,25);
  wall_sticker(-2.32f,1.61f,-2.976f,.24f,.10f,9,15,23);
  wall_sticker(-1.41f,1.75f,-2.976f,.39f,.08f,10,16,27);
  /* One recognizable moon disk and a few rain streaks, with bright pink
   * glitch eyes hiding OUTSIDE, not random floating indoor particles. */
- ellipse(-1.35f,1.54f,-2.964f,.14f,.14f,.016f,31,29,22);
+ ellipse(-1.35f,1.54f,-2.964f,
+         tour_daylight?.17f:.14f,tour_daylight?.17f:.14f,.016f,
+         31,tour_daylight?26:29,tour_daylight?9:22);
  wall_sticker(-2.18f,1.32f,-2.954f,.016f,.24f,15,22,29);
  wall_sticker(-1.95f,1.62f,-2.954f,.014f,.18f,17,23,29);
  wall_sticker(-1.63f,1.12f,-2.954f,.015f,.23f,13,20,29);
@@ -319,11 +328,14 @@ static void room(void){
   ellipse(-2.55f,drawer_y,.128f,.073f,.054f,.038f,27,13,18);
  }
  block(-2.55,.42,-.48,.14,.28,.14,29,23,21);
- ellipse(-2.55,.65,-.48,.34,.16,.32,31,25,15);
+ ellipse(-2.55,.65,-.48,.34,.16,.32,
+         tour_lamp_on?31:19,tour_lamp_on?25:18,tour_lamp_on?15:17);
  /* Lamp rim and warm key-light patch: intentional large forms rather than
   * noisy fake bloom or per-frame translucent screen effects. */
- ellipse(-2.55,.76,-.48,.20,.06,.18,31,30,20);
- wall_sticker(-2.73f,.78f,-.012f,.40f,.03f,31,25,18);
+ ellipse(-2.55,.76,-.48,.20,.06,.18,
+         tour_lamp_on?31:21,tour_lamp_on?30:20,tour_lamp_on?20:19);
+ if(tour_lamp_on)
+  wall_sticker(-2.73f,.78f,-.012f,.40f,.03f,31,25,18);
  /* REMOVE 5.6-unit, one-pixel wall ribbons. They z-fought with the
   * color-interpolated back wall and made bright 40+ pixel horizontal
   * cracks through the dresser and crib in real DeSmuME captures.
@@ -614,22 +626,69 @@ void world_init(void){
  glMatrixMode(GL_PROJECTION);glLoadIdentity();
  gluPerspective(51,256.0f/192.0f,.1f,30);
 }
-void world_draw_care(const Game *s,uint32_t frame,int activity,
-                     uint32_t action_age){
+/* Four deliberate in-world object angles, plus the original portrait.
+ * Every preset looks into the SAME actual 3D nursery, not a picture
+ * carousel or a second low-detail room. A 16-tick smoothstep dolly avoids
+ * hard teleports when tapping around the furniture. */
+EggCamera world_nursery_camera(int focus,int previous,uint32_t age){
+ static const EggCamera presets[5]={
+  {.97f,1.05f,3.43f,-.12f,.035f,.17f},  /* baby / default */
+  {.75f,1.22f,3.38f,-1.55f,.95f,-1.95f},/* window / moon */
+  {.66f,1.01f,3.23f,-2.24f,.38f,-.28f},/* lamp / dresser */
+  {.84f,.74f,3.27f,-.88f,-.48f,.33f},  /* teddy / playmat */
+  {1.44f,1.21f,3.18f,1.57f,-.15f,-1.14f} /* crib */
+ };
+ EggCamera a,b,c;
+ float t;
+ int i=focus>=0&&focus<4?focus+1:0;
+ int j=previous>=0&&previous<4?previous+1:0;
+ a=presets[j];b=presets[i];
+ t=age>=16u?1.f:(float)age/16.f;
+ t=t*t*(3.f-2.f*t);
+ c.x=a.x+(b.x-a.x)*t;c.y=a.y+(b.y-a.y)*t;
+ c.z=a.z+(b.z-a.z)*t;
+ c.look_x=a.look_x+(b.look_x-a.look_x)*t;
+ c.look_y=a.look_y+(b.look_y-a.look_y)*t;
+ c.look_z=a.look_z+(b.look_z-a.look_z)*t;
+ return c;
+}
+void world_draw_nursery(const Game *s,uint32_t frame,int activity,
+                        uint32_t action_age,int focus,int from,
+                        uint32_t camera_age,int daylight,int lamp){
+ EggCamera camera=world_nursery_camera(focus,from,camera_age);
  glMatrixMode(GL_MODELVIEW);glLoadIdentity();
- /* This is a room with true depth and perspective, not a flat orthographic collage. */
- /* More frontal portrait: avoids exaggerated protruding facial geometry. */
- gluLookAt(.97f,1.05f,3.43f,-.12f,.035f,.17f,0,1,0);
+ gluLookAt(camera.x,camera.y,camera.z,
+           camera.look_x,camera.look_y,camera.look_z,0,1,0);
+ (void)camera; /* host GL shim intentionally discards its arguments */
  glPolyFmt(POLY_ALPHA(31)|POLY_CULL_NONE);
  frame_vertices=0;frame_polygons=0;
+ tour_daylight=daylight!=0;
+ tour_lamp_on=lamp!=0;
+ nursery_ambient=tour_lamp_on?0:-2;
  room();
- /* A muted plum contact shadow belongs ON the lavender rug, below the
-  * cream shoes. The former olive green quad hovered at y=-1.105 and
-  * read as a glowing green wedge stuck between the infant's legs. */
+ /* Reset visual state BEFORE drawing baby: the lamp affects room surfaces,
+  * but must not tint the actual baby or leak into Toybox / egg replay. */
+ nursery_ambient=0;
+ tour_daylight=0;
+ tour_lamp_on=1;
  flat_floor(-.10f,-1.124f,.31f,.84f,.255f,18,16,23);
  baby_model(s,frame,activity,0,action_age);
- teddy();
+ if(focus==2){
+  int beat=(int)(frame%48u);
+  int tilt=beat<24?beat:48-beat;
+  /* Touching Teddy starts a tiny, connected stuffed-bear bow. */
+  glPushMatrix();
+  glTranslatef(-1.28f,-.87f,.52f);
+  glRotateZi(model_angle((tilt-12)/5));
+  glTranslatef(1.28f,.87f,-.52f);
+  teddy();
+  glPopMatrix(1);
+ }else teddy();
  glFlush(0);
+}
+void world_draw_care(const Game *s,uint32_t frame,int activity,
+                     uint32_t action_age){
+ world_draw_nursery(s,frame,activity,action_age,-1,-1,16u,0,1);
 }
 /* Compatibility for existing host callers and noninteractive views: they
  * sample the deliberately posed hold, while live gameplay uses action age. */
