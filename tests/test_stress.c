@@ -5,7 +5,7 @@
 #include "save.h"
 
 /* Deterministic long-run simulation: exercises all care actions, endings,
- * corruption tiers, both bespoke minigames, directional cabinets and saves.
+ * corruption tiers, all eight distinct initial cabinets, legacy challenges and saves.
  * The ROM has no heap allocations in these state transitions. */
 int main(void){
  const char *base="/tmp/my_baby_ai_stress";
