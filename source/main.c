@@ -354,7 +354,10 @@ int main(void){
     sfx_stop();
     view=4;last_ending=END_EGG;dirty=1;
    }else{
-    egg_frame++;
+    /* The lower screen advertises A CONTINUE. Advance one deliberate
+     * cinematic act at a time; B/START still skip straight to the card. */
+    if(down&KEY_A)egg_frame=roughhouse_egg_next_act(egg_frame);
+    else egg_frame++;
     if(egg_frame==EGG_CRACK_FRAME)sfx_play(SFX_UNSEAL);
     else if(egg_frame==EGG_SCARE_FRAME)sfx_play(SFX_SCARE);
     else if(egg_frame==EGG_PUSH_FRAME||
