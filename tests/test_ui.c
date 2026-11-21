@@ -81,6 +81,11 @@ int main(void){
  assert(ui_room_touch(129,139)==-1); /* column gap */
  assert(ui_room_touch(30,117)==-1); /* row gap */
  assert(ui_room_touch(128,183)==4); /* return */
+ assert(ui_room_touch(180,183)==5); /* native stylus sound toggle */
+ assert(ui_room_touch(222,183)==6); /* native stylus USE */
+ assert(ui_room_touch(150,183)==5); /* sound button left edge */
+ assert(ui_room_touch(207,183)==5); /* sound button right edge */
+ assert(ui_room_touch(248,183)==4); /* outside USE button */
  assert(ui_room_touch(0,0)==-1);
  assert(ui_room_touch(256,95)==-1);
  assert(ui_room_touch(40,192)==-1);
@@ -99,6 +104,16 @@ int main(void){
   ui_draw(&g,&a,10,2|16,0,0,1,"TEDDY PROMOTED");
   verify_coverage();teddy=fingerprint();
   assert(teddy!=light_on);
+  /* Room sound is visible and controllable independently of Toybox:
+   * 32=globally muted, drawn inside the existing footer with no overlaps. */
+  {
+   uint32_t sound_on,sound_off;
+   ui_draw(&g,&a,10,2|16,0,0,1,"TEDDY PROMOTED");
+   verify_coverage();sound_on=fingerprint();
+   ui_draw(&g,&a,10,2|16|32,0,0,1,"TEDDY PROMOTED");
+   verify_coverage();sound_off=fingerprint();
+   assert(sound_on!=sound_off);
+  }
   /* The crib itself explains the conditional bonus, not hidden knowledge.
    * Compare the SAME crib card under lit and quiet-night conditions. */
   {
