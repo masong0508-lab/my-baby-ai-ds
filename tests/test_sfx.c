@@ -32,7 +32,15 @@ int main(void){
  finish(SFX_CRACK,24);
  finish(SFX_UNSEAL,54);
  finish(SFX_PULSE,19);
- finish(SFX_SCARE,40);
+ finish(SFX_SCARE,45);
+ /* The scare begins with a clear high alarm, then drops to bass instead
+  * of an indistinguishable sustained beep. Audio never exceeds PSG limits. */
+ sfx_play(SFX_SCARE);
+ sfx_tick();
+ assert(max_hz>=1200);
+ for(int i=0;i<11;i++)sfx_tick();
+ assert(sfx_is_playing());
+ sfx_stop();
  sfx_play(SFX_SCARE);
  sfx_play(SFX_BOUNCE); /* must not interrupt the reveal */
  assert(sfx_is_playing());

@@ -610,6 +610,114 @@ static void fang(float x,float y,float z,float width,float height,int upper){
  glEnd();
  frame_vertices+=3;frame_polygons++;
 }
+/* Fixed, sculpted porcelain crescent. The old stretched sphere produced
+ * tall rectangular pillars in actual 256x192 DeSmuME images. Each wing is
+ * now a tapering, irregular shell with a raised inner cut edge, shaded
+ * thickness and two short stress fractures. No trig, buffer, or texture.
+ * 14 quads and two cracks per side vs. 60-quads per old ellipsoid. */
+static void egg_porcelain_wing(int side,float opened){
+ static const float y[8]={-1.01f,-.82f,-.57f,-.23f,
+                            .13f,.47f,.78f,1.09f};
+ static const float inner[8]={.61f,.45f,.37f,.34f,
+                                .38f,.45f,.55f,.72f};
+ static const float outer[8]={.75f,.96f,1.09f,1.15f,
+                                1.12f,1.02f,.88f,.77f};
+ static const int shade[8]={-6,-2,1,3,4,3,0,-4};
+ float drift=opened*.18f;
+ int i;
+ /* This strip's convex outer contour and fractured, concave inner edge
+  * form a recognizable open egg even when the head is very close. */
+ glBegin(GL_QUAD_STRIP);
+ for(i=0;i<8;i++){
+  color(29,29,24,shade[i]+1);
+  glVertex3f(side*(inner[i]+drift),y[i],
+             .65f+(i==2||i==5?.018f:0.f));
+  color(27,28,24,shade[i]-3);
+  glVertex3f(side*(outer[i]+drift),y[i],.39f);
+ }
+ glEnd();
+ frame_vertices+=16;frame_polygons+=7;
+ /* Thickness is the dark organic cut beneath the porcelain, NOT an
+  * extra white bar drawn across the opening. */
+ glBegin(GL_QUAD_STRIP);
+ for(i=0;i<8;i++){
+  color(7,14,12,shade[i]/2);
+  glVertex3f(side*(inner[i]+drift-.034f),y[i],.705f);
+  color(15,23,18,shade[i]/2);
+  glVertex3f(side*(inner[i]+drift+.067f),y[i],.649f);
+ }
+ glEnd();
+ frame_vertices+=16;frame_polygons+=7;
+ /* Deep cracks on the exposed face, with a short zigzag rather than the
+  * prior perfectly straight black streaks. Only 3 tiny surface quads. */
+ glBegin(GL_QUADS);
+ color(12,15,17,0);
+ face(side*(.85f+drift),.58f,.689f,
+      side*(.88f+drift),.57f,.689f,
+      side*(.82f+drift),.30f,.689f,
+      side*(.79f+drift),.31f,.689f);
+ face(side*(.82f+drift),.31f,.688f,
+      side*(.85f+drift),.30f,.688f,
+      side*(.75f+drift),.16f,.688f,
+      side*(.72f+drift),.17f,.688f);
+ color(18,19,18,0);
+ face(side*(.96f+drift),-.39f,.689f,
+      side*(.99f+drift),-.40f,.689f,
+      side*(.92f+drift),-.60f,.689f,
+      side*(.89f+drift),-.58f,.689f);
+ glEnd();
+ frame_vertices+=12;frame_polygons+=3;
+}
+/* A few broad, uneven acid-green ribbons make the inner edge appear wet.
+ * Align directly to the curved shell profile instead of drawing a long
+ * floating neon rectangle. Three-dimensional parallax is preserved. */
+static void egg_lip_ichor(int side,float opened){
+ static const float y[6]={-.73f,-.40f,-.12f,.19f,.48f,.76f};
+ static const float lip[6]={.47f,.37f,.35f,.39f,.46f,.54f};
+ static const int gleam[6]={-6,-2,2,5,0,-5};
+ int i;
+ float drift=opened*.18f;
+ glBegin(GL_QUAD_STRIP);
+ for(i=0;i<6;i++){
+  color(3,24,7,gleam[i]);
+  glVertex3f(side*(lip[i]+drift-.020f),y[i],.724f);
+  color(17,31,9,gleam[i]);
+  glVertex3f(side*(lip[i]+drift+.036f),y[i],.729f);
+ }
+ glEnd();
+ frame_vertices+=12;frame_polygons+=5;
+}
+
+/* Eight hand-placed triangular planes sculpt the brow, cheeks and lower
+ * jaw. Deliberate asymmetric light makes the face feel carved instead of a
+ * flat turquoise emoji. Native GL vertex colors supply a cheap fake rim
+ * light, while the shell/eye palette carries the neon contrast. */
+static void alien_face_facets(void){
+ glBegin(GL_TRIANGLES);
+ /* Brow planes sweep down toward the fixed eye sockets. */
+ color(9,20,17,1);glVertex3f(-.72f,.53f,.720f);
+ color(16,25,19,2);glVertex3f(-.38f,.65f,.790f);
+ color(7,15,16,-2);glVertex3f(-.42f,.42f,.856f);
+ color(9,20,17,1);glVertex3f(.72f,.53f,.720f);
+ color(16,25,19,2);glVertex3f(.38f,.65f,.790f);
+ color(7,15,16,-2);glVertex3f(.42f,.42f,.856f);
+ /* Back cheek planes bridge the broad head to the mouth corners. */
+ color(7,17,17,-2);glVertex3f(-.89f,.06f,.612f);
+ color(12,24,18,1);glVertex3f(-.62f,.06f,.819f);
+ color(4,10,12,-2);glVertex3f(-.54f,-.38f,.800f);
+ color(7,17,17,-2);glVertex3f(.89f,.06f,.612f);
+ color(12,24,18,1);glVertex3f(.62f,.06f,.819f);
+ color(4,10,12,-2);glVertex3f(.54f,-.38f,.800f);
+ /* Lower jaw panels keep teeth and tongue visually attached to skull. */
+ color(6,16,15,0);glVertex3f(-.66f,-.30f,.70f);
+ color(12,22,16,1);glVertex3f(-.49f,-.70f,.78f);
+ color(4,10,12,-2);glVertex3f(-.23f,-.90f,.69f);
+ color(6,16,15,0);glVertex3f(.66f,-.30f,.70f);
+ color(12,22,16,1);glVertex3f(.49f,-.70f,.78f);
+ color(4,10,12,-2);glVertex3f(.23f,-.90f,.69f);
+ glEnd();
+ frame_vertices+=18;frame_polygons+=6;
+}
 /* Purpose-built visual hierarchy for the secret BAD ending:
  *   porcelain shell / shadowed inner lip / black incubation chamber /
  *   clearly silhouetted parasite / thin luminous green ichor.
@@ -659,10 +767,12 @@ float world_egg_creature_depth(uint32_t frame){
  uint32_t elapsed,beat;
  if(frame<EGG_SCARE_FRAME)return 0.f;
  elapsed=frame-EGG_SCARE_FRAME;
- if(elapsed<=7u)return (float)elapsed*.025f;
- if(elapsed<=15u)return .175f-(float)(elapsed-7u)*.006f;
- beat=(elapsed-15u)%40u;
- return .127f+(float)(beat<20u?beat:40u-beat)*.00055f;
+ /* One unmistakable lunge: surge for nine frames, then deliberately
+  * withdraw. A continuous idle pulse follows, not repeated jump cuts. */
+ if(elapsed<=9u)return (float)elapsed*(.31f/9.f);
+ if(elapsed<=22u)return .31f-(float)(elapsed-9u)*.0075f;
+ beat=(elapsed-22u)%40u;
+ return .2125f+(float)(beat<20u?beat:40u-beat)*.0004f;
 }
 /* A barely perceptible pulse inside the shell; the embryonic eyes and
  * mouth share one pivot so nothing floats away from the skull. */
@@ -729,35 +839,12 @@ void world_draw_secret(const Game *s,uint32_t frame,const Roughhouse *r){
    soft_mark(.078f+sway,-.092f,.682f,.038f,.026f,23,31,10);
    glPopMatrix(1);
   }
-  /* TWO SEPARATE porcelain halves. The inner seam is open from the
-   * first shot and widens during the dolly; both halves have physical
-   * curvature, lit outer faces, and darker beveled inner lips. */
-  soft_head(-.466f-opened*.17f,-.14f,.45f,
-            .32f,.78f,.16f,28,29,24);
-  soft_head(.472f+opened*.17f,-.13f,.46f,
-            .32f,.77f,.16f,25,28,23);
-  soft_head(-.223f-opened*.17f,-.13f,.606f,
-            .065f,.66f,.042f,17,25,18);
-  soft_head(.232f+opened*.17f,-.12f,.608f,
-            .066f,.65f,.042f,15,24,18);
-  /* Single broad ceramic highlight on each half establishes key light;
-   * dark secondary seams make the curved exterior read as hard material. */
-  soft_mark(-.575f-opened*.17f,.18f,.620f,.08f,.41f,31,30,26);
-  soft_mark(.61f+opened*.17f,-.19f,.627f,.047f,.38f,29,29,23);
-  soft_mark(-.37f-opened*.17f,-.46f,.627f,.029f,.25f,14,20,18);
-  soft_mark(.41f+opened*.17f,.38f,.628f,.024f,.17f,14,20,18);
-  /* Deep cracks break the edges of the ceramic halves and lead the eye
-   * toward the living cavity. Static quad seams, no animated particles. */
-  soft_mark(-.535f-opened*.17f,.49f,.640f,.017f,.19f,15,15,18);
-  soft_mark(-.467f-opened*.17f,.31f,.640f,.030f,.11f,15,16,18);
-  soft_mark(.55f+opened*.17f,.39f,.643f,.017f,.21f,13,16,18);
-  soft_mark(.49f+opened*.17f,.15f,.643f,.028f,.10f,13,16,18);
-  /* The alien liquid collects on the INNER lips, not over the face.
-   * Four viscous ribbons and tiny wet specular cores; no particle noise. */
-  soft_mark(-.267f-opened*.17f,.09f,.676f,.052f,.36f,5,29,10);
-  soft_mark(.271f+opened*.17f,-.03f,.679f,.053f,.30f,6,30,9);
-  soft_mark(-.261f-opened*.17f,.09f,.680f,.017f,.20f,24,31,11);
-  soft_mark(.265f+opened*.17f,-.03f,.682f,.018f,.18f,23,31,11);
+  /* Unlike a sphere elongated vertically, the new concave crescent has a
+   * genuine pointed tip, chipped inner edges and an acid-lit cavity lip. */
+  egg_porcelain_wing(-1,opened);
+  egg_porcelain_wing(1,opened);
+  egg_lip_ichor(-1,opened);
+  egg_lip_ichor(1,opened);
   if(phase==2u){
    float drip=opened*.29f;
    soft_mark(-.269f-opened*.17f,-.31f-drip*.46f,.686f,
@@ -768,20 +855,15 @@ void world_draw_secret(const Game *s,uint32_t frame,const Roughhouse *r){
    ellipse(.27f,-.94f,.63f,.14f,.026f,.045f,14,31,10);
   }
  }else{
-  /* The egg DOES NOT vanish on the jump-scare cut. Two separate
-   * porcelain wings frame the creature with a black incubation recess
-   * between them, while the original crib, window and dresser persist
-   * as real 3D nursery geography behind the subject. These shapes
-   * are static DS geometry and use no extra texture/buffer allocations. */
+  /* The EXACT same shell now holds together across the hard camera cut.
+   * The hero portrait emerges FROM the cracked cavity; never a floating
+   * mask between unrelated white columns. */
   block(0,-1.08f,-.28f,2.10f,.16f,1.44f,10,13,12);
   soft_head(0,-.10f,-.08f,.86f,1.12f,.23f,1,3,7);
-  soft_head(-.92f,-.08f,.29f,.35f,1.15f,.22f,28,29,24);
-  soft_head(.92f,-.08f,.29f,.35f,1.15f,.22f,27,28,23);
-  /* Acid-green rim/rivulets tell the same story as the push-in. */
-  soft_mark(-.67f,.12f,.535f,.055f,.54f,7,30,9);
-  soft_mark(.67f,.02f,.535f,.055f,.56f,6,31,9);
-  soft_mark(-.67f,-.36f,.540f,.070f,.28f,15,31,8);
-  soft_mark(.67f,-.38f,.540f,.062f,.26f,17,31,9);
+  egg_porcelain_wing(-1,1.f);
+  egg_porcelain_wing(1,1.f);
+  egg_lip_ichor(-1,1.f);
+  egg_lip_ichor(1,1.f);
   /* The reveal is a DESIGNED creature portrait rather than overlapping
    * random ellipsoids: cranium, socketed eyes, slit pupils, jaw and teeth.
    * A single parent transform lunges ALL facial components together. */
@@ -789,6 +871,7 @@ void world_draw_secret(const Game *s,uint32_t frame,const Roughhouse *r){
   glTranslatef(0.f,0.f,world_egg_creature_depth(frame));
   soft_head(0,.085f,.34f,1.00f,1.08f,.51f,5,10,12);
   soft_head(0,.68f,.36f,.66f,.29f,.28f,7,15,14);
+  alien_face_facets();
   /* Raised brow masses visually lock the sockets to the head. */
   tilted_ellipse(-.37f,.51f,.79f,.34f,.105f,.055f,-12,8,18,16);
   tilted_ellipse(.38f,.50f,.79f,.34f,.105f,.055f,12,8,18,16);

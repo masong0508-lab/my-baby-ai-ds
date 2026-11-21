@@ -52,8 +52,18 @@ void sfx_tick(void){
   duration=12;hz=110u+age*3u;volume=age<4u?age*6u:(12u-age)*3u;
   break;
  case SFX_SCARE:
-  duration=33;hz=880u-age*19u;volume=age<5u?28u+age*5u:
-     age<23u?48u:(33u-age)*4u;
+  /* Distinct attack + low distorted synthetic growl in one PSG voice:
+   * 3 ticks of sharp alarm, an 8-tick plunge, then a short decaying
+   * subharmonic tail. No PCM, second sound channel, or repeating strobe. */
+  duration=38;
+  if(age<3u){
+   hz=1220u-age*100u;volume=60u-age*2u;
+  }else if(age<11u){
+   hz=410u-(age-3u)*25u;volume=49u-(age-3u)*2u;
+  }else{
+   hz=155u+(age%3u)*13u-(age-11u)*2u;
+   volume=(38u-age)*2u;
+  }
   break;
  default:duration=0;break;
  }
