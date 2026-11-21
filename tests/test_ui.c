@@ -39,6 +39,16 @@ static uint32_t care_hint_fingerprint(void){
  }
  return hash;
 }
+/* Distinguish geometry count updates in the optional diagnostics strip.
+ * This scans the real 256x192 software-VRAM framebuffer. */
+static uint32_t diag_geometry_fingerprint(void){
+ uint32_t h=2166136261u;
+ int x,y;
+ for(y=163;y<173;y++)for(x=59;x<238;x++){
+  h^=screen[y*256+x];h*=16777619u;
+ }
+ return h;
+}
 static uint32_t fingerprint(void){
  uint32_t h=2166136261u;
  unsigned i;
@@ -463,23 +473,39 @@ int main(void){
   /* Crosshair must not stick after stylus release, or ghost at 0,0. */
   unsigned index=139u*256u+122u; /* x=31+120*194/255, y=119+130*30/191 */
   uint16_t canvas=screen[index];
-  ui_touch_diag_update();
+  ui_touch_diag_update(1320u,426u);
   assert(screen[index]!=canvas);
-  ui_touch_diag_update(); /* same state should be a no-op */
+  ui_touch_diag_update(1320u,426u); /* same state should be a no-op */
   ui_touch_observe(0,0,0,3);
-  ui_touch_diag_update();
+  ui_touch_diag_update(1320u,426u);
   assert(screen[index]==canvas);
   ui_touch_observe(1,120,130,4);
-  ui_touch_diag_update();
+  ui_touch_diag_update(1320u,426u);
   assert(screen[index]!=canvas);
   ui_touch_observe(1,220,170,4);
-  ui_touch_diag_update();
+  ui_touch_diag_update(1320u,426u);
   assert(screen[index]==canvas); /* old crosshair erased on movement */
   ui_touch_observe(0,0,0,4);
-  ui_touch_diag_update();
+  ui_touch_diag_update(1320u,426u);
  }
  ui_draw(&g,&a,7,0,0,0,1,"TOUCH DEBUG");
- ui_touch_diag_update();
+ ui_touch_diag_update(1320u,426u);
+ /* Live 3D submission telemetry must be visible, bounded to its own
+  * strip, and redrawn only when a budget counter changes. */
+ {
+  uint32_t initial,verts_changed,polys_changed;
+  ui_touch_diag_update(1320u,426u);
+  initial=diag_geometry_fingerprint();
+  ui_touch_diag_update(1321u,426u);
+  verts_changed=diag_geometry_fingerprint();
+  assert(verts_changed!=initial);
+  ui_touch_diag_update(1321u,426u); /* same input is stable */
+  assert(diag_geometry_fingerprint()==verts_changed);
+  ui_touch_diag_update(1321u,1900u); /* polygon budget exceeded */
+  polys_changed=diag_geometry_fingerprint();
+  assert(polys_changed!=verts_changed);
+  verify_coverage();
+ }
  /* Cursor must restore the exact pixels it covered, then obey a UI
   * redraw without resurrecting stale pixels from the previous scene. */
  {
