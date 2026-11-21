@@ -11,6 +11,17 @@ static uint8_t clamp(int n){return n<0?0:n>100?100:(uint8_t)n;}
 static uint32_t next(Game *s){uint32_t x=s->rng?s->rng:0xA17u;x^=x<<13;x^=x>>17;x^=x<<5;return s->rng=x;}
 void game_init(Game *s){memset(s,0,sizeof(*s));s->rng=0xBADA551u;s->days=1;s->dollars=8;s->favors=1;s->unlocked=255;s->hunger=35;s->mood=75;s->energy=75;s->chaos=12;s->corruption=2;}
 unsigned game_glitch_tier(const Game *s){return s->corruption>=80?4:s->corruption>=60?3:s->corruption>=40?2:s->corruption>=20?1:0;}
+/* One readable next-step hint instead of four unlabeled competing needs.
+ * Exhaustion at critical levels wins first, then hunger, recoverable sleep
+ * / chaos, and finally social connection. No RNG or mutation. */
+int game_care_hint(const Game *s){
+ if(!s)return -1;
+ if(s->energy<=15)return NAP;
+ if(s->hunger>=70)return FEED;
+ if(s->energy<=35||s->chaos>=70)return NAP;
+ if(s->mood<=40)return CHAT;
+ return -1;
+}
 const char *game_care(Game *s,Care action){
  switch(action){
  case FEED:s->hunger=clamp(s->hunger-30);s->mood=clamp(s->mood+3);break;
