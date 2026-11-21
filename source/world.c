@@ -518,7 +518,12 @@ static void baby_model(const Game *s,uint32_t frame,int action,
  /* Layered shadow + warm collar replaces the single white floating coin. */
  soft_head(0,-.32f,-.08f,.49f,.46f,.36f,19,27,27);
  ellipse(0,.084f,-.015f,.27f,.11f,.196f,17,22,21);
- ellipse(0,.117f,.012f,.23f,.073f,.215f,31,27,22);
+ /* A nearly paper-flat, overbright collar ellipsoid was emitting a
+  * 75-pixel row of RGB15(31,28,23) through the dresser/cheek. That exact
+  * color came from the ellipsoid's terminal GL_QUAD_STRIP band.
+  * Replace it with a small, volumetric curved neckline, still attached
+  * to the romper, but safely away from the rasterizer's thin-pole case. */
+ ellipse(0,.117f,.012f,.176f,.112f,.139f,29,25,21);
  ellipse(0,-.39f,.284f,.235f,.225f,.035f,29,30,26);
  /* Four inexpensive stitched glints on the romper's central pocket. */
  soft_mark(0,-.30f,.330f,.10f,.044f,glitch?24:27,glitch?17:23,10);
