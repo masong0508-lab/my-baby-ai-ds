@@ -611,15 +611,12 @@ static void sparkle(int x,int y,uint16_t color){
 /* Every cabinet inherits a unified theatrical frame. Previously each
  * redraw emitted ~140 dot primitives; this lightweight motif costs fewer
  * bitmap writes and gives every activity the same visual structure. */
+/* Clean playfield mat: formerly the dashed strips on both edges looked
+ * like vertical rendering faults and contributed visual clutter in every
+ * mini-game. Keep one consistent top rule and distinct footer boundary. */
 static void arcade_wall(uint16_t background){
- int x,y;
  solid(0,27,256,149,background);
  solid(0,27,256,3,screen_accent);
- for(x=10;x<251;x+=32)solid(x,29,15,1,WHITE);
- for(y=35;y<170;y+=22){
-  solid(2,y,3,13,screen_accent);
-  solid(251,y,3,13,screen_accent);
- }
  solid(0,174,256,2,screen_accent);
 }
 /* A quiet status rule instead of an extra dense row of pixel badges. */
