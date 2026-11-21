@@ -107,8 +107,7 @@ int main(void){
    * Keep raw pen visibility for diagnostics, but do not steer or drag game
    * objects using an uncalibrated (0,0) or off-screen sample. A real touch
    * at the top-left corner becomes valid after the gate's three-frame grace. */
-  int pen_ready=raw_touch&&touch.px<=255&&touch.py<=191&&
-      !(touch.px==0&&touch.py==0&&gesture.held_frames<3);
+  int pen_ready=touch_gate_coordinates_ready(&gesture,raw_touch,touch.px,touch.py);
   ui_touch_observe(raw_touch,touch.px,touch.py,gesture.total_presses);
   /* Compare against the proven button-scanning pattern from the user's
    * Mandex DS bare-metal port. This fallback needs no working ARM7 stylus. */
