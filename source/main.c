@@ -595,7 +595,8 @@ int main(void){
            selected,last_ending,reset_step,storage_ok,message);
    dirty=0;
   }
-  if(view==7)ui_touch_diag_update();
+  if(view==7)ui_touch_diag_update(world_vertex_count(),
+                                  world_polygon_count());
   /* Overlay a tiny cursor only when virtual pen is enabled. The bottom BG
    * needn't be fully repainted on every frame, avoiding DraStic flicker. */
   ui_virtual_cursor_update(vpen.enabled,vpen.x,vpen.y,
