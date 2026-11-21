@@ -186,3 +186,25 @@ Implemented in original game code:
 5. **Upper-screen character animation:** One stable model reacts to the care action: feeding raises a hand, chatting gestures, play adds gentle bounce, and napping closes the eyes and rests both hands. Existing geometric budgets, animation cadence, sprite assets, and room appearance remain intact.
 
 Tests: native framebuffer test hashes the four Beatbox icon regions and verifies WATCH vs REPEAT output. DeSmuME automation captures actual upper-screen feed and sleeping poses and fails if the baby does not visibly respond. The same host save/scene/touch/arcade regression and both original and BlocksDS ROM workflows are required before merge. No physical DraStic or measured-FPS claim is made.
+
+## Optional Toybox / synthetic-egg secret ending
+
+The design adapts the *Talking Tom* virtual-pet HUD pattern to Nintendo DS hardware, taking inspiration from the source material's selectable bottom-row activity icons rather than copying its artwork:
+https://www.talkandroid.com/4687-how-to-play-my-talking-tom-2-walkthrough-tips-hints/
+
+### UI and gameplay
+- Nursery has a consistent lower-screen three-tab action dock: **ARCADE / TOYBOX / END DAY**. The four original FEED, CHAT, PLAY and NAP cards and their existing touch hitboxes are unchanged.
+- TOYBOX explicitly changes to a second lower-screen mode (the upper hardware-3D baby remains visible). Tap the **SLAP** hand or **KICK** boot icon to **select** a tool. This is a non-violent action itself; a separate tap on the lower-screen doll preview applies the selected action. Hold **L/R** to choose the tool, press **A** to use it; press **B** to return safely to ordinary care. No touch on the non-touch upper DS LCD is required. The unusual actions apply exclusively to a fictional artificial toy shell.
+- The shell doll uses fixed-point velocity/gravity/bounds/floor restitution/angular rotation and damping: deterministic, bounded motion without a physics dependency or per-frame allocation. An optional R+X keyboard shortcut also opens the Toybox.
+- A secret trigger requires **at least six** counted actions and **at least fifteen** charge points, protected by a short cooldown so holding a button doesn't instantly complete the ending.
+- Secret BAD ending **#9** is a preexisting ending-mask bit 9; the binary save struct/version is unchanged and repeat discovery is idempotent. Existing 8 endings are untouched. The third scrapbook page reveals and replays the ending after discovery.
+- Staged 3D camera film: artificial shell stress, intact alien egg, **thick bright-green extraterrestrial ichor** seeping through the cracks in opaque native polygon ribbons, an unnaturally quiet sustained camera push into the opening, and a single abrupt, close-up alien reveal. No real-human injury, red human blood, gore texture, rapidly flashing strobe loops, or imported copyrighted images. The finale is a non-gory collectible BAD ENDING.
+- The upper-screen cinematic is drawn by the existing native libnds geometry renderer; the lower screen shows staged suspense cards. All new 3D elements are a small fixed collection of polygons rather than loaded video, textures or framebuffers.
+
+### Verification gates
+- `tests/test_roughhouse.c` asserts deterministic repeated impulses, bounded motion, hit cooldown, secret gate, once-only bad-ending credit, and save reload.
+- `tests/test_ui.c` asserts the three-way dock, selectable Toybox, tap-to-use independence, all scrapbook pages and no framebuffer overrun.
+- `tests/test_world.c` exercises moving synthetic baby and egg reveal phases while checking Nintendo DS poly/vertex budgets.
+- DeSmuME integration asserts the *actual rendered* Toybox selection, animated doll kick, repeated six-hit trigger, visible alien-green fluid on the 3D egg, a clearly distinct jump-scare frame, and the BAD ENDING postcard.
+
+Do not consider this tested on physical DS or the user's specific DraStic installation until confirmed there. These effects have not been given a measured FPS figure.
