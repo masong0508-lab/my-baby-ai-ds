@@ -585,6 +585,8 @@ void world_draw_secret(const Game *s,uint32_t frame,const Roughhouse *r){
  glMatrixMode(GL_MODELVIEW);glLoadIdentity();
  gluLookAt(camera.x,camera.y,camera.z,
            camera.look_x,camera.look_y,camera.look_z,0,1,0);
+ /* The host geometry stub elides gluLookAt arguments entirely. */
+ (void)camera;
  glPolyFmt(POLY_ALPHA(31)|POLY_CULL_NONE);
  frame_vertices=0;frame_polygons=0;
  /* Keep the real nursery where the player last saw it: the patterned
