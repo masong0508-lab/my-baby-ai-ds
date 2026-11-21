@@ -9,6 +9,8 @@ void ui_draw(const Game *s,const Arcade *a,int view,int selected,
 int ui_nursery_touch(int x,int y);
 int ui_prank_entry_touch(int x,int y);
 int ui_roughhouse_touch(int x,int y); /* 1 slap, 2 kick, 3 back */
+/* Film: 1 skip, 2 pause/resume, 3 next act. The readout is tappable. */
+int ui_egg_cinematic_touch(int x,int y);
 int ui_home_navigation(int x,int y);
 int ui_arcade_select_page(int x,int y,int selected);
 int ui_arcade_page_touch(int x,int y); /* -1 previous, +1 next */

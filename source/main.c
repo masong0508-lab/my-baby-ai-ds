@@ -28,6 +28,7 @@ static TouchGate gesture;
 static VirtualStylus vpen;
 static Roughhouse rag;
 static uint32_t egg_frame;
+static int egg_paused;
 static int toy_tool=ROUGHHOUSE_SLAP;
 static const char *message="WELCOME TO DAYCARE 2.0";
 static void persist(void){if(storage_ok)(void)save_write(SAVE_BASE,&baby);}
@@ -87,7 +88,7 @@ int main(void){
  /* Always show a visible title before touching the filesystem or heavy 3D.
   * Some older emulators hang during their emulated DLDI/FAT setup. */
  ui_draw(&baby,&arc,view,view==6?album_page:view==8?((int)rag.charge|(toy_tool==ROUGHHOUSE_KICK?32:0)|((int)rag.hits<<6)|
-           (sfx_is_enabled()?(1<<16):0)):view==9?(int)egg_frame:selected,last_ending,reset_step,storage_ok,message);
+           (sfx_is_enabled()?(1<<16):0)):view==9?((int)egg_frame|(egg_paused?EGG_FILM_PAUSED_FLAG:0)):selected,last_ending,reset_step,storage_ok,message);
  /* Sound starts only AFTER the title is visibly present. Small hardware
   * PSG cues are synthesized at the ARM9 game tick; no sample bank/heap. */
  sfx_init();
@@ -344,32 +345,44 @@ int main(void){
       sfx_play(SFX_CRACK);
       (void)game_secret_egg(&baby);
       persist();
-      view=9;egg_frame=0;last_ending=END_EGG;
+      view=9;egg_frame=0;egg_paused=0;last_ending=END_EGG;
       message="INCUBATION FILE 09 OPENED.";dirty=1;
      }
     }
    }
   }else if(view==9){
-   if(down&(KEY_B|KEY_START)){
+   int film_touch=tap?ui_egg_cinematic_touch(touch.px,touch.py):0;
+   if((down&(KEY_B|KEY_START))||film_touch==1){
     sfx_stop();
+    egg_paused=0;
     view=4;last_ending=END_EGG;dirty=1;
+   }else if((down&KEY_X)||film_touch==2){
+    /* Pause freezes the camera, drip growth and scare countdown. Yields
+     * no extra screen VRAM writes except this one HUD state change. */
+    egg_paused=!egg_paused;
+    dirty=1;
    }else{
-    /* The lower screen advertises A CONTINUE. Advance one deliberate
-     * cinematic act at a time; B/START still skip straight to the card. */
-    if(down&KEY_A)egg_frame=roughhouse_egg_next_act(egg_frame);
-    else egg_frame++;
-    if(egg_frame==EGG_CRACK_FRAME)sfx_play(SFX_UNSEAL);
-    else if(egg_frame==EGG_SCARE_FRAME)sfx_play(SFX_SCARE);
-    else if(egg_frame==EGG_PUSH_FRAME||
-            (egg_frame>EGG_PUSH_FRAME&&
-             egg_frame<EGG_SCARE_FRAME-24u&&
-             (egg_frame-EGG_PUSH_FRAME)%38u==0u))
-     sfx_play(SFX_PULSE);
-    if(egg_frame==EGG_CRACK_FRAME||egg_frame==EGG_PUSH_FRAME||
-       egg_frame==EGG_SCARE_FRAME||egg_frame==EGG_HOLD_FRAME)dirty=1;
-    if(egg_frame>=EGG_TOTAL_FRAMES){
-     sfx_stop();
-     view=4;last_ending=END_EGG;dirty=1;
+    /* Native stylus and virtual D-pad cursor can now advance scenes too.
+     * Advance unpauses on purpose; idle pauses never consume film frames. */
+    if((down&KEY_A)||film_touch==3){
+     egg_frame=roughhouse_egg_next_act(egg_frame);
+     egg_paused=0;dirty=1;
+    }else if(!egg_paused)egg_frame++;
+    if(!egg_paused){
+     if(egg_frame==EGG_CRACK_FRAME)sfx_play(SFX_UNSEAL);
+     else if(egg_frame==EGG_SCARE_FRAME)sfx_play(SFX_SCARE);
+     else if(egg_frame==EGG_PUSH_FRAME||
+             (egg_frame>EGG_PUSH_FRAME&&
+              egg_frame<EGG_SCARE_FRAME-24u&&
+              (egg_frame-EGG_PUSH_FRAME)%38u==0u))
+      sfx_play(SFX_PULSE);
+     if(egg_frame==EGG_CRACK_FRAME||egg_frame==EGG_PUSH_FRAME||
+        egg_frame==EGG_SCARE_FRAME||egg_frame==EGG_HOLD_FRAME)dirty=1;
+     if(egg_frame>=EGG_TOTAL_FRAMES){
+      sfx_stop();
+      egg_paused=0;
+      view=4;last_ending=END_EGG;dirty=1;
+     }
     }
    }
   }else if(view==3){
@@ -412,7 +425,7 @@ int main(void){
     view=0;message="COLLECTION CLOSED.";dirty=1;
    }else if((down&KEY_A)&&album_page==2&&
             (baby.ending_mask&(1u<<END_EGG))){
-    view=9;egg_frame=0;last_ending=END_EGG;dirty=1;
+    view=9;egg_frame=0;egg_paused=0;last_ending=END_EGG;dirty=1;
    }else if(down&KEY_A){
     view=0;message="COLLECTION CLOSED.";dirty=1;
    }else if(down&(KEY_LEFT|KEY_L)){
@@ -427,7 +440,7 @@ int main(void){
     else if(page>0){if(album_page<2)album_page++;dirty=1;}
     else if(album_page==2&&touch.py>=67&&touch.py<169&&
             (baby.ending_mask&(1u<<END_EGG))){
-     view=9;egg_frame=0;last_ending=END_EGG;dirty=1;
+     view=9;egg_frame=0;egg_paused=0;last_ending=END_EGG;dirty=1;
     }else if(touch.py>=176){
      view=0;message="COLLECTION CLOSED.";dirty=1;
     }
@@ -458,7 +471,7 @@ int main(void){
   if(dirty||previous!=view||
      (view==2&&frame%arcade_redraw_period(&arc)==0u)){
    ui_draw(&baby,&arc,view,view==6?album_page:view==8?((int)rag.charge|(toy_tool==ROUGHHOUSE_KICK?32:0)|((int)rag.hits<<6)|
-           (sfx_is_enabled()?(1<<16):0)):view==9?(int)egg_frame:selected,last_ending,reset_step,storage_ok,message);
+           (sfx_is_enabled()?(1<<16):0)):view==9?((int)egg_frame|(egg_paused?EGG_FILM_PAUSED_FLAG:0)):selected,last_ending,reset_step,storage_ok,message);
    dirty=0;
   }
   if(view==7)ui_touch_diag_update();

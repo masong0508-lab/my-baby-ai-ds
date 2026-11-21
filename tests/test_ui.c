@@ -67,6 +67,22 @@ int main(void){
  assert(ui_roughhouse_touch(38,110)==0);
  assert(ui_roughhouse_touch(128,182)==3); /* back */
  assert(ui_roughhouse_touch(128,67)==0);
+ /* Footer hitboxes support real and virtual pen even with KEY_A masked.
+  * Center readout acts as a deliberate NEXT, not an accidental SKIP. */
+ assert(ui_egg_cinematic_touch(41,183)==1);
+ assert(ui_egg_cinematic_touch(83,176)==1);
+ assert(ui_egg_cinematic_touch(84,176)==2);
+ assert(ui_egg_cinematic_touch(150,182)==2);
+ assert(ui_egg_cinematic_touch(171,190)==2);
+ assert(ui_egg_cinematic_touch(172,181)==3);
+ assert(ui_egg_cinematic_touch(241,180)==3);
+ assert(ui_egg_cinematic_touch(128,100)==3);
+ assert(ui_egg_cinematic_touch(15,35)==3);
+ assert(ui_egg_cinematic_touch(128,165)==0);
+ assert(ui_egg_cinematic_touch(128,23)==0);
+ assert(ui_egg_cinematic_touch(-1,180)==0);
+ assert(ui_egg_cinematic_touch(256,180)==0);
+ assert(ui_egg_cinematic_touch(100,192)==0);
  assert(ui_arcade_select_page(35,92,0)==0);
  assert(ui_arcade_select_page(173,92,0)==1);
  assert(ui_arcade_select_page(35,145,0)==2);
@@ -112,6 +128,12 @@ int main(void){
   assert(foot!=fingerprint());
   ui_draw(&g,&a,9,EGG_PUSH_FRAME,0,0,1,"EGG");
   verify_coverage();
+  {
+   uint32_t playing=fingerprint();
+   ui_draw(&g,&a,9,EGG_PUSH_FRAME|EGG_FILM_PAUSED_FLAG,0,0,1,"EGG");
+   verify_coverage();
+   assert(playing!=fingerprint()); /* visible PAUSED/RESUME state */
+  }
   ui_draw(&g,&a,9,EGG_SCARE_FRAME,0,0,1,"EGG");
   verify_coverage();
   ui_draw(&g,&a,6,2,0,0,1,"ALBUM");
@@ -328,6 +350,29 @@ int main(void){
   ui_draw(&g,&a,6,1,0,0,1,"ALBUM");
   verify_coverage();
   assert(hashes[0]!=fingerprint());
+  /* Three-page memory book has actual original egg illustration on
+   * unlock, not two empty rectangles. It must also be visibly different
+   * from its still-sealed state, without repainting beyond VRAM bounds. */
+  ui_draw(&g,&a,6,2,0,0,1,"ALBUM");
+  verify_coverage();
+  hashes[0]=fingerprint();
+  g.ending_mask|=(uint16_t)(1u<<END_EGG);
+  ui_draw(&g,&a,6,2,0,0,1,"ALBUM");
+  verify_coverage();
+  assert(hashes[0]!=fingerprint());
+  ui_draw(&g,&a,4,0,END_EGG,0,1,"ENDING");
+  verify_coverage();
+  /* The egg icon on the standalone ending card uses at least six
+   * separate original colors plus the dark cavity, not a flat box. */
+  {
+   uint16_t shades[32]={0};unsigned used=0,x,y,k;
+   for(y=76;y<118;y++)for(x=97;x<162;x++){
+    uint16_t pixel=screen[y*256+x];
+    for(k=0;k<used;k++)if(shades[k]==pixel)break;
+    if(k==used&&used<32)shades[used++]=pixel;
+   }
+   assert(used>=8);
+  }
   ui_draw(&g,&a,3,0,0,0,1,"RESET");
   verify_coverage();
   hashes[0]=fingerprint();

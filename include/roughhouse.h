@@ -16,6 +16,8 @@
 #define EGG_SCARE_FRAME 298u
 #define EGG_HOLD_FRAME 322u
 #define EGG_TOTAL_FRAMES 375u
+/* UI-only bit in the film scene selection; not part of the saved Game. */
+#define EGG_FILM_PAUSED_FLAG (1<<16)
 typedef struct {
  int32_t x,y,z,vx,vy,vz;
  int16_t roll,pitch,yaw,vr,vp,vyaw;

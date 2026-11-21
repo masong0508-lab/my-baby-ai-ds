@@ -459,6 +459,26 @@ def test_actual_game(path: Path, output: Path) -> dict:
     assert green_ichor_pixels >= 12, (
         f"Alien-green ichor not visible in actual egg film ({green_ichor_pixels})"
     )
+    # A black recess BETWEEN two pale halves is now essential to the
+    # artwork. Previously the center was still pastel green and the whole
+    # subject resembled a sealed polygon ball. Sample INSIDE the subject,
+    # not the dark stage background surrounding it.
+    recess = egg_green.crop((113, 67, 143, 137))
+    cavity_dark_pixels = sum(
+        1 for r, g, b in recess.get_flattened_data()
+        if r < 96 and g < 130 and b < 145
+    )
+    assert cavity_dark_pixels >= 300, (
+        f"Egg has no clearly recessed dark inner cavity ({cavity_dark_pixels})"
+    )
+    left_shell = egg_green.crop((81, 65, 113, 145))
+    ivory_shell_pixels = sum(
+        1 for r, g, b in left_shell.get_flattened_data()
+        if r >= 135 and g >= 155 and b >= 105
+    )
+    assert ivory_shell_pixels >= 160, (
+        f"Porcelain half is too small or dark to read ({ivory_shell_pixels})"
+    )
     assert movie_stage(egg_green) == 1, "Wrong image labeled green alien egg"
 
     egg_push = seek_phase(2, "game_egg_slow_push")
@@ -555,6 +575,8 @@ def test_actual_game(path: Path, output: Path) -> dict:
         "Toybox_first_bounce_changed_pixels": bounce_motion,
         "Toybox_egg_trigger_changed_pixels": fracture_changed,
         "Alien_green_ichor_pixels": green_ichor_pixels,
+        "Egg_dark_cavity_pixels": cavity_dark_pixels,
+        "Egg_visible_porcelain_pixels": ivory_shell_pixels,
         "Alien_jump_scare_changed_pixels": scare_difference,
         "Alien_ending_finale_changed_pixels": finale_difference,
         "Egg_green_stage": movie_stage(egg_green),
