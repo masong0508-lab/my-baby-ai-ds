@@ -5,6 +5,15 @@
 #define BOUND_Y 345
 static int32_t abs32(int32_t x){return x<0?-x:x;}
 static int32_t decay(int32_t v,int factor){return v*factor/256;}
+/* Deterministic fixed-point springless posture settle; fast at large
+ * angles and fine at small ones, without floats or an extra animation. */
+static int16_t settle_angle(int16_t angle){
+ int32_t n=angle,step;
+ if(n>=-2&&n<=2)return 0;
+ step=abs32(n)/4;
+ if(step<2)step=2;
+ return (int16_t)(n>0?n-step:n+step);
+}
 static int32_t clamp32(int32_t x,int32_t lo,int32_t hi){
  return x<lo?lo:x>hi?hi:x;
 }
@@ -109,6 +118,11 @@ void roughhouse_step(Roughhouse *r){
  if(abs32(r->vp)<2)r->vp=0;
  if(abs32(r->vyaw)<2)r->vyaw=0;
  if(r->y==0&&r->vy==0&&!r->vx&&!r->vz&&!r->vr&&!r->vp&&!r->vyaw){
-  r->moving=0;r->roll=0;r->pitch=0;r->yaw=0;
+  /* Don't teleport the pose upright on the first grounded idle frame.
+   * Continue lightweight posture recovery until all rotations settle. */
+  r->roll=settle_angle(r->roll);
+  r->pitch=settle_angle(r->pitch);
+  r->yaw=settle_angle(r->yaw);
+  if(!r->roll&&!r->pitch&&!r->yaw)r->moving=0;
  }
 }
