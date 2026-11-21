@@ -442,6 +442,18 @@ def test_actual_game(path: Path, output: Path) -> dict:
     assert movie_stage(egg_begin) == 0, (
         "The egg film did not start with the shell fracture prologue"
     )
+    # A recognizable baby face must appear in the centered prologue,
+    # never the enormous back-of-hair disk left by a random physics roll.
+    # The hair/eye shadow pixels are inside the character focal area.
+    opening_face = egg_begin.crop((80, 50, 170, 145))
+    recognizable_features = sum(
+        1 for r, g, b in opening_face.get_flattened_data()
+        if 25 < r < 120 and g < 115 and b < 100
+    )
+    assert recognizable_features >= 20, (
+        "Fracture prologue lost the frontal baby face after Toybox physics "
+        f"({recognizable_features} dark facial/hair pixels)"
+    )
 
     def seek_phase(target: int, name: str):
         for _ in range(100):
