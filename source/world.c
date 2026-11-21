@@ -11,6 +11,15 @@ static const float cz[8]={0,.7071f,1,.7071f,0,-.7071f,-1,-.7071f};
 static const float h[4]={-1,-.54f,.54f,1};
 static const float w[4]={0,.842f,.842f,0};
 static int limit(int v){return v<0?0:v>31?31:v;}
+/* Avoid passing negative degree values into DS fixed-angle conversion.
+ * On some ARM builds the signed shift in degreesToAngle can yield an
+ * invalid rotation matrix: a tiny NAP lean then flips the entire doll.
+ * Wrap to the native [0,360) domain before any model transform. */
+static int model_angle(int degrees){
+ int wrapped=degrees%360;
+ if(wrapped<0)wrapped+=360;
+ return degreesToAngle(wrapped);
+}
 /* Draw-time-only room lighting: no extra geometry, textures or VRAM. */
 static int nursery_ambient;
 static void color(int r,int g,int b,int shift){
@@ -204,7 +213,7 @@ static void tilted_ellipse(float x,float y,float z,float rx,float ry,float rz,
                            int degrees,int red,int green,int blue){
  glPushMatrix();
  glTranslatef(x,y,z);
- glRotateZ(degreesToAngle(degrees));
+ glRotateZ(model_angle(degrees));
  ellipse(0,0,0,rx,ry,rz,red,green,blue);
  glPopMatrix(1);
 }
@@ -443,8 +452,8 @@ static void baby_arm(int direction,int angle,int forward){
  float side=(float)direction;
  glPushMatrix();
  glTranslatef(side*.45f,-.21f,-.025f);
- glRotateZ(degreesToAngle(direction*angle));
- glRotateX(degreesToAngle(-forward));
+ glRotateZ(model_angle(direction*angle));
+ glRotateX(model_angle(-forward));
  ellipse(0,0,0,.205f,.22f,.195f,19,26,27);
  tilted_ellipse(side*.10f,-.16f,.17f,
                 .14f,.18f,.14f,direction*26,31,23,19);
@@ -492,7 +501,7 @@ static void baby_model(const Game *s,uint32_t frame,int action,
                   (frame%151u)<12u;
  glPushMatrix();
  glTranslatef(-.12f,bob-settle,.23f);
- glRotateZ(degreesToAngle(lean)); /* torso and limbs ease together */
+ glRotateZ(model_angle(lean)); /* torso and limbs ease together */
  /* Footed one-piece romper, short legs and soft shoes: no adult denim. */
  ellipse(0,-.75f,-.07f,.46f,.31f,.34f,19,26,27);
  ellipse(-.32f,-.93f,.14f,.245f,.22f,.27f,18,25,27);
@@ -527,14 +536,14 @@ static void baby_model(const Game *s,uint32_t frame,int action,
   if(neck){
    /* Pivot below the jaw, rather than spinning the head around its middle. */
    glTranslatef(0,.10f,0);
-   glRotateZ(degreesToAngle(neck));
+   glRotateZ(model_angle(neck));
    glTranslatef(0,-.10f,0);
   }
  }
  /* A tiny eye-line turn keeps head and arms reading as one intention.
   * Avoid large yaw: low-poly eyes/ears remain recognizable in profile. */
  if(action==2||action==3)
-  glRotateY(degreesToAngle((action==2?3:-2)*weight/256));
+  glRotateY(model_angle((action==2?3:-2)*weight/256));
  /* Rounded unified face. No second oversized jaw shell, no floating teeth. */
  soft_head(0,.54f,.045f,.61f,.615f,.45f,30,22,19);
  ellipse(-.575f,.49f,.065f,.105f,.145f,.09f,31,23,19);
@@ -644,9 +653,9 @@ void world_draw_roughhouse(const Game *s,uint32_t frame,const Roughhouse *r){
   elevation=(float)tilt*.00075f;
   glTranslatef((float)r->x/256.f,(float)r->y/256.f+elevation,
                (float)r->z/256.f);
-  glRotateZ(degreesToAngle((int)r->roll/4));
-  glRotateX(degreesToAngle((int)r->pitch/4));
-  glRotateY(degreesToAngle((int)r->yaw/4));
+  glRotateZ(model_angle((int)r->roll/4));
+  glRotateX(model_angle((int)r->pitch/4));
+  glRotateY(model_angle((int)r->yaw/4));
  }
  baby_model(s,frame,r&&r->moving?5:0,r,0u);
  if(r&&r->charge>=6){
@@ -1022,7 +1031,7 @@ void world_draw_secret(const Game *s,uint32_t frame,const Roughhouse *r){
    * A single parent transform lunges ALL facial components together. */
   glPushMatrix();
   glTranslatef(0.f,0.f,world_egg_creature_depth(frame));
-  glRotateZ(degreesToAngle(world_egg_head_tilt(frame)));
+  glRotateZ(model_angle(world_egg_head_tilt(frame)));
   soft_head(0,.085f,.34f,1.00f,1.08f,.51f,5,10,12);
   soft_head(0,.68f,.36f,.66f,.29f,.28f,7,15,14);
   alien_face_facets();
@@ -1070,7 +1079,7 @@ void world_draw_secret(const Game *s,uint32_t frame,const Roughhouse *r){
    * lower-jaw assembly in front of the throat and let it drop as ONE
    * connected unit. The visible pitch is deliberately subtle. */
   glTranslatef(0.f,-(float)world_egg_jaw_angle(frame)*.003f,.004f);
-  glRotateX(degreesToAngle(-world_egg_jaw_angle(frame)/6));
+  glRotateX(model_angle(-world_egg_jaw_angle(frame)/6));
   ellipse(0,-.68f,.931f,.195f,.079f,.019f,22,6,13);
   soft_mark(-.04f,-.692f,.952f,.080f,.018f,30,14,21);
   ellipse(0,-.65f,.930f,.195f,.074f,.018f,19,5,13);
