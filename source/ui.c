@@ -165,21 +165,31 @@ static void panel(int x,int y,int width,int height,uint16_t fill,uint16_t border
   solid(x+3,y+height-3,width-6,1,border);
  }
 }
+/* Draw horizontal font runs as single rectangles. The output matches the
+ * old bit-per-pixel rasterizer while avoiding redundant VRAM write setup. */
 static void char_at(int x,int y,char value,uint16_t color,int scale){
- int i,j,dx,dy;unsigned ch=(unsigned char)value;
+ int i,j;unsigned ch=(unsigned char)value;
  const uint8_t *bits;
  if(ch>='a'&&ch<='z')ch-=32;
- if(ch<32||ch>=128)return;
+ if(ch<32||ch>=128||scale<=0)return;
  bits=glyph[ch-32];
- for(j=0;j<7;j++)for(i=0;i<5;i++)
-  if(bits[j]&(1u<<(4-i)))
-   for(dy=0;dy<scale;dy++)for(dx=0;dx<scale;dx++)
-    solid(x+i*scale+dx,y+j*scale+dy,1,1,color);
+ for(j=0;j<7;j++){
+  uint8_t row=bits[j];
+  i=0;
+  while(i<5){
+   int start;
+   if(!(row&(1u<<(4-i)))){i++;continue;}
+   start=i++;
+   while(i<5&&(row&(1u<<(4-i))))i++;
+   solid(x+start*scale,y+j*scale,(i-start)*scale,scale,color);
+  }
+ }
 }
 static void label(int x,int y,const char *s,uint16_t color,int size,int max){
  int i;
- if(!s)return;
- for(i=0;s[i]&&i<max;i++)char_at(x+i*6*size,y,s[i],color,size);
+ if(!s||size<=0)return;
+ for(i=0;s[i]&&i<max&&x+i*6*size<W;i++)
+  char_at(x+i*6*size,y,s[i],color,size);
 }
 static void fit(int x,int y,const char *s,uint16_t color,int max){
  label(x,y,s,color,1,max);
@@ -1264,7 +1274,9 @@ void ui_draw(const Game *s,const Arcade *a,int view,int selection,
  }else screen_title=view==0?"MY BABY A.I.!":view==1?"BABY ARCADE":
          view==3?"SAVE MEMORY":view==4?"ENDING!":view==5?"WELCOME":
          view==6?"MEMORY ALBUM":"TOUCH TEST";
- solid(0,0,256,192,IVORY);
+ /* Every screen paints its own content band (y=27..175), and header/foot
+  * repaint the other two bands. The previous blanket 256x192 clear was
+  * 49,152 redundant 16-bit VRAM writes on every animation refresh. */
  header(screen_title,s);
  switch(view){
  case 0:home(s,can_save,message);break;
