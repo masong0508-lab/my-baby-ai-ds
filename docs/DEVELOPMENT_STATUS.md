@@ -234,3 +234,26 @@ This pass continues from the merged PR #26's fully playable synthetic toy and se
 - **Tests:** All existing host/DS/BlocksDS/legacy/DeSmuME tests remain mandatory. A new host SFX test exercises pitch/volume bounds, mute, cue priority and completion. Geometry tests now cover just-before and just-after split/approach/scare boundaries within the existing DS frame-budget headroom.
 
 Audio is implemented in the ROM using the supported libnds PSG API; emulator screenshot tests and host audio-envelope tests cannot certify speaker balance on an actual DS/DraStic instance. No measured FPS gain or sound-output recording is claimed.
+
+## Visual legibility redesign — readable synthetic nursery and alien egg
+
+The earlier screenshots made the old egg look like an indistinct mint poly blob. This is a targeted, code-level replacement of its layout, silhouette, materials and final ending UI rather than another round of isolated decorations.
+
+### Upper screen 3D (libnds / BlocksDS)
+- **Shell**: replace the center-filling pastel ovum with two visibly distinct pale-ceramic halves separated by a wide gap, each with a darker bevel and its own warm highlight; the opening increases during the existing dramatic dolly.
+- **Incubation cavity**: a deep blue-black concavity sits BEHIND the two halves, ringed by shadowed moss/green lip geometry; no pale solid remains in front of the opening.
+- **Parasitic occupant**: an intentional nested head silhouette is visible in the hole before the reveal, with matched pairs of luminous eyes, dark slits and a breathing mouth. Neon-green ichor now follows the physical inner lips and collects at the base rather than covering the creature.
+- **Jump scare**: dark sculpted cranial silhouette, anchored brow ridges, two black eye sockets with contrasty yellow-green iris slits and glints, a recessed black maw, and seven actual pointed triangular fangs. Green trails are aligned with cheeks and edges, not free-floating neon bars.
+- **Nursery**: redesign the aggressively lime play mat as dusty lavender with blush-pink flowers to restore a warm and non-alien visual baseline. The chibi baby gains dimensionally layered collar and two-tone blue-gray irises with sclera, eye rim and highlights so the facial expression reads at native 256×192.
+- All changes use fixed native hardware primitives and existing 5-bit vertex colors; zero new VRAM textures, heap allocations, framebuffers, soundbanks, or major per-frame collections. Geometry regression enforces less than 5000 vertices / 1850 polygons even in the horror scene.
+
+### Lower screen, ending, scrapbook
+- **A coherent horror-interface palette:** deep ink + dark teal + acidic luminous green, without the unrelated bright baby-pink content panels, while preserving the existing readable 2x cinematic headline and four phase indicators.
+- **Original cracked-egg art:** 32×24 ROM indexed pixel icon depicts two ivory shell halves, a dark cavity, green seams and creature eyes. Its 768 source characters are rendered via the already-existing run-length horizontal sprite blitter; no new decoder, transient image memory or extra BG allocation.
+- The same graphic appears in the BAD ENDING #9 postcard and the *discovered* third scrapbook page. The undiscovered page remains sealed. All existing page and touchscreen hitboxes, original ending unlocks, 16 arcade games, and save binary stay intact.
+
+### Regression and proof requirements
+- Host 3D tests now cover eight frames across the visible cavity, separating shell, final face, and their polygon/vertex budgets.
+- Native lower-screen 256x192 framebuffer test distinguishes undiscovered/discovered egg art, counts at least eight colors in the actual postcard sprite and checks entire VRAM coverage.
+- Real DeSmuME native stylus test must complete feeding, 16-game navigation, Toybox hits, green egg, deliberate camera push, single jump scare and ending; screenshots are used for HUMAN visual review.
+- Neither physical Nintendo DS nor the user's exact DraStic instance is inferred to be validated by DeSmuME. New FPS measurements are not claimed until instrumented.
