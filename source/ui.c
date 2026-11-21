@@ -155,15 +155,12 @@ static void outline(int x,int y,int width,int height,uint16_t color){
 }
 /* Shared dimensional cards and buttons: no textures, allocations or
  * secondary buffer. All geometry is clipped by solid() to DS bitmap VRAM. */
+/* Flat, legible notebook cards. One outline and a subtle shadow,
+ * instead of multiple 1px glints that clutter a 192px touchscreen. */
 static void panel(int x,int y,int width,int height,uint16_t fill,uint16_t border){
- solid(x+2,y+3,width,height,SHADOW);
+ solid(x+1,y+2,width,height,SHADOW);
  solid(x,y,width,height,fill);
  outline(x,y,width,height,border);
- if(width>=9&&height>=9){
-  solid(x+2,y+2,width-4,2,WHITE);
-  solid(x+2,y+4,2,height-7,WHITE);
-  solid(x+3,y+height-3,width-6,1,border);
- }
 }
 /* Draw horizontal font runs as single rectangles. The output matches the
  * old bit-per-pixel rasterizer while avoiding redundant VRAM write setup. */
@@ -199,10 +196,6 @@ static void capsule(int x,int y,int width,int height,uint16_t fill,uint16_t edge
  solid(x,y+3,width,height-6,fill);
  solid(x+3,y,width-6,1,edge);solid(x+3,y+height-1,width-6,1,edge);
  solid(x,y+3,1,height-6,edge);solid(x+width-1,y+3,1,height-6,edge);
- if(width>=15&&height>=13){
-  solid(x+5,y+2,width-10,2,WHITE);
-  solid(x+5,y+height-3,width-10,1,edge);
- }
 }
 static void meter(int x,int y,int value,uint16_t fill){
  int v=value;
@@ -219,28 +212,25 @@ static void insignia(int x,int y,uint16_t c){
  solid(x+3,y+6,3,3,c);
  solid(x+3,y+3,3,3,WHITE);
 }
+/* Readable 2x screen title plus two deliberately separated counters.
+ * Avoid long headers colliding with the save/currency readout. */
 static void header(const char *title,const Game *s,int can_save){
- char tmp[32];int x;
+ char tmp[32];
  solid(0,0,W,27,NIGHT);
- solid(0,0,W,2,screen_accent);
- solid(0,3,3,21,screen_accent);
- solid(0,24,W,3,screen_accent);
- for(x=8;x<142;x+=24)solid(x,22,12,1,SILVER);
- insignia(7,9,screen_accent);
- label(20,9,title,WHITE,1,21);
- fit(122,10,can_save?"SD":"RAM",can_save?MINT:PINK,4);
- snprintf(tmp,sizeof(tmp),"DAY %lu",(unsigned long)s->days);
- capsule(192,4,57,18,LILAC,screen_accent);
- fit(196,10,tmp,INK,9);
+ solid(0,0,W,3,screen_accent);
+ label(12,7,title,WHITE,2,10);
+ fit(138,11,can_save?"SD":"RAM",can_save?MINT:PINK,3);
+ capsule(167,5,37,17,IVORY,PURPLE);
+ snprintf(tmp,sizeof(tmp),"D%lu",(unsigned long)s->days);
+ fit(173,10,tmp,INK,4);
+ capsule(209,5,40,17,LEMON,GOLD);
  snprintf(tmp,sizeof(tmp),"$%u",s->dollars);
- fit(151,10,tmp,LEMON,6);
+ fit(214,10,tmp,INK,5);
+ solid(0,25,W,2,screen_accent);
 }
 static void foot(uint16_t color){
  solid(0,176,256,16,NIGHT);
  solid(0,176,256,2,screen_accent);
- solid(0,178,256,1,SILVER);
- solid(0,179,3,13,screen_accent);
- solid(253,179,3,13,screen_accent);
  (void)color;
 }
 static void icon_bottle(int x,int y){
@@ -264,35 +254,48 @@ static void icon_nap(int x,int y){
  solid(x+6,y+18,22,3,DEEP_PINK);
  label(x+11,y+1,"Z",PURPLE,1,1);
 }
-/* Nursery dashboard preserves all touch hitboxes while giving the four
- * actions a single readable visual hierarchy and real progress indicators. */
+/* The nursery follows an actual DS pet-care layout:
+ * dialogue, a compact health summary, then FOUR large actions. */
 static void home(const Game *s,int can_save,const char *message){
- solid(0,27,W,149,BLUSH);
- solid(0,28,W,3,screen_accent);
- panel(6,32,244,55,WHITE,PURPLE);
- fit(13,40,"HUNGER",PURPLE,7);meter(63,39,s->hunger,ROSE);
- fit(139,40,"MOOD",PURPLE,4);meter(178,39,s->mood,GREEN);
- fit(13,57,"ENERGY",PURPLE,7);meter(63,56,s->energy,TEAL);
- fit(139,57,"CHAOS",PURPLE,5);meter(178,56,s->chaos,GOLD);
- fit(13,75,"GLITCH",PURPLE,6);
- solid(66,75,171,7,GRAY);
- solid(68,77,(s->corruption*167)/100,3,DEEP_PINK);
- solid(68,77,(s->corruption*167)/100,1,PINK);
- for(int i=1;i<5;i++)solid(68+i*33,75,1,7,WHITE);
- panel(6,89,244,27,IVORY,screen_accent);
- solid(12,94,4,17,screen_accent);
- fit(21,98,message,INK,36);
- capsule(7,121,117,23,SKY,BLUE);
- solid(14,141,100,1,BLUE);icon_bottle(9,119);label(43,128,"FEED",INK,1,11);
- capsule(132,121,117,23,LEMON,GOLD);
- solid(139,141,100,1,GOLD);icon_chat(133,119);label(168,128,"CHAT",INK,1,11);
- capsule(7,148,117,23,MINT,GREEN);
- solid(14,168,100,1,GREEN);icon_play(9,146);label(43,155,"PLAY",INK,1,11);
- capsule(132,148,117,23,PINK,DEEP_PINK);
- solid(139,168,100,1,DEEP_PINK);icon_nap(133,146);label(168,155,"NAP",INK,1,11);
+ int i,n,start=0,split=0;
+ const char *speech=message?message:"";
+ char first[37],second[37];
+ solid(0,27,W,149,IVORY);
+ panel(8,31,240,34,WHITE,TEAL);
+ fit(17,35,"BABY SAYS",TEAL,12);
+ n=(int)strlen(speech);
+ if(n>36){
+  split=36;
+  for(i=36;i>18;i--)if(speech[i]==' '){split=i;break;}
+ }else split=n;
+ for(i=0;i<split&&i<36;i++)first[i]=speech[i];
+ first[i]=0;
+ start=split;
+ while(speech[start]==' ')start++;
+ for(i=0;speech[start+i]&&i<36;i++)second[i]=speech[start+i];
+ second[i]=0;
+ fit(17,45,first,INK,36);
+ if(second[0])fit(17,55,second,INK,36);
+ panel(8,68,240,36,WHITE,LILAC);
+ fit(17,72,"HUNGER",PURPLE,7);meter(61,70,s->hunger,ROSE);
+ fit(144,72,"MOOD",PURPLE,5);meter(178,70,s->mood,GREEN);
+ fit(17,85,"ENERGY",PURPLE,7);meter(61,83,s->energy,TEAL);
+ fit(144,85,"CHAOS",PURPLE,5);meter(178,83,s->chaos,GOLD);
+ fit(17,96,"GLITCH",MUTED,7);
+ solid(62,97,175,4,GRAY);
+ solid(62,97,s->corruption*175/100,4,ROSE);
+ /* The icon is secondary; 2x words are the primary tap targets. */
+ capsule(8,108,116,30,SKY,BLUE);
+ icon_bottle(12,110);label(51,116,"FEED",INK,2,4);
+ capsule(132,108,116,30,LEMON,GOLD);
+ icon_chat(135,110);label(174,116,"CHAT",INK,2,4);
+ capsule(8,143,116,30,MINT,GREEN);
+ icon_play(12,144);label(51,151,"PLAY",INK,2,4);
+ capsule(132,143,116,30,PINK,ROSE);
+ icon_nap(135,145);label(173,151,"NAP",INK,2,3);
  foot(PURPLE);
- fit(12,181,"START ARCADE",WHITE,19);
- fit(152,181,"END DAY",WHITE,14);
+ fit(12,181,"START  ARCADE",WHITE,20);
+ fit(157,181,"END  DAY",WHITE,14);
  (void)can_save;
 }
 static const char *const nick[16]={
