@@ -32,15 +32,38 @@ int main(void){
  assert(ui_nursery_touch(0,0)==-1);
  assert(ui_home_navigation(35,183)==1);
  assert(ui_home_navigation(225,183)==2);
- assert(ui_arcade_select(9,66)==0);
- assert(ui_arcade_select(195,145)==15);
- assert(ui_arcade_select(255,191)==-1);
+ assert(ui_arcade_select_page(35,92,0)==0);
+ assert(ui_arcade_select_page(173,92,0)==1);
+ assert(ui_arcade_select_page(35,145,0)==2);
+ assert(ui_arcade_select_page(173,145,0)==3);
+ assert(ui_arcade_select_page(173,145,12)==15);
+ assert(ui_arcade_select_page(35,92,8)==8);
+ assert(ui_arcade_select_page(255,191,0)==-1);
+ assert(ui_arcade_select_page(128,93,0)==-1);
+ assert(ui_arcade_page_touch(34,44)==-1);
+ assert(ui_arcade_page_touch(220,44)==1);
+ assert(ui_arcade_page_touch(128,44)==0);
+ assert(ui_arcade_page_touch(220,72)==0);
+ assert(ui_nursery_touch(25,109)==FEED);
+ assert(ui_nursery_touch(25,143)==PLAY);
+ assert(ui_nursery_touch(25,140)==-1);
+ assert(ui_nursery_touch(25,175)==-1);
  assert(ui_arcade_navigation(11,181)==1);
  assert(ui_arcade_navigation(112,181)==2);
  assert(ui_arcade_navigation(221,181)==3);
  assert(ui_arcade_navigation(11,122)==0);
  a.timer=110;
  ui_draw(&g,&a,1,0,0,0,1,"ARCADE");
+ {
+  uint32_t first=fingerprint(), second;
+  ui_draw(&g,&a,1,4,0,0,1,"ARCADE");
+  second=fingerprint();
+  assert(first!=second); /* Every four-cabinet page must be visibly unique. */
+  ui_draw(&g,&a,1,8,0,0,1,"ARCADE");
+  assert(second!=fingerprint());
+  ui_draw(&g,&a,1,12,0,0,1,"ARCADE");
+  assert(first!=fingerprint());
+ }
  ui_draw(&g,&a,2,0,0,0,1,"GO!");
  a.id=0;a.timer=600;a.balance=12;a.hold_frames=45;
  ui_draw(&g,&a,2,0,0,0,1,"BOTTLE");
