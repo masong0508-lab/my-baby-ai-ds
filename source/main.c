@@ -188,7 +188,8 @@ int main(void){
    else if(down&KEY_B){view=0;message="BACK TO THE NURSERY.";dirty=1;}
    else if(down&KEY_X){
     if(game_unlock(&baby,selected)){message="CABINET BOUGHT!";persist();}
-    else message="EARN MORE WINS OR CURRENCY.";
+    else message=game_unlocked(&baby,selected)?
+       "ALREADY OPEN: PRESS A.":"CHECK WINS, $ AND FAVORS.";
     dirty=1;
    }else if(down&KEY_A){begin_game();dirty=1;}
    else if(tap){
@@ -196,7 +197,8 @@ int main(void){
     if(nav==1){begin_game();dirty=1;}
     else if(nav==2){
      if(game_unlock(&baby,selected)){message="CABINET BOUGHT!";persist();}
-     else message="EARN MORE WINS OR CURRENCY.";
+     else message=game_unlocked(&baby,selected)?
+        "ALREADY OPEN: PRESS A.":"CHECK WINS, $ AND FAVORS.";
      dirty=1;
     }else if(nav==3){view=0;message="BACK TO THE NURSERY.";dirty=1;}
     else{
