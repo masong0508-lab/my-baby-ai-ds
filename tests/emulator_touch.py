@@ -218,6 +218,17 @@ def test_actual_game(path: Path, output: Path) -> dict:
         f"Touch FEED did not change needs bars or dialogue UI "
         f"({feed_changed} pixels)"
     )
+    # The new 3D emotion/gesture pass must affect the actual TOP display:
+    # FEED lifts an arm, while NAP closes both eyes and relaxes the arms.
+    emu.input.touch_set_pos(187, 160)  # NAP on unchanged lower-screen hitbox
+    frames(emu, 12)
+    emu.input.touch_release()
+    frames(emu, 12)
+    after_nap = picture(emu, output, "game_nursery_sleeping_baby")
+    pose_changed = difference(after_feed, after_nap, (15, 5, 241, 185))
+    assert pose_changed > 35, (
+        f"3D nursery baby did not respond visibly to care pose ({pose_changed})"
+    )
     # Reach the ending album on the actual ARM9 program, then return.
     # The album was previously only covered by a host-side framebuffer test.
     emu.input.keypad_add_key(keymask(Keys.KEY_L))
@@ -367,6 +378,7 @@ def test_actual_game(path: Path, output: Path) -> dict:
     return {
         "3D_top_screen_distinct_colors": hero_colors,
         "3D_top_screen_full_height_dark_stripes": len(full_height_stripes),
+        "3D_care_pose_changed_pixels": pose_changed,
         "3D_title_top_screen_colors": title_colors,
         "album_screen_changed_pixels": album_diff,
         "album_next_page_changed_pixels": album_next_diff,

@@ -28,6 +28,16 @@ static uint32_t icon_fingerprint(int x,int y){
  }
  return h;
 }
+/* Scan the real pad picture region separately from its background/name.
+ * Four inputs must be visually distinguishable at native 256x192. */
+static uint32_t beat_pad_fingerprint(int x){
+ uint32_t h=2166136261u;
+ int dx,dy;
+ for(dy=127;dy<149;dy++)for(dx=0;dx<48;dx++){
+  h^=screen[dy*256+x+dx];h*=16777619u;
+ }
+ return h;
+}
 int main(void){
  Game g;Arcade a={0};unsigned i,changed=0;
  game_init(&g);ui_init(screen);
@@ -111,6 +121,17 @@ int main(void){
  a.id=4;a.phase=0;a.timer=90;a.hold_frames=90;
  a.notes[0]=1;a.notes[1]=3;a.notes[2]=2;
  ui_draw(&g,&a,2,0,0,0,1,"BABY BEATBOX");
+ {
+  uint32_t pads[4],watch=fingerprint();unsigned k,p;
+  for(p=0;p<4;p++){
+   pads[p]=beat_pad_fingerprint(12+(int)p*62);
+   for(k=0;k<p;k++)assert(pads[p]!=pads[k]);
+  }
+  /* Both control states have a different 2x imperative prompt. */
+  a.phase=1;a.stage=2;
+  ui_draw(&g,&a,2,0,0,0,1,"REPEAT");
+  assert(fingerprint()!=watch);
+ }
  a.phase=1;a.stage=2;
  ui_draw(&g,&a,2,0,0,0,1,"REPEAT");
  assert(ui_beatbox_touch(30,148)==0);
@@ -309,6 +330,6 @@ int main(void){
   ui_draw(&g,&a,0,0,0,0,0,"SAFE MODE");
   verify_coverage();
  }
- puts("PASS: 16 unique illustrated cabinets, shaded baby art, full-screen coverage, touch hitboxes, cursor");
+ puts("PASS: illustrated 4-pad Beatbox, readable care layout, 16 unique cabinets, touchscreen bounds and full coverage");
  return 0;
 }

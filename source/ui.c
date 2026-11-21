@@ -285,14 +285,21 @@ static void home(const Game *s,int can_save,const char *message){
  solid(62,97,175,4,GRAY);
  solid(62,97,s->corruption*175/100,4,ROSE);
  /* The icon is secondary; 2x words are the primary tap targets. */
+ /* Two-line action cards explain the ACTUAL state effects rather than
+  * leaving a new player to guess. The 4 established touch rectangles do
+  * not move by a pixel. Big 2x verbs + smaller quantified consequences. */
  capsule(8,108,116,30,SKY,BLUE);
- icon_bottle(12,110);label(51,116,"FEED",INK,2,4);
+ icon_bottle(12,110);label(50,111,"FEED",INK,2,4);
+ fit(50,128,"HUNGER -30",BLUE,12);
  capsule(132,108,116,30,LEMON,GOLD);
- icon_chat(135,110);label(174,116,"CHAT",INK,2,4);
+ icon_chat(135,110);label(173,111,"CHAT",INK,2,4);
+ fit(172,128,"MOOD +7",PURPLE,10);
  capsule(8,143,116,30,MINT,GREEN);
- icon_play(12,144);label(51,151,"PLAY",INK,2,4);
+ icon_play(12,144);label(50,146,"PLAY",INK,2,4);
+ fit(50,163,"MOOD +10",GREEN,10);
  capsule(132,143,116,30,PINK,ROSE);
- icon_nap(135,145);label(173,151,"NAP",INK,2,3);
+ icon_nap(135,145);label(172,146,"NAP",INK,2,3);
+ fit(172,163,"ENERGY +25",PURPLE,11);
  foot(PURPLE);
  fit(12,181,"START  ARCADE",WHITE,20);
  fit(157,181,"END  DAY",WHITE,14);
@@ -878,10 +885,46 @@ static void nap_challenge(const Arcade *a){
  solid(20,151,214,9,GRAY);
  solid(green_x,151,green_w,9,MINT);
  solid(pos,146,4,20,DEEP_PINK);
- fit(29,133,a->taped?"LOVELY!":"SHHH... FIND THE GREEN",WHITE,39);
+ /* Dark legible instruction on the cream crib card. The previous WHITE
+  * text was effectively invisible on the WHITE card below the baby. */
+ fit(82,134,a->taped?"SWEET DREAMS!":"TAP IN GREEN",PURPLE,19);
  foot(PURPLE);
  snprintf(text,sizeof(text),"TAP IN GREEN! %u SEC  B BACK",(a->timer+59)/60);
  fit(12,181,text,WHITE,39);
+}
+/* Rhythm-Heaven-inspired legibility: one distinct instrument-shaped
+ * silhouette for each pad, at 48x47 display size. These are our own 2D
+ * pixel primitives, never an imported bitmap/VRAM texture. */
+static void beat_pad_icon(int pad,int x,int y,int lit){
+ uint16_t shine=lit?LEMON:WHITE;
+ switch(pad){
+ case 0: /* BOOM / drum */
+  capsule(x+9,y+1,29,19,NIGHT,PURPLE);
+  capsule(x+14,y+3,19,15,PINK,WHITE);
+  solid(x+21,y+8,5,5,shine);
+  break;
+ case 1: /* CLAP / offset palms */
+  solid(x+13,y+4,8,15,INK);
+  solid(x+22,y+2,8,17,INK);
+  solid(x+15,y+5,5,11,shine);
+  solid(x+24,y+3,5,12,shine);
+  solid(x+11,y+11,23,5,PINK);
+  break;
+ case 2: /* BEEP / toy synthesizer */
+  capsule(x+7,y+2,35,19,NIGHT,PURPLE);
+  solid(x+10,y+5,29,8,TEAL);
+  solid(x+13,y+7,6,4,shine);
+  solid(x+22,y+6,5,5,LEMON);
+  solid(x+30,y+7,6,4,shine);
+  break;
+ default: /* POP / starburst bubble */
+  capsule(x+13,y+2,22,18,PINK,WHITE);
+  solid(x+18,y+5,8,4,shine);
+  solid(x+9,y+9,5,3,LEMON);
+  solid(x+37,y+8,5,4,LEMON);
+  solid(x+27,y+17,4,3,ROSE);
+  break;
+ }
 }
 static void beatbox_challenge(const Arcade *a){
  static const char *const pads[4]={"BOOM","CLAP","BEEP","POP"};
@@ -898,8 +941,9 @@ static void beatbox_challenge(const Arcade *a){
   if(index>2)index=2;
   active=a->notes[index];
  }
- capsule(69,79,118,20,a->phase?MINT:LEMON,TEAL);
- fit(83,85,a->phase?"YOUR TURN: REPEAT!":"WATCH THE PATTERN",INK,29);
+ /* A single emphatic WATCH/REPEAT cue avoids squashed microtext. */
+ capsule(64,79,128,21,a->phase?MINT:LEMON,TEAL);
+ label(a->phase?86:94,83,a->phase?"REPEAT":"WATCH",INK,2,6);
  sprite(111,101,1,spr_baby,18);
  for(int i=0;i<3;i++)
   capsule(143+i*18,103,13,11,a->phase?(i<a->stage?GREEN:GRAY):
@@ -907,9 +951,9 @@ static void beatbox_challenge(const Arcade *a){
  for(int i=0;i<4;i++){
   int x=12+i*62;
   capsule(x,123,48,47,active==i?WHITE:colors[i],active==i?GOLD:PURPLE);
-  solid(x+17,131,14,14,active==i?LEMON:WHITE);
-  outline(x+16,130,16,16,PURPLE);
-  fit(x+7,152,pads[i],INK,6);
+  beat_pad_icon(i,x,127,active==i);
+  /* Four real 2x touch verbs. The 48px pad and its hitbox are unchanged. */
+  label(x+(i==3?6:0),151,pads[i],INK,2,4);
  }
  foot(PURPLE);
  snprintf(text,sizeof(text),"%s  %u SEC   B BACK",a->phase?"REPEAT":"LISTEN",(a->timer+59)/60);
@@ -1162,7 +1206,7 @@ static void court_challenge(const Arcade *a){
  fit(9,181,"TRACE 1 TO 2 TO 3   (L UP R)",WHITE,40);
 }
 static void ceo_challenge(const Arcade *a){
- static const char *const actions[3]={"BANK","PLAY","NAP"};
+ static const char *const actions[3]={"FUND","PLAY","NAP"};
  char text[40];int i;
  arcade_wall(BLUSH);
  panel(6,31,244,41,WHITE,PURPLE);
@@ -1180,7 +1224,22 @@ static void ceo_challenge(const Arcade *a){
  for(i=0;i<3;i++){
   int x=13+i*82;
   capsule(x,121,66,51,i==0?MINT:i==1?PINK:SKY,PURPLE);
-  solid(x+24,130,18,15,i==0?GOLD:i==1?LEMON:WHITE);
+  /* Distinct desk-ledger, play block and crescent icons. These are not
+   * interchangeable abstract squares anymore; the captions remain 2x. */
+  if(i==0){
+   capsule(x+22,129,22,18,LEMON,GOLD);
+   solid(x+26,132,3,12,INK);
+   solid(x+31,134,9,2,WHITE);
+   solid(x+31,139,9,2,WHITE);
+  }else if(i==1){
+   capsule(x+24,128,18,18,SKY,BLUE);
+   solid(x+28,131,10,10,PINK);
+   solid(x+32,129,2,14,WHITE);
+  }else{
+   capsule(x+22,129,22,18,LEMON,GOLD);
+   solid(x+33,130,13,14,SKY);
+   solid(x+26,133,5,4,WHITE);
+  }
   label(x+12,149,actions[i],INK,2,4);
  }
  foot(PURPLE);

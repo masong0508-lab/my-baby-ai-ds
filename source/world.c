@@ -346,9 +346,17 @@ static void teddy(void){
  * Only ROM-native primitive meshes; no texture or framebuffer allocation. */
 static void baby_model(const Game *s,uint32_t frame,int action){
  unsigned beat=frame%120u,arms=frame%104u;
- const float bob=((float)(beat<60u?beat:120u-beat)-30.f)*.00028f;
+ const unsigned hop=frame%36u;
+ /* Behavior-driven, joint-consistent low-cost posing, never a free-floating
+  * ornament: PLAY hops, CHAT gestures, FEED reaches up, NAP rests. */
+ const float bob=((float)(beat<60u?beat:120u-beat)-30.f)*.00028f+
+                 (action==3?(float)(hop<18u?hop:36u-hop)*.0022f:0.f);
  const float wave=((float)(arms<52u?arms:104u-arms)-26.f)*.0011f;
- const int blink=(frame%173u)<5u||(action==4&&(frame%125u)<42u);
+ const float left_pose=wave+(action==2?.065f:action==3?.075f:
+                              action==4?-.035f:0.f);
+ const float right_pose=-wave+(action==1?.07f:action==3?.075f:
+                                action==4?-.035f:0.f);
+ const int blink=(frame%173u)<5u||action==4;
  const int happy=s->mood>35;
  const int glitch=game_glitch_tier(s)>=2&&!s->safe_visuals&&
                   (frame%151u)<12u;
@@ -375,10 +383,10 @@ static void baby_model(const Game *s,uint32_t frame,int action){
   * always remain attached while the animation cycles. */
  tilted_ellipse(-.45f,-.21f,-.025f,.205f,.22f,.195f,-20,19,26,27);
  tilted_ellipse(.45f,-.21f,-.025f,.205f,.22f,.195f,20,19,26,27);
- tilted_ellipse(-.55f,-.37f+wave,.15f,.14f,.18f,.14f,-26,31,23,19);
- tilted_ellipse(.55f,-.37f-wave,.15f,.14f,.18f,.14f,26,31,23,19);
- ellipse(-.63f,-.46f+wave,.28f,.13f,.125f,.13f,31,24,20);
- ellipse(.63f,-.46f-wave,.28f,.13f,.125f,.13f,31,24,20);
+ tilted_ellipse(-.55f,-.37f+left_pose,.15f,.14f,.18f,.14f,-26,31,23,19);
+ tilted_ellipse(.55f,-.37f+right_pose,.15f,.14f,.18f,.14f,26,31,23,19);
+ ellipse(-.63f,-.46f+left_pose,.28f,.13f,.125f,.13f,31,24,20);
+ ellipse(.63f,-.46f+right_pose,.28f,.13f,.125f,.13f,31,24,20);
  /* Rounded unified face. No second oversized jaw shell, no floating teeth. */
  soft_head(0,.54f,.045f,.61f,.615f,.45f,30,22,19);
  ellipse(-.575f,.49f,.065f,.105f,.145f,.09f,31,23,19);
