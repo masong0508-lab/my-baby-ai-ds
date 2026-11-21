@@ -32,7 +32,18 @@ int main(void){
   * and leaves the default portrait unchanged. */
  {
   EggCamera idle=world_nursery_camera(-1,-1,16u);
+  EggCamera window=world_nursery_camera(0,-1,16u);
+  EggCamera lamp=world_nursery_camera(1,-1,16u);
+  EggCamera teddy_view=world_nursery_camera(2,-1,16u);
+  EggCamera crib=world_nursery_camera(3,-1,16u);
   unsigned f;
+  /* Composition deliberately looks near the baby and landmark. The
+   * earlier far-left targets showed a giant empty sage wall. */
+  assert(window.look_x>-.95f && window.look_x<-.75f);
+  assert(lamp.look_x>-1.45f && lamp.look_x< -1.25f);
+  assert(teddy_view.look_x>-.75f && teddy_view.look_x<-.55f);
+  assert(crib.look_x>1.f && crib.look_x<1.3f);
+  assert(window.x>.9f && lamp.x>.9f && teddy_view.x>.9f);
   assert(idle.x>.9f&&idle.z>3.4f);
   for(i=0;i<4;i++){
    EggCamera start=world_nursery_camera(i,-1,0u);
