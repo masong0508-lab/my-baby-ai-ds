@@ -68,6 +68,40 @@ int main(void){
  assert(ui_home_navigation(35,183)==1);
  assert(ui_home_navigation(225,183)==2);
  assert(ui_home_navigation(130,183)==0);
+ /* Room entry lives inside the CARE speech panel, never on Toybox,
+  * FEED or CHAT. Native and virtual stylus use the SAME hitboxes. */
+ assert(ui_room_entry_touch(220,40));
+ assert(!ui_room_entry_touch(220,55));
+ assert(!ui_room_entry_touch(120,40));
+ assert(!ui_room_entry_touch(243,40));
+ assert(ui_room_touch(28,90)==0); /* window */
+ assert(ui_room_touch(180,90)==1); /* lamp */
+ assert(ui_room_touch(28,139)==2); /* teddy */
+ assert(ui_room_touch(180,139)==3); /* crib */
+ assert(ui_room_touch(129,139)==-1); /* column gap */
+ assert(ui_room_touch(30,117)==-1); /* row gap */
+ assert(ui_room_touch(128,183)==4); /* return */
+ assert(ui_room_touch(0,0)==-1);
+ assert(ui_room_touch(256,95)==-1);
+ assert(ui_room_touch(40,192)==-1);
+ {
+  uint32_t night,day,lamp_off,light_on,teddy;
+  ui_draw(&g,&a,10,16,0,0,1,"ROOM TOUR");
+  verify_coverage();night=fingerprint();
+  ui_draw(&g,&a,10,24,0,0,1,"ROOM TOUR"); /* daylight */
+  verify_coverage();day=fingerprint();
+  assert(day!=night);
+  ui_draw(&g,&a,10,1|8,0,0,1,"LIGHTS OFF");
+  verify_coverage();lamp_off=fingerprint();
+  ui_draw(&g,&a,10,1|8|16,0,0,1,"LIGHTS ON");
+  verify_coverage();light_on=fingerprint();
+  assert(light_on!=lamp_off);
+  ui_draw(&g,&a,10,2|16,0,0,1,"TEDDY PROMOTED");
+  verify_coverage();teddy=fingerprint();
+  assert(teddy!=light_on);
+  ui_draw(&g,&a,0,0,0,0,1,"BACK IN THE NURSERY");
+  verify_coverage();
+ }
  assert(ui_prank_entry_touch(125,184));
  assert(!ui_prank_entry_touch(194,45));
  assert(!ui_prank_entry_touch(225,183));
