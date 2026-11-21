@@ -385,6 +385,16 @@ static void teddy(void){
  * shoulder transform; no independent bobbing parts and no new polygons.
  * A horizontal PLAY reach or CHAT gesture is visible from the front,
  * while NAP naturally folds both arms toward the torso. */
+/* The entire face, hair, eyes, mouth and cheeks lean together. NAP
+ * nods toward the lap; PLAY and CHAT glance subtly toward the player. */
+int world_baby_neck_tilt(int action,uint32_t frame){
+ int phase=(int)(frame%80u);
+ int sway=phase<40?phase:80-phase;
+ if(action==4)return -9;
+ if(action==2)return 3+(sway-20)/5;
+ if(action==3)return 5+(sway-20)/7;
+ return 0;
+}
 int world_baby_arm_reach(int action){
  return action==3?57:action==2?45:action==1?28:
         action==4?-8:action==5?-6:7;
@@ -454,13 +464,17 @@ static void baby_model(const Game *s,uint32_t frame,int action,
  /* Neck pivot moves the entire face, eyes, cheeks, hair, and mouth AS ONE.
   * The free head briefly lags the shell's rolling body by at most 16deg. */
  glPushMatrix();
- if(rag&&rag->moving){
-  int neck=-rag->vr/3;
+ {
+  int neck=world_baby_neck_tilt(action,frame);
+  if(rag&&rag->moving)neck-=rag->vr/3;
   if(neck>16)neck=16;
   if(neck< -16)neck=-16;
-  glTranslatef(0,.10f,0);
-  glRotateZ(degreesToAngle(neck));
-  glTranslatef(0,-.10f,0);
+  if(neck){
+   /* Pivot below the jaw, rather than spinning the head around its middle. */
+   glTranslatef(0,.10f,0);
+   glRotateZ(degreesToAngle(neck));
+   glTranslatef(0,-.10f,0);
+  }
  }
  /* Rounded unified face. No second oversized jaw shell, no floating teeth. */
  soft_head(0,.54f,.045f,.61f,.615f,.45f,30,22,19);
