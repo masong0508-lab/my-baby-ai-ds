@@ -375,6 +375,74 @@ def test_actual_game(path: Path, output: Path) -> dict:
         f"Four native stylus diaper tasks did not finish and award currency "
         f"(screen={returned}, reward={reward})"
     )
+    # Regression: the optional Talking-Tom-style tool mode is SELECTED
+    # from the home dock. Its icons must NOT themselves strike the doll.
+    emu.input.keypad_add_key(keymask(Keys.KEY_B))
+    frames(emu, 6)
+    emu.input.keypad_rm_key(keymask(Keys.KEY_B))
+    frames(emu, 12)
+    stylus_tap(emu, 128, 183)  # middle TOYBOX dock tab
+    toybox = picture(emu, output, "game_toybox_select_hand")
+    toy_opened = difference(
+        won, toybox, (0, 192 + 31, 256, 192 + 175)
+    )
+    assert toy_opened > 500, (
+        f"Touching the center Toybox tab did not enter selectable mode ({toy_opened})"
+    )
+    stylus_tap(emu, 184, 159)  # choose boot/KICK without impact
+    selected_kick = picture(emu, output, "game_toybox_select_boot")
+    tool_selected = difference(
+        toybox, selected_kick, (9, 192 + 145, 247, 192 + 174)
+    )
+    assert tool_selected > 80, (
+        f"Talking-Tom-style KICK tool did not visibly highlight ({tool_selected})"
+    )
+    # Only touching the doll activates a selected tool.
+    stylus_tap(emu, 126, 110)
+    first_bounce = picture(emu, output, "game_toybox_first_kick")
+    bounce_motion = difference(
+        selected_kick, first_bounce, (10, 8, 244, 180)
+    )
+    assert bounce_motion > 35, (
+        f"Ragdoll did not visibly bounce after tapping doll ({bounce_motion})"
+    )
+    for _ in range(5):
+        stylus_tap(emu, 126, 110)  # release frames re-arm cooldown
+    egg_begin = picture(emu, output, "game_egg_shell_fracture")
+    fracture_changed = difference(
+        selected_kick, egg_begin, (0, 192 + 32, 256, 192 + 174)
+    )
+    assert fracture_changed > 400, (
+        f"Six toy impacts did not trigger secret egg ending ({fracture_changed})"
+    )
+    frames(emu, 95)  # shell cracked open; thick green alien ichor visible
+    egg_green = picture(emu, output, "game_egg_green_ichor")
+    top_green = egg_green.crop((0, 0, 256, 192))
+    green_ichor_pixels = sum(
+        1 for r, g, b in top_green.get_flattened_data()
+        if g > r + 28 and g > b + 19 and g > 80
+    )
+    assert green_ichor_pixels >= 12, (
+        f"Alien-green ichor was not visible on actual 3D egg ({green_ichor_pixels})"
+    )
+    frames(emu, 156)  # slow push through the shell's opening
+    egg_push = picture(emu, output, "game_egg_slow_push")
+    frames(emu, 117)  # single harsh perspective cut/jump scare
+    egg_scare = picture(emu, output, "game_egg_jump_scare")
+    scare_difference = difference(
+        egg_push, egg_scare, (8, 7, 248, 182)
+    )
+    assert scare_difference > 300, (
+        f"Egg film did not show an abrupt visual reveal ({scare_difference})"
+    )
+    frames(emu, 96)  # resolve to the BAD ENDING postcard
+    egg_final = picture(emu, output, "game_egg_secret_bad_ending")
+    finale_difference = difference(
+        egg_begin, egg_final, (5, 192 + 35, 251, 192 + 173)
+    )
+    assert finale_difference > 350, (
+        f"Alien-egg cutscene did not resolve to final ending ({finale_difference})"
+    )
     return {
         "3D_top_screen_distinct_colors": hero_colors,
         "3D_top_screen_full_height_dark_stripes": len(full_height_stripes),
@@ -400,6 +468,13 @@ def test_actual_game(path: Path, output: Path) -> dict:
         "touch_DIAPER_changed_pixels": diaper_changed,
         "touch_DIAPER_stage_changed_pixels": step_changed,
         "touch_DIAPER_win_reward_changed_pixels": reward,
+        "Toybox_entry_changed_pixels": toy_opened,
+        "Toybox_selected_tool_changed_pixels": tool_selected,
+        "Toybox_first_bounce_changed_pixels": bounce_motion,
+        "Toybox_egg_trigger_changed_pixels": fracture_changed,
+        "Alien_green_ichor_pixels": green_ichor_pixels,
+        "Alien_jump_scare_changed_pixels": scare_difference,
+        "Alien_ending_finale_changed_pixels": finale_difference,
         "result": "PASS",
     }
 
