@@ -1734,11 +1734,21 @@ static void title_screen(const Game *s,int storage_ok,const char *status){
  capsule(85,70,86,57,MINT,TEAL);
  sprite(98,72,3,spr_baby,18);
  fit(18,129,status?status:"WELCOME!",TEAL,36);
- capsule(19,140,218,28,LEMON,GOLD);
- label(99,147,"START",INK,2,5);
+ /* Two real, high-contrast title actions, matched to their touch bounds.
+  * The START button remains separate from save-device probing, which
+  * intentionally occurs only on an explicit user request. */
+ capsule(19,140,132,28,LEMON,GOLD);
+ label(58,147,"START",INK,2,5);
+ capsule(159,140,78,28,MINT,TEAL);
+ fit(171,150,"SAVE/LOAD",INK,11);
  foot(PURPLE);
  fit(10,181,"A START   X SAVE   SELECT TEST",WHITE,39);
  (void)storage_ok;
+}
+/* Match the visible 78x28 right-hand title card, with no accidental
+ * touches on the baby portrait, START card or off-screen coordinates. */
+int ui_title_save_touch(int x,int y){
+ return x>=159&&x<237&&y>=140&&y<168;
 }
 /* Collection stamps carry ONE readable label apiece instead of two
  * crowded microtext lines. Color indicates discovered good/bad endings. */
