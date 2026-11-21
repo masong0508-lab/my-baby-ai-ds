@@ -6,6 +6,9 @@
 void ui_init(void *vram);
 void ui_draw(const Game *s,const Arcade *a,int view,int selected,
              int ending,int reset_step,int can_save,const char *message);
+/* Explicit title-only SAVE/LOAD touch target. The boot-time storage probe
+ * remains opt-in; touching START never initializes FAT. */
+int ui_title_save_touch(int x,int y);
 int ui_nursery_touch(int x,int y);
 int ui_room_entry_touch(int x,int y);
 int ui_room_touch(int x,int y); /* 0 window, 1 lamp, 2 teddy, 3 crib, 4 back, 5 sound, 6 use */
