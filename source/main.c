@@ -92,10 +92,7 @@ int main(void){
  }
  /* Always show a visible title before touching the filesystem or heavy 3D.
   * Some older emulators hang during their emulated DLDI/FAT setup. */
- ui_draw(&baby,&arc,view,view==6?album_page:view==8?((int)rag.charge|(toy_tool==ROUGHHOUSE_KICK?32:0)|((int)rag.hits<<6)|
-           (sfx_is_enabled()?(1<<16):0)):view==9?((int)egg_frame|(egg_paused?EGG_FILM_PAUSED_FLAG:0)):
-           view==10?((room_focus&3)|(room_daylight?8:0)|
-                     (room_lamp?16:0)):selected,last_ending,reset_step,storage_ok,message);
+ ui_draw(&baby,&arc,view,selected,last_ending,reset_step,storage_ok,message);
  /* Sound starts only AFTER the title is visibly present. Small hardware
   * PSG cues are synthesized at the ARM9 game tick; no sample bank/heap. */
  sfx_init();
@@ -525,8 +522,15 @@ int main(void){
   /* Keep bitmap VRAM writes off the hot path unless UI state changed. */
   if(dirty||previous!=view||
      (view==2&&frame%arcade_redraw_period(&arc)==0u)){
-   ui_draw(&baby,&arc,view,view==6?album_page:view==8?((int)rag.charge|(toy_tool==ROUGHHOUSE_KICK?32:0)|((int)rag.hits<<6)|
-           (sfx_is_enabled()?(1<<16):0)):view==9?((int)egg_frame|(egg_paused?EGG_FILM_PAUSED_FLAG:0)):selected,last_ending,reset_step,storage_ok,message);
+   /* The actual per-frame draw must receive the Room prop selection and
+    * lamp/day flags. Startup UI paint is NOT the Room redraw path. */
+   ui_draw(&baby,&arc,view,view==6?album_page:
+           view==8?((int)rag.charge|(toy_tool==ROUGHHOUSE_KICK?32:0)|((int)rag.hits<<6)|
+                     (sfx_is_enabled()?(1<<16):0)):
+           view==9?((int)egg_frame|(egg_paused?EGG_FILM_PAUSED_FLAG:0)):
+           view==10?((room_focus&3)|(room_daylight?8:0)|
+                    (room_lamp?16:0)):
+           selected,last_ending,reset_step,storage_ok,message);
    dirty=0;
   }
   if(view==7)ui_touch_diag_update();
