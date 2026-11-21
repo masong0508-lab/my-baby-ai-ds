@@ -82,3 +82,21 @@ The following implementations are present in the feature branch and must pass ho
 | 15 CEO of Daycare | Balance budget and morale through six INVEST, PLAY or NAP decisions | Stylus or LEFT/DOWN/RIGHT |
 
 No new runtime heap buffers, image decoders or serialized fields were introduced. Existing bitmap rendering is throttled for animated cabinets; validate frame rates on the target DS and emulator rather than assuming a compile proves performance.
+
+## Unified bottom-screen interface overhaul (development branch, 2026-11-20)
+
+All eight application views and all 16 unique cabinets share an updated Nintendo DS visual language. It is rendered in the existing 256×192 16-bit sub-screen bitmap, with no image loader, heap allocation, framebuffer duplication, font assets or save-format changes.
+
+- **Title:** illustrated baby portrait, hierarchy for START, explicit SD/RAM state, and accurate button hints.
+- **Nursery:** legible care dashboard, mood/hunger/energy/chaos and corruption meters, readable baby text, four raised action controls. The original FEED/CHAT/PLAY/NAP and footer hitboxes are unchanged.
+- **Arcade:** refined 4×4 cabinet matrix with strong selected/locked states, currency, readable cabinet name and native key hints; all original 16 cabinet hitboxes are preserved.
+- **Every arcade challenge (16/16):** individual accent theme, numbered cabinet header, progress and three-strike bar, consistent inset stage border, improved dimensional cards and buttons. Original game rules remain unchanged.
+- **Ending cards:** illustrated baby keepsake with clearer good/bad color coding, one-time reward description and album progress.
+- **Album:** eight individual scrapbook entries, reveal/locked state, short readable names, good/bad result indicator.
+- **Reset:** explicit two-step keyboard confirmation panel explaining the scoped save deletion; cancel still available and no new touch-to-reset shortcut.
+- **Touch test:** high-contrast live signal panel with the original 220×52 canvas; partial crosshair updates and last-input tracking stay intact.
+- **Shared interface:** coordinated high-contrast top bars, SD-vs-RAM status, card highlight/shadow hierarchy and footer action bands.
+- **Rendering:** replaced bitmap glyph-by-glyph pixel writes with identical horizontal runs; removed the redundant 49,152-pixel full-screen clear (all views fill their own content, with header and footer covering the remaining rows); reduced cabinet background dot draws. Static cabinet panels now redraw roughly once a second for timers while gesture/timing scenes retain their responsive cadence. Gardening triggers a redraw only at useful progress increments rather than every held frame.
+- **QA:** new host assertions check full 256×192 coverage, untouched offscreen 256×64 rows, distinct fingerprints across all 16 cabinets, safe/SD and ending/reset visual variants, plus gardening progress redraw cadence. CI ROM build and DeSmuME touchscreen tests still have to pass before this branch is merged.
+
+Changes to the top-screen 3D nursery geometry are deliberately out of scope for this UI refresh: they would compete with the DS polygon/frame budgets. Character animation and 3D environments remain a separate production effort.
