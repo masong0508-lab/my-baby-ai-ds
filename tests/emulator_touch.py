@@ -355,6 +355,20 @@ def test_actual_game(path: Path, output: Path) -> dict:
     assert crib_scene_change > 35, (
         f"Crib doesn't animate a nap or change camera ({crib_scene_change})"
     )
+    # The nursery mobile is now made of connected hanging pieces, and
+    # responds ONCE to CRIB, before settling. Inspect both native top
+    # captures to reject perpetually rocking or detached decorations.
+    frames(emu, 7)
+    mobile_sway = picture(emu, output, "game_room_crib_mobile_sway")
+    frames(emu, 24)
+    mobile_rest = picture(emu, output, "game_room_crib_mobile_settled")
+    mobile_motion_pixels = difference(
+        mobile_sway, mobile_rest, (178, 14, 255, 150)
+    )
+    assert mobile_motion_pixels > 12, (
+        "The crib mobile has no visible motion in the actual DS nursery "
+        f"({mobile_motion_pixels} changed pixels)"
+    )
     stylus_tap(emu, 128, 183)  # visible BACK footer, never End Day!
     frames(emu, 20)
     room_return = picture(emu, output, "game_room_tour_back_to_care")
@@ -821,6 +835,7 @@ def test_actual_game(path: Path, output: Path) -> dict:
         "Room_teddy_recovery_changed_pixels": teddy_recovery_change,
         "Room_quiet_crib_status_changed_pixels": quiet_bonus_display,
         "Room_crib_top_changed_pixels": crib_scene_change,
+        "Room_crib_mobile_changed_pixels": mobile_motion_pixels,
         "Room_back_to_care_changed_pixels": room_back_change,
         "3D_care_pose_changed_pixels": pose_changed,
         "3D_nap_upright_romper_pixels": upright_romper_pixels,
