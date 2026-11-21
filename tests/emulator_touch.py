@@ -477,14 +477,27 @@ def test_actual_game(path: Path, output: Path) -> dict:
         "The jump-scare image was captured in the wrong cinematic phase"
     )
 
+    finale_heading_ink = 0
     for _ in range(100):
         frames(emu, 12)
         sample = emu.screenshot().convert("RGB")
         if movie_stage(sample) == -1:
-            egg_final = picture(emu, output, "game_egg_secret_bad_ending")
-            break
+            # A title-band switch can arrive BEFORE the rest of the 256x192
+            # bitmap has finished drawing on a busy DS frame. Require the
+            # actual completed 2x BAD ENDING heading, not a blank card.
+            heading = sample.crop((35, 192 + 40, 218, 192 + 77))
+            finale_heading_ink = sum(
+                1 for r, g, b in heading.get_flattened_data()
+                if r >= 216 and g >= 216 and b >= 216
+            )
+            if finale_heading_ink > 45:
+                frames(emu, 8)  # settled, visually inspectable capture
+                egg_final = picture(emu, output, "game_egg_secret_bad_ending")
+                break
     else:
-        raise AssertionError("Alien-egg film never reached its ending postcard")
+        raise AssertionError(
+            "Alien egg did not finish rendering its actual BAD ENDING postcard"
+        )
     finale_difference = difference(
         egg_begin, egg_final, (5, 192 + 35, 251, 192 + 173)
     )
@@ -535,6 +548,7 @@ def test_actual_game(path: Path, output: Path) -> dict:
         "Egg_push_stage": movie_stage(egg_push),
         "Egg_jump_scare_stage": movie_stage(egg_scare),
         "Alien_ending_header_changed_pixels": finale_header,
+        "Alien_finale_readable_ink_pixels": finale_heading_ink,
         "result": "PASS",
     }
 
