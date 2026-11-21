@@ -329,86 +329,71 @@ static void teddy(void){
  soft_mark(x-.175f,y-.285f,z+.263f,.078f,.065f,30,25,18);
  soft_mark(x+.175f,y-.285f,z+.263f,.078f,.065f,30,25,18);
 }
+/* Baby A.I. hero model. One stable chibi silhouette with a connected
+ * romper, SHORT hair, embedded eyes and a small closed-mouth smile. The
+ * previous dark bob, gaping mouth/teeth, flaring jeans and detached facial
+ * layers were the main reason the character looked frightening at 256x192.
+ * Only ROM-native primitive meshes; no texture or framebuffer allocation. */
 static void baby_model(const Game *s,uint32_t frame,int action){
- /* The reference is uneasy because the infant smiles a little too steadily,
-  * not because of supernatural effects or physically impossible anatomy. */
- const float bob=(float)((int)(frame%120u)-60)*.00020f;
- const float wave=(float)((int)(frame%105u)-52)*.0013f;
- const int blink=(frame%153u)<4u||(action==4&&(frame%110u)<55u);
- const int glitched=game_glitch_tier(s)>=2&&!s->safe_visuals&&frame%121u<13u;
+ unsigned beat=frame%120u,arms=frame%104u;
+ const float bob=((float)(beat<60u?beat:120u-beat)-30.f)*.00028f;
+ const float wave=((float)(arms<52u?arms:104u-arms)-26.f)*.0011f;
+ const int blink=(frame%173u)<5u||(action==4&&(frame%125u)<42u);
  const int happy=s->mood>35;
+ const int glitch=game_glitch_tier(s)>=2&&!s->safe_visuals&&
+                  (frame%151u)<12u;
  glPushMatrix();
- glTranslatef(-.12f,bob,.22f);
- /* Dark, baggy denim. Legs fan outward, teddy occupying the empty space. */
- ellipse(0,-.81f,-.08f,.53f,.26f,.40f,7,9,15);
- ellipse(-.39f,-.96f,.24f,.29f,.23f,.34f,7,9,15);
- ellipse(.39f,-.96f,.24f,.29f,.23f,.34f,7,9,15);
- ellipse(-.44f,-1.105f,.47f,.26f,.125f,.25f,6,7,9);
- ellipse(.44f,-1.105f,.47f,.26f,.125f,.25f,6,7,9);
- /* A little exposed pink sock band breaks up the dark shoes. */
- soft_mark(-.43f,-1.02f,.695f,.26f,.045f,29,16,19);
- soft_mark(.43f,-1.02f,.695f,.26f,.045f,29,16,19);
- /* Dusty pink short-sleeved top and a cheap appliqué detail. */
- soft_head(0,-.295f,-.07f,.54f,.49f,.37f,29,15,18);
- ellipse(0,.13f,.02f,.25f,.09f,.23f,30,21,17);
- /* Angled sleeves and overlapping forearms form a continuous arm pose. */
- tilted_ellipse(-.48f,-.155f,.025f,.21f,.26f,.22f,-24,28,14,17);
- tilted_ellipse(.48f,-.155f,.025f,.21f,.26f,.22f,24,28,14,17);
- tilted_ellipse(-.605f,-.355f+wave,.26f,.155f,.23f,.18f,-29,28,19,15);
- tilted_ellipse(.605f,-.355f-wave,.26f,.155f,.23f,.18f,29,28,19,15);
- ellipse(-.685f,-.455f+wave,.435f,.155f,.14f,.15f,30,22,17);
- ellipse(.685f,-.455f-wave,.435f,.155f,.14f,.15f,30,22,17);
- /* A deliberately blurry sewn teddy-face mark: tiny and low-poly. */
- soft_mark(0,-.32f,.308f,.31f,.19f,29,19,18);
- soft_mark(-.09f,-.28f,.323f,.045f,.045f,21,12,10);
- soft_mark(.09f,-.28f,.323f,.045f,.045f,21,12,10);
- soft_mark(0,-.37f,.329f,.11f,.032f,21,12,10);
- /* One coherent face, with a shallow jaw/cheek transition. */
- soft_head(0,.525f,.035f,.645f,.665f,.49f,29,21,17);
- ellipse(0,.275f,.30f,.42f,.18f,.17f,29,21,17);
- /* Continuous dark scalp, rounded bob sides and tucked fringe panels. */
- hair_cap(0,.535f,-.07f,.68f,.68f,.53f,7,5,4);
- ellipse(-.575f,.555f,-.09f,.13f,.32f,.22f,8,5,4);
- ellipse(.575f,.555f,-.09f,.13f,.32f,.22f,8,5,4);
- ellipse(-.615f,.43f,.15f,.11f,.14f,.105f,27,18,14);
- ellipse(.615f,.43f,.15f,.11f,.14f,.105f,27,18,14);
- hair_fringe(-.29f,.925f,.474f,.29f,.16f,.05f);
- hair_fringe(.005f,.94f,.474f,.31f,.15f,.055f);
- hair_fringe(.295f,.94f,.45f,.25f,.125f,.02f);
- /* A small, partly embedded hair clip survives the hair redesign. */
- ellipse(-.505f,1.015f,.35f,.087f,.13f,.035f,28,9,16);
- ellipse(-.505f,1.035f,.386f,.042f,.067f,.015f,31,20,24);
- /* Smaller eyes are recessed toward the skin, not pasted on as bubbles. */
- ellipse(-.215f,.565f,.533f,.107f,blink?.014f:.079f,.020f,18,12,10);
- ellipse(.215f,.572f,.533f,.107f,blink?.014f:.079f,.020f,18,12,10);
+ glTranslatef(-.12f,bob,.23f);
+ /* Footed one-piece romper, short legs and soft shoes: no adult denim. */
+ ellipse(0,-.75f,-.07f,.46f,.31f,.34f,21,28,27);
+ ellipse(-.32f,-.93f,.14f,.245f,.22f,.27f,20,27,27);
+ ellipse(.32f,-.93f,.14f,.245f,.22f,.27f,20,27,27);
+ ellipse(-.365f,-1.08f,.36f,.235f,.13f,.24f,30,28,23);
+ ellipse(.365f,-1.08f,.36f,.235f,.13f,.24f,30,28,23);
+ /* Curved mint romper and cream collar meet behind the head. */
+ soft_head(0,-.32f,-.08f,.49f,.46f,.36f,23,29,27);
+ ellipse(0,.09f,.0f,.22f,.10f,.205f,31,26,21);
+ ellipse(0,-.39f,.284f,.245f,.25f,.035f,29,30,26);
+ soft_mark(0,-.31f,.329f,.11f,.048f,glitch?25:30,glitch?17:18,21);
+ /* Sleeves overlap the torso and the skin overlaps each sleeve; hands
+  * always remain attached while the animation cycles. */
+ tilted_ellipse(-.45f,-.21f,-.025f,.205f,.22f,.195f,-20,21,28,27);
+ tilted_ellipse(.45f,-.21f,-.025f,.205f,.22f,.195f,20,21,28,27);
+ tilted_ellipse(-.55f,-.37f+wave,.15f,.14f,.18f,.14f,-26,31,23,19);
+ tilted_ellipse(.55f,-.37f-wave,.15f,.14f,.18f,.14f,26,31,23,19);
+ ellipse(-.63f,-.46f+wave,.28f,.13f,.125f,.13f,31,24,20);
+ ellipse(.63f,-.46f-wave,.28f,.13f,.125f,.13f,31,24,20);
+ /* Rounded unified face. No second oversized jaw shell, no floating teeth. */
+ soft_head(0,.54f,.045f,.61f,.615f,.45f,31,24,20);
+ ellipse(-.575f,.49f,.065f,.105f,.145f,.09f,31,23,19);
+ ellipse(.575f,.49f,.065f,.105f,.145f,.09f,31,23,19);
+ /* Chestnut cap and two small swept tufts; old long side hair removed. */
+ hair_cap(0,.54f,.035f,.625f,.63f,.465f,16,11,8);
+ hair_fringe(-.19f,.948f,.44f,.29f,.105f,.045f);
+ hair_fringe(.16f,.959f,.438f,.28f,.095f,-.04f);
+ ellipse(-.39f,1.018f,.365f,.075f,.069f,.029f,29,14,20);
+ /* Sclera and pupils lie just above the curved facial surface, not
+  * stacked .10 units out in space. Each shallow eye has a tiny highlight. */
  if(!blink){
-  ellipse(-.215f,.565f,.548f,.09f,.072f,.014f,29,28,26);
-  ellipse(.215f,.572f,.548f,.09f,.072f,.014f,29,28,26);
-  ellipse(-.195f,.561f,.562f,.05f,.056f,.014f,5,4,4);
-  ellipse(.235f+(glitched?.045f:0),.568f,.562f,.05f,.056f,.014f,5,4,4);
-  soft_mark(-.205f,.603f,.579f,.025f,.025f,31,30,28);
-  soft_mark(.226f,.609f,.579f,.025f,.025f,31,30,28);
+  ellipse(-.205f,.575f,.472f,.100f,.094f,.015f,30,29,27);
+  ellipse(.205f,.575f,.472f,.100f,.094f,.015f,30,29,27);
+  ellipse(-.190f,.565f,.485f,.052f,.061f,.015f,5,7,11);
+  ellipse(.220f,.565f,.485f,.052f,.061f,.015f,5,7,11);
+  soft_mark(-.208f,.602f,.508f,.028f,.023f,31,31,30);
+  soft_mark(.202f,.602f,.508f,.028f,.023f,31,31,30);
  }else{
-  soft_mark(-.215f,.565f,.551f,.20f,.016f,15,9,8);
-  soft_mark(.215f,.572f,.551f,.20f,.016f,15,9,8);
+  soft_mark(-.205f,.575f,.480f,.169f,.016f,15,10,9);
+  soft_mark(.205f,.575f,.480f,.169f,.016f,15,10,9);
  }
- soft_mark(-.22f,.755f,.485f,.19f,.023f,14,9,8);
- soft_mark(.22f,.759f,.485f,.19f,.023f,14,9,8);
- soft_mark(-.405f,.34f,.455f,.125f,.055f,30,17,16);
- soft_mark(.405f,.34f,.455f,.125f,.055f,30,17,16);
- ellipse(0,.395f,.511f,.067f,.045f,.029f,30,23,19);
- /* Layered shallow mouth cavity: dark interior, lip rims, recessed teeth.
-  * A small steady open grin is unsettling without a floating black sticker. */
- ellipse(.006f,.205f,.504f,happy?.156f:.112f,happy?.074f:.043f,
-         .023f,9,3,5);
- ellipse(.004f,.259f,.520f,happy?.158f:.114f,.022f,.019f,24,12,14);
- ellipse(.006f,.15f,.518f,happy?.143f:.10f,.023f,.018f,26,13,15);
- if(happy){
-  soft_mark(0,.231f,.535f,.135f,.017f,30,27,25);
-  ellipse(.008f,.163f,.526f,.076f,.020f,.009f,26,11,14);
- }
+ /* Warm cheeks, gentle brows, button nose and a tiny restrained smile. */
+ ellipse(-.355f,.365f,.397f,.102f,.058f,.016f,31,18,19);
+ ellipse(.355f,.365f,.397f,.102f,.058f,.016f,31,18,19);
+ soft_mark(-.205f,.734f,.459f,.105f,.014f,17,11,9);
+ soft_mark(.205f,.734f,.459f,.105f,.014f,17,11,9);
+ ellipse(0,.375f,.467f,.047f,.034f,.019f,31,23,20);
+ soft_mark(0,.259f,.449f,happy?.132f:.095f,.024f,18,9,11);
+ soft_mark(0,.275f,.455f,happy?.091f:.059f,.011f,31,20,19);
  glPopMatrix(1);
- if(glitched)block(.55f,.64f,.91f,.10f,.035f,.04f,8,29,23);
 }
 void world_init(void){
  glInit();
