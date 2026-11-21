@@ -624,7 +624,7 @@ static void bottle_challenge(const Arcade *a){
  int cursor=128+a->balance/2;
  arcade_wall(BLUSH);
  panel(7,31,242,41,WHITE,TEAL);
- fit(15,38,"BOTTLE BALANCE",PURPLE,30);
+ label(15,35,"BOTTLE BALANCE",PURPLE,2,14);
  fit(15,52,a->reverse?"GLITCH: LEFT IS RIGHT!":"STEADY HANDS, HAPPY BABY",a->reverse?DEEP_PINK:TEAL,37);
  bar(16,76,224,a->hold_frames,150,MINT);
  sprite(36,90,2,spr_baby,18);
@@ -647,7 +647,7 @@ static void teether_challenge(const Arcade *a){
  char text[40];
  arcade_wall(MINT);
  panel(6,31,244,41,WHITE,TEAL);
- fit(13,38,"TAX RETURN TEETHER",PURPLE,35);
+ label(13,35,"TAX TEETHER",PURPLE,2,11);
  snprintf(text,sizeof(text),"SORTED %u/6   %u SEC",a->round,(a->timer+59)/60);
  fit(13,53,text,DEEP_PINK,36);
  /* Office-nursery scene: receipts come from the baby executive's desk. */
@@ -678,7 +678,7 @@ static void kart_challenge(const Arcade *a){
  int i,y;
  arcade_wall(SKY);
  panel(6,31,244,42,WHITE,TEAL);
- fit(12,38,"CRIB KART",PURPLE,34);
+ label(12,35,"CRIB KART",PURPLE,2,9);
  snprintf(text,sizeof(text),"SAFE %u/6  CRASH %u/3",a->round,a->mistakes);
  fit(12,54,text,DEEP_PINK,38);
  for(i=0;i<3;i++){
@@ -707,7 +707,7 @@ static void sock_challenge(const Arcade *a){
  char text[40];int i;
  arcade_wall(BLUSH);
  panel(6,31,244,41,WHITE,PINK);
- fit(12,38,"SOCK MARKET",PURPLE,35);
+ label(12,35,"SOCK MARKET",PURPLE,2,11);
  snprintf(text,sizeof(text),"PAIRS %u/6  MISS %u/3",a->round,a->mistakes);
  fit(12,53,text,DEEP_PINK,38);
  capsule(9,76,238,40,MINT,TEAL);
@@ -731,7 +731,7 @@ static void nap_challenge(const Arcade *a){
  int green_w=33*214/100;
  arcade_wall(BLUE);
  panel(6,31,244,41,WHITE,LILAC);
- fit(13,37,"NAPTIME NEGOTIATOR",PURPLE,35);
+ label(13,35,"NAPTIME",PURPLE,2,7);
  snprintf(text,sizeof(text),"CALM %u/4  WAKEUPS %u/3",a->round,a->mistakes);
  fit(13,53,text,DEEP_PINK,39);
  /* Warm bedside light, sleep bonnet, pillow and a broad quiet window. */
@@ -757,7 +757,7 @@ static void beatbox_challenge(const Arcade *a){
  int active=-1;
  arcade_wall(LILAC);
  panel(6,31,244,42,WHITE,PURPLE);
- fit(12,38,"BABY BEATBOX",PURPLE,37);
+ label(12,35,"BABY BEATBOX",PURPLE,2,12);
  snprintf(text,sizeof(text),"TUNE %u/3  MISS %u/3",a->round+1,a->mistakes);
  fit(12,54,text,DEEP_PINK,36);
  if(!a->phase&&a->hold_frames){
@@ -792,7 +792,7 @@ static void diaper_challenge(const Arcade *a){
  char text[40];int i;
  arcade_wall(BLUSH);
  panel(6,31,244,41,WHITE,PINK);
- fit(14,37,"DIAPER DASH",PURPLE,26);
+ label(14,35,"DIAPER DASH",PURPLE,2,11);
  snprintf(text,sizeof(text),"STEP %u/4",a->stage+1);
  fit(184,37,text,DEEP_PINK,10);
  fit(14,52,steps[a->stage<4?a->stage:3],TEAL,37);
@@ -829,7 +829,7 @@ static void rattle_challenge(const Arcade *a){
  int lane,y,i,fall;
  arcade_wall(SKY);
  panel(6,31,244,40,WHITE,TEAL);
- fit(13,37,"RATTLE RESCUE",PURPLE,30);
+ label(13,35,"RATTLE RESCUE",PURPLE,2,13);
  snprintf(text,sizeof(text),"CAUGHT %u/6  MISSED %u/3",a->round,a->mistakes);
  fit(13,53,text,TEAL,38);
  for(i=0;i<3;i++){
@@ -851,7 +851,7 @@ static void crawl_challenge(const Arcade *a){
  char text[40];int x;
  arcade_wall(SKY);
  panel(6,31,244,42,WHITE,TEAL);
- fit(13,38,"CORPORATE CRAWL",PURPLE,35);
+ label(13,35,"OFFICE CRAWL",PURPLE,2,12);
  snprintf(text,sizeof(text),"ESCAPED %u/6  BUMPS %u/3",a->round,a->mistakes);
  fit(13,54,text,DEEP_PINK,39);
  capsule(14,81,229,52,BLUSH,PINK);
@@ -880,7 +880,7 @@ static void stroller_challenge(const Arcade *a){
  char text[40];int x=128+a->balance;
  arcade_wall(MINT);
  panel(6,31,244,41,WHITE,TEAL);
- fit(13,38,"STROLLER DRIFT",PURPLE,35);
+ label(13,35,"STROLLER DRIFT",PURPLE,2,14);
  snprintf(text,sizeof(text),"LAPS %u/5  BUMPS %u/3",a->round,a->mistakes);
  fit(13,53,text,DEEP_PINK,37);
  solid(42,77,171,66,SHADOW);
@@ -907,7 +907,7 @@ static void cereal_challenge(const Arcade *a){
  char text[40];
  arcade_wall(LEMON);
  panel(6,31,244,42,WHITE,GOLD);
- fit(12,38,"CEREAL CIPHER",PURPLE,35);
+ label(12,35,"CEREAL CIPHER",PURPLE,2,13);
  snprintf(text,sizeof(text),"SOLVED %u/6  WRONG %u/3",a->round,a->mistakes);
  fit(12,54,text,DEEP_PINK,38);
  capsule(36,79,184,33,WHITE,PURPLE);
@@ -929,7 +929,7 @@ static void blocks_challenge(const Arcade *a){
  char text[40];int i;
  arcade_wall(LILAC);
  panel(6,31,244,41,WHITE,PURPLE);
- fit(12,38,"TANTRUM BLOCKS",PURPLE,36);
+ label(12,35,"TANTRUM BLOCKS",PURPLE,2,14);
  snprintf(text,sizeof(text),"STACK %u/6  MISSED %u/3",a->round,a->mistakes);
  fit(12,53,text,DEEP_PINK,38);
  capsule(12,77,232,94,SKY,PURPLE);
@@ -954,7 +954,7 @@ static void audit_challenge(const Arcade *a){
  char text[40];
  arcade_wall(MINT);
  panel(6,31,244,41,WHITE,TEAL);
- fit(12,38,"BABY'S FIRST AUDIT",PURPLE,35);
+ label(12,35,"BABY AUDIT",PURPLE,2,10);
  snprintf(text,sizeof(text),"CHECKED %u/6  WRONG %u/3",a->round,a->mistakes);
  fit(12,53,text,DEEP_PINK,38);
  /* Two legible invoice numbers on a stamped clipboard. */
@@ -979,7 +979,7 @@ static void garden_challenge(const Arcade *a){
  char text[40];int i;
  arcade_wall(SKY);
  panel(6,31,244,42,WHITE,GREEN);
- fit(13,38,"GLITCH GARDENING",PURPLE,34);
+ label(13,35,"GLITCH GARDEN",PURPLE,2,13);
  snprintf(text,sizeof(text),"FLOWERS %u/4  WITHERED %u/3",a->round,a->mistakes);
  fit(13,54,text,DEEP_PINK,39);
  for(i=0;i<3;i++){
@@ -1004,7 +1004,7 @@ static void court_challenge(const Arcade *a){
  char text[40];int i,j;
  arcade_wall(LEMON);
  panel(6,31,244,42,WHITE,GOLD);
- fit(12,38,"COURTROOM CRAYONS",PURPLE,35);
+ label(12,35,"CRAYON COURT",PURPLE,2,12);
  snprintf(text,sizeof(text),"CASES %u/4  OBJECTIONS %u/3",a->round,a->mistakes);
  fit(12,54,text,DEEP_PINK,40);
  /* Numbered clues form a new three-node route every case. */
@@ -1033,7 +1033,7 @@ static void ceo_challenge(const Arcade *a){
  char text[40];int i;
  arcade_wall(BLUSH);
  panel(6,31,244,41,WHITE,PURPLE);
- fit(12,38,"CEO OF DAYCARE",PURPLE,35);
+ label(12,35,"DAYCARE CEO",PURPLE,2,11);
  snprintf(text,sizeof(text),"DECISIONS %u/6  FAILS %u/3",a->round,a->mistakes);
  fit(12,53,text,DEEP_PINK,38);
  panel(15,78,226,38,WHITE,LILAC);
