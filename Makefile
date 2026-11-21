@@ -5,6 +5,11 @@ $(error Set DEVKITARM to the installed devkitARM path)
 endif
 include $(DEVKITARM)/ds_rules
 TARGET := my-baby-ai
+# Game banner for shell menus; the canonical 12-byte cartridge title and
+# CRC are also normalized after linking by tools/nds_rom_identity.py.
+GAME_TITLE := My Baby A.I.!
+GAME_SUBTITLE1 := A tiny daycare with big problems
+GAME_SUBTITLE2 := Original Nintendo DS homebrew
 BUILD := build
 SOURCES := source
 INCLUDES := include
@@ -28,6 +33,7 @@ export LIBPATHS := $(foreach dir,$(LIBDIRS),-L$(dir)/lib)
 $(BUILD):
 	@mkdir -p $@
 	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
+	@python3 tools/nds_rom_identity.py $(TARGET).nds
 clean:
 	@rm -rf $(BUILD) $(TARGET).elf $(TARGET).nds
 else
