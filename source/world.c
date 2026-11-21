@@ -981,6 +981,31 @@ static void egg_lip_ichor(int side,float opened){
  frame_vertices+=12;frame_polygons+=5;
 }
 
+/* The alien shell leaks tapering dark-green fluid rather than a long
+ * constant-width fluorescent rectangle when the camera pushes close.
+ * The top of each rivulet stays attached to its inner shell lip.
+ * Two colored triangles per side; no new meshes or frame buffers. */
+static void egg_ichor_drip(int side,float opened){
+ float s=(float)side,drift=opened*.17f;
+ float x=.269f+drift;
+ float y=side<0?-.205f:-.165f;
+ float length=.30f+opened*.46f;
+ glBegin(GL_TRIANGLES);
+ color(6,27,9,0);
+ glVertex3f(s*(x-.064f),y,.719f);
+ color(8,29,10,0);
+ glVertex3f(s*(x+.040f),y-.028f,.716f);
+ color(2,12,5,0);
+ glVertex3f(s*(x+.066f),y-length,.688f);
+ color(3,18,7,0);
+ glVertex3f(s*(x-.025f),y-.090f,.721f);
+ color(7,25,9,0);
+ glVertex3f(s*(x+.048f),y-.075f,.722f);
+ color(2,11,5,0);
+ glVertex3f(s*(x+.082f),y-length*.77f,.694f);
+ glEnd();
+ frame_vertices+=6;frame_polygons+=2;
+}
 /* Eight hand-placed triangular planes sculpt the brow, cheeks and lower
  * jaw. Deliberate asymmetric light makes the face feel carved instead of a
  * flat turquoise emoji. Native GL vertex colors supply a cheap fake rim
@@ -1010,6 +1035,35 @@ static void alien_face_facets(void){
  color(4,10,12,-2);glVertex3f(.23f,-.90f,.69f);
  glEnd();
  frame_vertices+=18;frame_polygons+=6;
+}
+/* Tapered organic cheek rivulets in a single connected facial rig.
+ * The earlier long screen-aligned bright rectangles read like graphical
+ * glitches in native 256x192 DeSmuME. Three small triangles per side
+ * produce asymmetric, shaded attachments with no streak-like strip,
+ * heap allocation, sprite atlas, framebuffer, or trigonometry. */
+static void alien_ichor_rivulet(int side){
+ float s=(float)side,dy=side<0?0.f:.035f;
+ glBegin(GL_TRIANGLES);
+ color(7,26,11,0);
+ glVertex3f(s*.625f,-.205f+dy,.798f);
+ color(11,27,12,0);
+ glVertex3f(s*.707f,-.240f+dy,.795f);
+ color(4,15,8,0);
+ glVertex3f(s*.745f,-.615f+dy,.776f);
+ color(5,18,10,0);
+ glVertex3f(s*.660f,-.290f+dy,.803f);
+ color(8,26,12,0);
+ glVertex3f(s*.731f,-.330f+dy,.793f);
+ color(3,13,8,0);
+ glVertex3f(s*.792f,-.465f+dy,.761f);
+ color(14,29,13,0);
+ glVertex3f(s*.680f,-.218f+dy,.811f);
+ color(9,22,10,0);
+ glVertex3f(s*.697f,-.232f+dy,.811f);
+ color(4,14,8,0);
+ glVertex3f(s*.736f,-.375f+dy,.799f);
+ glEnd();
+ frame_vertices+=9;frame_polygons+=3;
 }
 /* Purpose-built visual hierarchy for the secret BAD ending:
  *   porcelain shell / shadowed inner lip / black incubation chamber /
@@ -1255,11 +1309,9 @@ void world_draw_secret(const Game *s,uint32_t frame,const Roughhouse *r){
   egg_lip_ichor(-1,opened);
   egg_lip_ichor(1,opened);
   if(phase==2u){
-   float drip=opened*.29f;
-   soft_mark(-.269f-opened*.17f,-.31f-drip*.46f,.686f,
-             .057f,.12f+drip,5,29,10);
-   soft_mark(.277f+opened*.17f,-.26f-drip*.33f,.686f,
-             .043f,.14f+drip*.72f,12,31,7);
+   /* Attached taper, not two neon rectangles reaching off-screen. */
+   egg_ichor_drip(-1,opened);
+   egg_ichor_drip(1,opened);
    ellipse(-.28f,-.94f,.64f,.19f,.038f,.050f,8,28,8);
    ellipse(.27f,-.94f,.63f,.14f,.026f,.045f,14,31,10);
   }
@@ -1343,10 +1395,10 @@ void world_draw_secret(const Game *s,uint32_t frame,const Roughhouse *r){
    * measured a 28-pixel fluorescent ruler at y=8 with exact RGB15
    * (11,27,12). The broad brow masses and two compact reveal glints
    * already establish the intended skull shape without this artifact. */
-  /* Sickly reflective slime follows the facial contour rather than
-   * obscuring pupils and teeth with arbitrary green rectangles. */
-  soft_mark(-.77f,-.40f,.764f,.068f,.39f,8,29,11);
-  soft_mark(.77f,-.30f,.765f,.061f,.31f,9,28,10);
+  /* Tapered cheek fluid, rather than two bright vertical rulers. The
+   * shorter under-cheek reflections connect the rivulets to the skull. */
+  alien_ichor_rivulet(-1);
+  alien_ichor_rivulet(1);
   soft_mark(-.67f,-.64f,.793f,.19f,.062f,10,31,11);
   soft_mark(.67f,-.56f,.793f,.16f,.054f,11,31,12);
   /* Two short highlights follow the curved brow instead of the old
