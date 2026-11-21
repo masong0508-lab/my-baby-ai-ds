@@ -226,6 +226,16 @@ def test_actual_game(path: Path, output: Path) -> dict:
     assert chat_changed > 28, (
         f"CHAT failed to visibly raise the connected infant arms ({chat_changed})"
     )
+    # An action should not leave the baby locked in a perpetual wave. The
+    # in-game pose now eases back to idle after 56 actual game ticks.
+    frames(emu, 155)
+    chat_recovered = picture(emu, output, "game_nursery_chat_return_to_idle")
+    recovered_change = difference(
+        after_chat, chat_recovered, (34, 20, 222, 182)
+    )
+    assert recovered_change > 25, (
+        f"CHAT never recovered to an idle pose ({recovered_change})"
+    )
     # The new 3D emotion/gesture pass must affect the actual TOP display:
     # FEED lifts an arm, while NAP closes both eyes and relaxes the arms.
     emu.input.touch_set_pos(187, 160)  # NAP on unchanged lower-screen hitbox
@@ -605,6 +615,7 @@ def test_actual_game(path: Path, output: Path) -> dict:
         "3D_top_screen_full_height_dark_stripes": len(full_height_stripes),
         "3D_care_pose_changed_pixels": pose_changed,
         "3D_chat_reach_changed_pixels": chat_changed,
+        "3D_chat_recovery_changed_pixels": recovered_change,
         "3D_title_top_screen_colors": title_colors,
         "album_screen_changed_pixels": album_diff,
         "album_next_page_changed_pixels": album_next_diff,
