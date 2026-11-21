@@ -467,8 +467,10 @@ static void teddy(void){
  * while NAP naturally folds both arms toward the torso. */
 /* The entire face, hair, eyes, mouth and cheeks lean together. NAP
  * nods toward the lap; PLAY and CHAT glance subtly toward the player. */
-int world_baby_neck_tilt(int action,uint32_t frame){
- int phase=(int)(frame%80u);
+/* This phase is ACTION AGE, never the global frame clock: two taps
+ * must animate identically even if they occur at different times. */
+int world_baby_neck_tilt(int action,uint32_t age){
+ int phase=(int)(age%80u);
  int sway=phase<40?phase:80-phase;
  if(action==4)return -9;
  if(action==2)return 3+(sway-20)/5;
@@ -504,6 +506,13 @@ int world_baby_attention_angle(int focus,uint32_t age){
  int scale=age>=16u?256:smooth8(age,16u);
  if(focus<0||focus>=4)return 0;
  return gazes[focus]*scale/256;
+}
+/* Quiet respiration stays inside the existing torso mesh: no additional
+ * geometry or textures. One 128-tick inhale/exhale cycle uses the same
+ * bounded integer easing as the one-shot care gestures. */
+int world_baby_breath(uint32_t frame){
+ uint32_t phase=frame%128u;
+ return smooth8(phase<=64u?phase:128u-phase,64u);
 }
 int world_baby_care_weight(uint32_t age){
  if(age<12u)return smooth8(age,12u);
@@ -561,6 +570,7 @@ static void baby_model(const Game *s,uint32_t frame,int action,
   * rotation, hand reach, neck reaction and eyelid shape share this curve. */
  const int weight=rag?256:(action?world_baby_care_weight(action_age):0);
  const float intensity=(float)weight/256.f;
+ const float breath=rag?0.f:(float)world_baby_breath(frame)/256.f;
  const float bob=((float)(beat<60u?beat:120u-beat)-30.f)*.00022f+
                  (action==3?(float)(hop<18u?hop:36u-hop)*.0022f*intensity:0.f);
  const float wave=((float)(arms<18u?arms:36u-arms)-9.f)*.00145f*intensity;
@@ -602,7 +612,10 @@ static void baby_model(const Game *s,uint32_t frame,int action,
  soft_mark(-.365f,-1.07f,.599f,.10f,.017f,21,27,24);
  soft_mark(.365f,-1.07f,.599f,.10f,.017f,21,27,24);
  /* Layered shadow + warm collar replaces the single white floating coin. */
- soft_head(0,-.32f,-.08f,.49f,.46f,.36f,19,27,27);
+ /* Preserve shoulder, collar and face attachment: only the upper torso
+  * expands by a few percent for a legible but restrained breath. */
+ soft_head(0,-.32f,-.08f,.49f*(1.f+.024f*breath),
+           .46f*(1.f+.016f*breath),.36f,19,27,27);
  ellipse(0,.084f,-.015f,.27f,.11f,.196f,17,22,21);
  /* A nearly paper-flat, overbright collar ellipsoid was emitting a
   * 75-pixel row of RGB15(31,28,23) through the dresser/cheek. That exact
@@ -625,7 +638,7 @@ static void baby_model(const Game *s,uint32_t frame,int action,
   * The free head briefly lags the shell's rolling body by at most 16deg. */
  glPushMatrix();
  {
-  int neck=world_baby_neck_tilt(action,frame)*weight/256;
+  int neck=world_baby_neck_tilt(action,action_age)*weight/256;
   if(rag&&rag->moving)neck-=rag->vr/3;
   if(neck>16)neck=16;
   if(neck< -16)neck=-16;
@@ -711,7 +724,14 @@ static void baby_model(const Game *s,uint32_t frame,int action,
   soft_mark(-.065f,.278f,.444f,.052f,.017f,18,9,11);
   soft_mark(0,.251f,.454f,.081f,.017f,18,9,11);
   soft_mark(.065f,.278f,.444f,.052f,.017f,18,9,11);
- }else soft_mark(0,.259f,.451f,.084f,.015f,18,9,11);
+ }else{
+  /* Low mood is visible on the real baby rather than only a number
+   * downstairs. A gentle three-piece inverted mouth stays on the face,
+   * replacing the former flat, unreadable one-quad line. */
+  soft_mark(-.064f,.241f,.451f,.050f,.016f,18,9,11);
+  soft_mark(0,.269f,.453f,.078f,.016f,18,9,11);
+  soft_mark(.064f,.241f,.451f,.050f,.016f,18,9,11);
+ }
  glPopMatrix(1); /* attached face and hair pivot */
  glPopMatrix(1); /* whole model */
 }
