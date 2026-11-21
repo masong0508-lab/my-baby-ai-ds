@@ -206,6 +206,7 @@ static void ceo_begin(Game *s,Arcade *a){
  a->balance=55;a->progress=45;
  a->timer=(uint16_t)(game_glitch_tier(s)>=3?390:540);
 }
+static void finish(Game *s,Arcade *a,int won);
 static void garden_water(Game *s,Arcade *a,unsigned amount){
  int count;
  if(!a->active||a->id!=13)return;
