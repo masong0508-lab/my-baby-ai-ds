@@ -285,14 +285,21 @@ static void home(const Game *s,int can_save,const char *message){
  solid(62,97,175,4,GRAY);
  solid(62,97,s->corruption*175/100,4,ROSE);
  /* The icon is secondary; 2x words are the primary tap targets. */
+ /* Two-line action cards explain the ACTUAL state effects rather than
+  * leaving a new player to guess. The 4 established touch rectangles do
+  * not move by a pixel. Big 2x verbs + smaller quantified consequences. */
  capsule(8,108,116,30,SKY,BLUE);
- icon_bottle(12,110);label(51,116,"FEED",INK,2,4);
+ icon_bottle(12,110);label(50,111,"FEED",INK,2,4);
+ fit(50,128,"HUNGER -30",BLUE,12);
  capsule(132,108,116,30,LEMON,GOLD);
- icon_chat(135,110);label(174,116,"CHAT",INK,2,4);
+ icon_chat(135,110);label(173,111,"CHAT",INK,2,4);
+ fit(172,128,"MOOD +7",PURPLE,10);
  capsule(8,143,116,30,MINT,GREEN);
- icon_play(12,144);label(51,151,"PLAY",INK,2,4);
+ icon_play(12,144);label(50,146,"PLAY",INK,2,4);
+ fit(50,163,"MOOD +10",GREEN,10);
  capsule(132,143,116,30,PINK,ROSE);
- icon_nap(135,145);label(173,151,"NAP",INK,2,3);
+ icon_nap(135,145);label(172,146,"NAP",INK,2,3);
+ fit(172,163,"ENERGY +25",PURPLE,11);
  foot(PURPLE);
  fit(12,181,"START  ARCADE",WHITE,20);
  fit(157,181,"END  DAY",WHITE,14);
