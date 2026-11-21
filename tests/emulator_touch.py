@@ -226,6 +226,16 @@ def test_actual_game(path: Path, output: Path) -> dict:
     assert chat_changed > 28, (
         f"CHAT failed to visibly raise the connected infant arms ({chat_changed})"
     )
+    # An action should not leave the baby locked in a perpetual wave. The
+    # in-game pose now eases back to idle after 56 actual game ticks.
+    frames(emu, 155)
+    chat_recovered = picture(emu, output, "game_nursery_chat_return_to_idle")
+    recovered_change = difference(
+        after_chat, chat_recovered, (34, 20, 222, 182)
+    )
+    assert recovered_change > 25, (
+        f"CHAT never recovered to an idle pose ({recovered_change})"
+    )
     # The new 3D emotion/gesture pass must affect the actual TOP display:
     # FEED lifts an arm, while NAP closes both eyes and relaxes the arms.
     emu.input.touch_set_pos(187, 160)  # NAP on unchanged lower-screen hitbox
@@ -236,6 +246,18 @@ def test_actual_game(path: Path, output: Path) -> dict:
     pose_changed = difference(after_feed, after_nap, (15, 5, 241, 185))
     assert pose_changed > 35, (
         f"3D nursery baby did not respond visibly to care pose ({pose_changed})"
+    )
+    # A signed-angle bug previously flipped the entire infant during NAP,
+    # leaving only a giant upside-down floating face. Require the actual
+    # cyan romper in the LOWER half of the scene at native 256x192.
+    nap_torso = after_nap.crop((78, 84, 176, 179))
+    upright_romper_pixels = sum(
+        1 for r, g, b in nap_torso.get_flattened_data()
+        if g > r + 25 and b > r + 35 and b > 125
+    )
+    assert upright_romper_pixels > 600, (
+        "NAP flipped the body out of frame or detached the head from the "
+        f"upright romper ({upright_romper_pixels} cyan torso pixels)"
     )
     # Reach the ending album on the actual ARM9 program, then return.
     # The album was previously only covered by a host-side framebuffer test.
@@ -538,6 +560,32 @@ def test_actual_game(path: Path, output: Path) -> dict:
         "Scare cut lost its readable split porcelain egg: "
         f"left={scare_shell_left}, right={scare_shell_right}"
     )
+    # The former glRotateZ(degreesToAngle(...)) passed fixed-angle values
+    # into a FLOAT-DEGREES API. The alien was rotated sideways, leaving
+    # a vertical mouth and one eye below the other. Protect actual 3D
+    # framing: TWO green eyes above ONE dark, centered mouth.
+    left_iris = egg_scare.crop((65, 40, 111, 80))
+    right_iris = egg_scare.crop((139, 40, 190, 80))
+    def luminous_eye(img):
+        return sum(
+            1 for r, g, b in img.get_flattened_data()
+            if g > r + 25 and g > b + 18 and g > 115
+        )
+    left_iris_pixels = luminous_eye(left_iris)
+    right_iris_pixels = luminous_eye(right_iris)
+    mouth_cut = egg_scare.crop((111, 108, 160, 150))
+    central_mouth_dark = sum(
+        1 for r, g, b in mouth_cut.get_flattened_data()
+        if r < 50 and g < 70 and b < 85
+    )
+    assert left_iris_pixels > 250 and right_iris_pixels > 250, (
+        "Alien eyes are no longer a centered horizontal pair: "
+        f"left={left_iris_pixels}, right={right_iris_pixels}"
+    )
+    assert central_mouth_dark > 450, (
+        "Alien skull tilted sideways; no deep mouth below the eyes "
+        f"({central_mouth_dark} center dark pixels)"
+    )
     # Capture the NEW animated reaction, not just the first scare frame.
     # The jaw, fangs, eyes and brow must lunge as one 3D subject.
     frames(emu, 12)
@@ -604,7 +652,9 @@ def test_actual_game(path: Path, output: Path) -> dict:
         "3D_top_screen_distinct_colors": hero_colors,
         "3D_top_screen_full_height_dark_stripes": len(full_height_stripes),
         "3D_care_pose_changed_pixels": pose_changed,
+        "3D_nap_upright_romper_pixels": upright_romper_pixels,
         "3D_chat_reach_changed_pixels": chat_changed,
+        "3D_chat_recovery_changed_pixels": recovered_change,
         "3D_title_top_screen_colors": title_colors,
         "album_screen_changed_pixels": album_diff,
         "album_next_page_changed_pixels": album_next_diff,
@@ -636,6 +686,8 @@ def test_actual_game(path: Path, output: Path) -> dict:
         "Alien_jump_scare_changed_pixels": scare_difference,
         "Jump_scare_porcelain_left_pixels": scare_shell_left,
         "Jump_scare_porcelain_right_pixels": scare_shell_right,
+        "Jump_scare_right_eye_pixels": right_iris_pixels,
+        "Jump_scare_center_mouth_dark_pixels": central_mouth_dark,
         "Alien_lunge_animation_changed_pixels": lunge_changed,
         "Alien_ending_finale_changed_pixels": finale_difference,
         "Egg_green_stage": movie_stage(egg_green),

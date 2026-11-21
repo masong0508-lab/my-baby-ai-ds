@@ -23,6 +23,7 @@
 static Game baby;
 static Arcade arc;
 static int storage_ok,view=5,selected,album_page,reset_step,last_ending,pose;
+static uint32_t pose_age;
 static int three_d_ready;
 static TouchGate gesture;
 static VirtualStylus vpen;
@@ -35,6 +36,7 @@ static void persist(void){if(storage_ok)(void)save_write(SAVE_BASE,&baby);}
 static void care(Care action){
  message=game_care(&baby,action);
  pose=(int)action+1;
+ pose_age=0; /* restart this care gesture: do not loop it forever */
  persist();
 }
 static void end_day(void){
@@ -465,7 +467,7 @@ int main(void){
    else if(view==9)world_draw_secret(&baby,egg_frame,&rag);
    else if(view==8||(view==0&&rag.moving))
     world_draw_roughhouse(&baby,frame,&rag);
-   else world_draw(&baby,frame,pose);
+   else world_draw_care(&baby,frame,pose,pose_age);
   }
   /* Keep bitmap VRAM writes off the hot path unless UI state changed. */
   if(dirty||previous!=view||
@@ -480,6 +482,12 @@ int main(void){
   ui_virtual_cursor_update(vpen.enabled,vpen.x,vpen.y,
                            vpen.enabled && (held&KEY_A)!=0);
   (void)virtual_move;
+  /* Allow a full anticipation/gesture/recovery, then return to normal
+   * idle. No extra timers, background threads or save-state entries. */
+  if(pose){
+   if(pose_age<56u)pose_age++;
+   else {pose=0;pose_age=0;}
+  }
   frame++;
  }
  return 0;

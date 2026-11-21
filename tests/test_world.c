@@ -41,6 +41,42 @@ int main(void){
  assert(world_baby_neck_tilt(2,0u)==world_baby_neck_tilt(2,80u));
  assert(world_baby_arm_reach(3)>world_baby_arm_reach(2));
  assert(world_baby_arm_reach(2)>world_baby_arm_reach(1));
+ /* Finite staged animation: anticipatory ease-in, expressive hold,
+  * graceful return to idle (not indefinitely repeating CHAT/PLAY forever). */
+ assert(world_baby_care_weight(0u)==0);
+ assert(world_baby_care_weight(6u)>0);
+ assert(world_baby_care_weight(12u)==256);
+ assert(world_baby_care_weight(25u)==256);
+ assert(world_baby_care_weight(30u)==256);
+ assert(world_baby_care_weight(42u)>0);
+ assert(world_baby_care_weight(55u)>=0);
+ assert(world_baby_care_weight(56u)==0);
+ {
+  unsigned f;
+  int prev=world_baby_care_weight(0);
+  for(f=1u;f<58u;f++){
+   int weight=world_baby_care_weight(f);
+   assert(weight>=0&&weight<=256);
+   assert(weight-prev<=35&&prev-weight<=35);
+   prev=weight;
+  }
+ }
+ assert(world_baby_speech_open(0u)==0);
+ assert(world_baby_speech_open(8u)==0);
+ assert(world_baby_speech_open(14u)>=250);
+ assert(world_baby_speech_open(20u)==0);
+ assert(world_baby_speech_open(26u)>=250);
+ assert(world_baby_speech_open(44u)==0);
+ assert(world_baby_lid_open(10u,0,25u)==256);
+ assert(world_baby_lid_open(10u,4,25u)==0);
+ assert(world_baby_lid_open(10u,4,0u)==256);
+ assert(world_baby_lid_open(10u,4,56u)==256);
+ assert(world_baby_lid_open(3u,0,25u)<80);
+ for(i=0;i<58;i++){
+  world_draw_care(&s,(uint32_t)(200+i),3,(uint32_t)i);
+  assert(world_vertex_count()<=5000);
+  assert(world_polygon_count()<=1850);
+ }
  /* Normal care gestures should actually alter the infant's mouth geometry:
   * HAPPY CHAT / PLAY displays a connected, shallow open smile. */
  {
@@ -195,6 +231,31 @@ int main(void){
   assert(world_egg_embryo_approach(0u)==0.f);
   assert(world_egg_embryo_approach(EGG_PUSH_FRAME)==0.f);
   assert(world_egg_embryo_approach(EGG_TOTAL_FRAMES)>.044f);
+ }
+ /* Smooth physical shell split and restrained one-piece skull sway. */
+ assert(world_egg_shell_open(EGG_PUSH_FRAME-1u)==0.f);
+ assert(world_egg_shell_open(EGG_PUSH_FRAME)==0.f);
+ assert(world_egg_shell_open(EGG_SCARE_FRAME)==1.f);
+ assert(world_egg_shell_open(EGG_TOTAL_FRAMES)==1.f);
+ assert(world_egg_head_tilt(EGG_SCARE_FRAME-1u)==0);
+ assert(world_egg_head_tilt(EGG_SCARE_FRAME)==-3);
+ assert(world_egg_head_tilt(EGG_SCARE_FRAME+9u)==2);
+ {
+  unsigned f;
+  float prior=0.f;
+  int old_tilt=world_egg_head_tilt(EGG_SCARE_FRAME);
+  for(f=EGG_PUSH_FRAME+1u;f<EGG_SCARE_FRAME;f++){
+   float width=world_egg_shell_open(f);
+   assert(width>=prior&&width<=1.f);
+   assert(width-prior<.012f);
+   prior=width;
+  }
+  for(f=EGG_SCARE_FRAME+1u;f<EGG_TOTAL_FRAMES;f++){
+   int tilt=world_egg_head_tilt(f);
+   assert(tilt>=-3&&tilt<=2);
+   assert(tilt-old_tilt<=1&&old_tilt-tilt<=1);
+   old_tilt=tilt;
+  }
  }
  /* The creature lunges ONCE after the final hard camera cut, then settles
   * into extremely small movement. All features use the SAME matrix. */

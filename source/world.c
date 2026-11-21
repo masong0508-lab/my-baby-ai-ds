@@ -11,6 +11,15 @@ static const float cz[8]={0,.7071f,1,.7071f,0,-.7071f,-1,-.7071f};
 static const float h[4]={-1,-.54f,.54f,1};
 static const float w[4]={0,.842f,.842f,0};
 static int limit(int v){return v<0?0:v>31?31:v;}
+/* Avoid passing negative degree values into DS fixed-angle conversion.
+ * On some ARM builds the signed shift in degreesToAngle can yield an
+ * invalid rotation matrix: a tiny NAP lean then flips the entire doll.
+ * Wrap to the native [0,360) domain before any model transform. */
+static int model_angle(int degrees){
+ int wrapped=degrees%360;
+ if(wrapped<0)wrapped+=360;
+ return degreesToAngle(wrapped);
+}
 /* Draw-time-only room lighting: no extra geometry, textures or VRAM. */
 static int nursery_ambient;
 static void color(int r,int g,int b,int shift){
@@ -204,7 +213,7 @@ static void tilted_ellipse(float x,float y,float z,float rx,float ry,float rz,
                            int degrees,int red,int green,int blue){
  glPushMatrix();
  glTranslatef(x,y,z);
- glRotateZ(degreesToAngle(degrees));
+ glRotateZi(model_angle(degrees));
  ellipse(0,0,0,rx,ry,rz,red,green,blue);
  glPopMatrix(1);
 }
@@ -399,11 +408,52 @@ int world_baby_arm_reach(int action){
  return action==3?57:action==2?45:action==1?28:
         action==4?-8:action==5?-6:7;
 }
-static void baby_arm(int direction,int angle){
+/* Q8 eased animation envelope: deliberate anticipation -> full gesture ->
+ * recovery. Frame-accurate rather than endlessly waving after one care tap.
+ * Integer only, deterministic, with zero heap and no animation tables. */
+static int smooth8(uint32_t age,uint32_t length){
+ uint32_t t;
+ if(age>=length)return 256;
+ if(!length)return 256;
+ t=age*256u/length;
+ return (int)((t*t*(768u-2u*t)+32768u)/65536u);
+}
+int world_baby_care_weight(uint32_t age){
+ if(age<12u)return smooth8(age,12u);
+ if(age<30u)return 256;
+ if(age<56u)return smooth8(56u-age,26u);
+ return 0;
+}
+/* Natural 8-tick blink with continuous eyelid height. NAP closes over
+ * the same action envelope; opening occurs during gesture recovery.
+ * A closed eye is an existing narrow lid, never a floating eyeball. */
+/* Three readable syllable pulses during CHAT. The jaw and tongue share
+ * one existing mouth aperture; no separate facial bits bouncing in space. */
+int world_baby_speech_open(uint32_t age){
+ uint32_t beat;
+ if(age<8u||age>=44u)return 0;
+ beat=(age-8u)%12u;
+ return (int)(beat<=6u?beat:12u-beat)*42;
+}
+int world_baby_lid_open(uint32_t frame,int action,uint32_t age){
+ uint32_t beat=frame%173u;
+ int openness=256,nap;
+ if(beat<8u){
+  int blink=beat<4u?256-(int)(beat+1u)*64:(int)(beat-3u)*64;
+  if(blink<openness)openness=blink;
+ }
+ if(action==4){
+  nap=256-world_baby_care_weight(age);
+  if(nap<openness)openness=nap;
+ }
+ return openness;
+}
+static void baby_arm(int direction,int angle,int forward){
  float side=(float)direction;
  glPushMatrix();
  glTranslatef(side*.45f,-.21f,-.025f);
- glRotateZ(degreesToAngle(direction*angle));
+ glRotateZi(model_angle(direction*angle));
+ glRotateXi(model_angle(-forward));
  ellipse(0,0,0,.205f,.22f,.195f,19,26,27);
  tilted_ellipse(side*.10f,-.16f,.17f,
                 .14f,.18f,.14f,direction*26,31,23,19);
@@ -416,29 +466,42 @@ static void baby_arm(int direction,int angle){
  * layers were the main reason the character looked frightening at 256x192.
  * Only ROM-native primitive meshes; no texture or framebuffer allocation. */
 static void baby_model(const Game *s,uint32_t frame,int action,
-                       const Roughhouse *rag){
- unsigned beat=frame%120u,arms=frame%104u;
- const unsigned hop=frame%36u;
- /* Behavior-driven, joint-consistent low-cost posing, never a free-floating
-  * ornament: PLAY hops, CHAT gestures, FEED reaches up, NAP rests. */
- const float bob=((float)(beat<60u?beat:120u-beat)-30.f)*.00028f+
-                 (action==3?(float)(hop<18u?hop:36u-hop)*.0022f:0.f);
- const float wave=((float)(arms<52u?arms:104u-arms)-26.f)*.0011f;
+                       const Roughhouse *rag,uint32_t action_age){
+ unsigned beat=frame%120u,arms=action_age%36u;
+ const unsigned hop=action_age%36u;
+ /* Rig motion is staged in one short action. Lower-body bounce, shoulder
+  * rotation, hand reach, neck reaction and eyelid shape share this curve. */
+ const int weight=rag?256:(action?world_baby_care_weight(action_age):0);
+ const float intensity=(float)weight/256.f;
+ const float bob=((float)(beat<60u?beat:120u-beat)-30.f)*.00022f+
+                 (action==3?(float)(hop<18u?hop:36u-hop)*.0022f*intensity:0.f);
+ const float wave=((float)(arms<18u?arms:36u-arms)-9.f)*.00145f*intensity;
  /* Primary body rotation comes from the fixed-point toy simulation. The
   * secondary shoulder/neck reactions are tiny and remain physically
   * connected to the parent model rather than becoming floating parts. */
  const float settle=rag?(float)rag->impact*.0025f:0.f;
  /* Care IDs: FEED=1, CHAT=2, PLAY=3, NAP=4. Each reaches using
   * a shared shoulder pivot, not isolated upward-moving arm balls. */
- const int base_reach=world_baby_arm_reach(action);
+ const int base_reach=7+(world_baby_arm_reach(action)-7)*weight/256;
  const int wave_deg=(int)(wave*160.f);
  const int recoil=rag&&rag->moving?(rag->vr>0?5:-5):0;
- const int blink=(frame%173u)<5u||action==4;
+ const int lean=(action==1?3:action==2?-3:action==3?5:
+                 action==4?-3:0)*weight/256;
+ const int reach_forward=(action==1?13:action==2?8:
+                          action==3?10:0)*weight/256;
+ /* The fractured-baby FILM must show recognizable eyes in its first
+  * shot. Ordinary care keeps natural blinking, including NAP; the
+  * view-only staged damaged doll holds its eyes open for the reveal. */
+ const int lid=rag&&!rag->moving&&
+               rag->charge>=ROUGHHOUSE_CRACK_CHARGE?
+               256:world_baby_lid_open(frame,action,action_age);
+ const float lid_height=(float)lid/256.f;
  const int happy=s->mood>35;
  const int glitch=game_glitch_tier(s)>=2&&!s->safe_visuals&&
                   (frame%151u)<12u;
  glPushMatrix();
  glTranslatef(-.12f,bob-settle,.23f);
+ glRotateZi(model_angle(lean)); /* torso and limbs ease together */
  /* Footed one-piece romper, short legs and soft shoes: no adult denim. */
  ellipse(0,-.75f,-.07f,.46f,.31f,.34f,19,26,27);
  ellipse(-.32f,-.93f,.14f,.245f,.22f,.27f,18,25,27);
@@ -459,23 +522,28 @@ static void baby_model(const Game *s,uint32_t frame,int action,
  soft_mark(0,-.38f,.332f,.044f,.027f,30,25,14);
  /* Rotating the whole forearm+hand hierarchy preserves contact with
   * the sleeve in every action and during roughhouse recoil. */
- baby_arm(-1,base_reach+wave_deg+recoil);
- baby_arm(1,base_reach-wave_deg-recoil);
+ baby_arm(-1,base_reach+wave_deg+recoil,reach_forward);
+ baby_arm(1,base_reach-wave_deg-recoil,
+          reach_forward+(action==2?6*weight/256:0));
  /* Neck pivot moves the entire face, eyes, cheeks, hair, and mouth AS ONE.
   * The free head briefly lags the shell's rolling body by at most 16deg. */
  glPushMatrix();
  {
-  int neck=world_baby_neck_tilt(action,frame);
+  int neck=world_baby_neck_tilt(action,frame)*weight/256;
   if(rag&&rag->moving)neck-=rag->vr/3;
   if(neck>16)neck=16;
   if(neck< -16)neck=-16;
   if(neck){
    /* Pivot below the jaw, rather than spinning the head around its middle. */
    glTranslatef(0,.10f,0);
-   glRotateZ(degreesToAngle(neck));
+   glRotateZi(model_angle(neck));
    glTranslatef(0,-.10f,0);
   }
  }
+ /* A tiny eye-line turn keeps head and arms reading as one intention.
+  * Avoid large yaw: low-poly eyes/ears remain recognizable in profile. */
+ if(action==2||action==3)
+  glRotateYi(model_angle((action==2?3:-2)*weight/256));
  /* Rounded unified face. No second oversized jaw shell, no floating teeth. */
  soft_head(0,.54f,.045f,.61f,.615f,.45f,30,22,19);
  ellipse(-.575f,.49f,.065f,.105f,.145f,.09f,31,23,19);
@@ -488,18 +556,18 @@ static void baby_model(const Game *s,uint32_t frame,int action,
  ellipse(-.39f,1.018f,.365f,.075f,.069f,.029f,29,14,20);
  /* Sclera and pupils lie just above the curved facial surface, not
   * stacked .10 units out in space. Each shallow eye has a tiny highlight. */
- if(!blink){
+ if(lid>32){
   /* Eye sockets/iris/pupils form a clear expression at only 256x192. */
-  ellipse(-.205f,.579f,.462f,.135f,.113f,.014f,22,15,14);
-  ellipse(.205f,.579f,.462f,.135f,.113f,.014f,22,15,14);
-  ellipse(-.205f,.575f,.477f,.113f,.099f,.015f,31,30,28);
-  ellipse(.205f,.575f,.477f,.113f,.099f,.015f,31,30,28);
-  ellipse(-.188f,.565f,.493f,.066f,.072f,.015f,10,19,22);
-  ellipse(.218f,.565f,.493f,.066f,.072f,.015f,10,19,22);
-  ellipse(-.185f,.560f,.509f,.040f,.054f,.011f,3,7,10);
-  ellipse(.221f,.560f,.509f,.040f,.054f,.011f,3,7,10);
-  soft_mark(-.208f,.602f,.526f,.031f,.023f,31,31,29);
-  soft_mark(.202f,.602f,.526f,.031f,.023f,31,31,29);
+  ellipse(-.205f,.579f,.462f,.135f,.113f*lid_height,.014f,22,15,14);
+  ellipse(.205f,.579f,.462f,.135f,.113f*lid_height,.014f,22,15,14);
+  ellipse(-.205f,.575f,.477f,.113f,.099f*lid_height,.015f,31,30,28);
+  ellipse(.205f,.575f,.477f,.113f,.099f*lid_height,.015f,31,30,28);
+  ellipse(-.188f,.565f,.493f,.066f,.072f*lid_height,.015f,10,19,22);
+  ellipse(.218f,.565f,.493f,.066f,.072f*lid_height,.015f,10,19,22);
+  ellipse(-.185f,.560f,.509f,.040f,.054f*lid_height,.011f,3,7,10);
+  ellipse(.221f,.560f,.509f,.040f,.054f*lid_height,.011f,3,7,10);
+  soft_mark(-.208f,.602f,.526f,.031f,.023f*lid_height,31,31,29);
+  soft_mark(.202f,.602f,.526f,.031f,.023f*lid_height,31,31,29);
  }else{
   soft_mark(-.205f,.575f,.480f,.169f,.016f,15,10,9);
   soft_mark(.205f,.575f,.480f,.169f,.016f,15,10,9);
@@ -510,11 +578,13 @@ static void baby_model(const Game *s,uint32_t frame,int action,
  soft_mark(-.205f,.734f,.459f,.105f,.014f,17,11,9);
  soft_mark(.205f,.734f,.459f,.105f,.014f,17,11,9);
  ellipse(0,.375f,.467f,.047f,.034f,.019f,31,23,20);
- if(happy&&(action==2||action==3)){
-  /* The cheerful speech/play reaction now has an actual shallow open
-   * mouth and connected rosy tongue, instead of the same frozen line. */
-  ellipse(0,.252f,.451f,.094f,.085f,.020f,12,4,9);
-  soft_mark(0,.212f,.476f,.095f,.025f,30,15,19);
+ if(happy&&(action==2||action==3)&&weight>40){
+  /* Syllabic CHAT jaw, or one broad PLAY smile. Both return to the
+   * original closed grin after the one-shot action recovery. */
+  float speech=action==2?(float)world_baby_speech_open(action_age)/256.f:1.f;
+  float open=.26f+.74f*speech;
+  ellipse(0,.252f,.451f,.094f,.085f*open,.020f,12,4,9);
+  soft_mark(0,.212f,.476f,.095f,.025f*open,30,15,19);
  }else if(happy){
   soft_mark(-.065f,.278f,.444f,.052f,.017f,18,9,11);
   soft_mark(0,.251f,.454f,.081f,.017f,18,9,11);
@@ -534,7 +604,8 @@ void world_init(void){
  glMatrixMode(GL_PROJECTION);glLoadIdentity();
  gluPerspective(51,256.0f/192.0f,.1f,30);
 }
-void world_draw(const Game *s,uint32_t frame,int activity){
+void world_draw_care(const Game *s,uint32_t frame,int activity,
+                     uint32_t action_age){
  glMatrixMode(GL_MODELVIEW);glLoadIdentity();
  /* This is a room with true depth and perspective, not a flat orthographic collage. */
  /* More frontal portrait: avoids exaggerated protruding facial geometry. */
@@ -543,9 +614,14 @@ void world_draw(const Game *s,uint32_t frame,int activity){
  frame_vertices=0;frame_polygons=0;
  room();
  flat_floor(-.10f,-1.105f,.34f,.96f,.32f,17,22,12);
- baby_model(s,frame,activity,0);
+ baby_model(s,frame,activity,0,action_age);
  teddy();
  glFlush(0);
+}
+/* Compatibility for existing host callers and noninteractive views: they
+ * sample the deliberately posed hold, while live gameplay uses action age. */
+void world_draw(const Game *s,uint32_t frame,int activity){
+ world_draw_care(s,frame,activity,20u);
 }
 
 /* The character is a synthetic toy shell, never a real child. The same
@@ -577,11 +653,11 @@ void world_draw_roughhouse(const Game *s,uint32_t frame,const Roughhouse *r){
   elevation=(float)tilt*.00075f;
   glTranslatef((float)r->x/256.f,(float)r->y/256.f+elevation,
                (float)r->z/256.f);
-  glRotateZ(degreesToAngle((int)r->roll/4));
-  glRotateX(degreesToAngle((int)r->pitch/4));
-  glRotateY(degreesToAngle((int)r->yaw/4));
+  glRotateZi(model_angle((int)r->roll/4));
+  glRotateXi(model_angle((int)r->pitch/4));
+  glRotateYi(model_angle((int)r->yaw/4));
  }
- baby_model(s,frame,r&&r->moving?5:0,r);
+ baby_model(s,frame,r&&r->moving?5:0,r,0u);
  if(r&&r->charge>=6){
   /* First fracture: the hospital-pastel chest pocket conceals a seam. */
   soft_mark(-.12f,-.27f,.565f,.029f,.20f,11,13,14);
@@ -812,6 +888,27 @@ int world_egg_eye_glow(uint32_t frame){
 }
 /* Embryo comes forward inside the shell, not through its porcelain lips.
  * Its whole face, eyes and jaw use the same parent model matrix. */
+/* Organic shell breach: cubic smoothstep has zero velocity at each
+ * film beat, unlike the old linear opening with abrupt start/stop. */
+float world_egg_shell_open(uint32_t frame){
+ float t;
+ if(frame<=EGG_PUSH_FRAME)return 0.f;
+ if(frame>=EGG_SCARE_FRAME)return 1.f;
+ t=(float)(frame-EGG_PUSH_FRAME)/
+   (float)(EGG_SCARE_FRAME-EGG_PUSH_FRAME);
+ return t*t*(3.f-2.f*t);
+}
+/* A restrained asymmetric whole-head reaction. All eyes/teeth/jaw move
+ * under the SAME model matrix; no detached moving features or jitter. */
+int world_egg_head_tilt(uint32_t frame){
+ uint32_t elapsed,beat;
+ if(frame<EGG_SCARE_FRAME)return 0;
+ elapsed=frame-EGG_SCARE_FRAME;
+ if(elapsed<=9u)return -3+(int)(elapsed*5u/9u);
+ if(elapsed<=22u)return 2-(int)((elapsed-9u)*2u/13u);
+ beat=(elapsed-22u)%80u;
+ return (int)(beat<40u?beat/20u:(80u-beat)/20u)-1;
+}
 float world_egg_embryo_approach(uint32_t frame){
  uint32_t elapsed;
  if(frame<=EGG_PUSH_FRAME)return 0.f;
@@ -870,11 +967,7 @@ void world_draw_secret(const Game *s,uint32_t frame,const Roughhouse *r){
  room();
  nursery_ambient=0; /* never bleed cinematic dimming into care scenes */
  if(phase<3u){
-  if(phase==2u){
-   opened=(float)(frame-EGG_PUSH_FRAME)/
-          (float)(EGG_SCARE_FRAME-EGG_PUSH_FRAME);
-   if(opened>1.f)opened=1.f;
-  }
+  if(phase==2u)opened=world_egg_shell_open(frame);
   block(0,-1.09f,-.26f,1.91f,.13f,1.45f,9,13,13);
   flat_floor(0,-1.016f,-.23f,1.67f,1.18f,5,7,8);
   /* The dark backing is a SINGLE continuous incubation sac, not pale
@@ -938,6 +1031,7 @@ void world_draw_secret(const Game *s,uint32_t frame,const Roughhouse *r){
    * A single parent transform lunges ALL facial components together. */
   glPushMatrix();
   glTranslatef(0.f,0.f,world_egg_creature_depth(frame));
+  glRotateZi(model_angle(world_egg_head_tilt(frame)));
   soft_head(0,.085f,.34f,1.00f,1.08f,.51f,5,10,12);
   soft_head(0,.68f,.36f,.66f,.29f,.28f,7,15,14);
   alien_face_facets();
@@ -985,7 +1079,7 @@ void world_draw_secret(const Game *s,uint32_t frame,const Roughhouse *r){
    * lower-jaw assembly in front of the throat and let it drop as ONE
    * connected unit. The visible pitch is deliberately subtle. */
   glTranslatef(0.f,-(float)world_egg_jaw_angle(frame)*.003f,.004f);
-  glRotateX(degreesToAngle(-world_egg_jaw_angle(frame)/6));
+  glRotateXi(model_angle(-world_egg_jaw_angle(frame)/6));
   ellipse(0,-.68f,.931f,.195f,.079f,.019f,22,6,13);
   soft_mark(-.04f,-.692f,.952f,.080f,.018f,30,14,21);
   ellipse(0,-.65f,.930f,.195f,.074f,.018f,19,5,13);
