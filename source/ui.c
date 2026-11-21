@@ -885,7 +885,9 @@ static void nap_challenge(const Arcade *a){
  solid(20,151,214,9,GRAY);
  solid(green_x,151,green_w,9,MINT);
  solid(pos,146,4,20,DEEP_PINK);
- fit(29,133,a->taped?"LOVELY!":"SHHH... FIND THE GREEN",WHITE,39);
+ /* Dark legible instruction on the cream crib card. The previous WHITE
+  * text was effectively invisible on the WHITE card below the baby. */
+ fit(82,134,a->taped?"SWEET DREAMS!":"TAP IN GREEN",PURPLE,19);
  foot(PURPLE);
  snprintf(text,sizeof(text),"TAP IN GREEN! %u SEC  B BACK",(a->timer+59)/60);
  fit(12,181,text,WHITE,39);
@@ -1222,7 +1224,22 @@ static void ceo_challenge(const Arcade *a){
  for(i=0;i<3;i++){
   int x=13+i*82;
   capsule(x,121,66,51,i==0?MINT:i==1?PINK:SKY,PURPLE);
-  solid(x+24,130,18,15,i==0?GOLD:i==1?LEMON:WHITE);
+  /* Distinct desk-ledger, play block and crescent icons. These are not
+   * interchangeable abstract squares anymore; the captions remain 2x. */
+  if(i==0){
+   capsule(x+22,129,22,18,LEMON,GOLD);
+   solid(x+26,132,3,12,INK);
+   solid(x+31,134,9,2,WHITE);
+   solid(x+31,139,9,2,WHITE);
+  }else if(i==1){
+   capsule(x+24,128,18,18,SKY,BLUE);
+   solid(x+28,131,10,10,PINK);
+   solid(x+32,129,2,14,WHITE);
+  }else{
+   capsule(x+22,129,22,18,LEMON,GOLD);
+   solid(x+33,130,13,14,SKY);
+   solid(x+26,133,5,4,WHITE);
+  }
   label(x+12,149,actions[i],INK,2,4);
  }
  foot(PURPLE);
