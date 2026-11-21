@@ -73,7 +73,15 @@ static void begin_game(void){
 static unsigned arcade_redraw_period(const Arcade *a){
  switch(a->id){
  case 0:case 3:case 6:case 7:case 8:case 9:case 11:return 3u;
- case 1:case 4:return 4u;
+ case 1:
+  /* Diaper Dash has a large, software-drawn illustrated changing mat.
+   * Do not repaint all 49K pixels every four frames while nobody is
+   * touching it: DeSmuME captured only the background halfway through
+   * that expensive redraw. Dirty flags still redraw immediately for
+   * each step, mistake and every meaningful gesture; during an active
+   * wipe/drag the cursor scene refreshes at a steady cadence. */
+  return a->touch_active?5u:60u;
+ case 4:return 4u;
  case 2:return a->touch_active?4u:60u;
  case 5:case 10:case 12:case 13:case 14:case 15:return 60u;
  default:return 4u;

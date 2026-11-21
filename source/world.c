@@ -514,6 +514,28 @@ int world_baby_breath(uint32_t frame){
  uint32_t phase=frame%128u;
  return smooth8(phase<=64u?phase:128u-phase,64u);
 }
+/* Missing sleep needs to be seen in the BABY, not merely an ENERGY meter.
+ * Even at zero energy the pupils remain inside their normal eye sockets,
+ * using an existing stable eyelid shutter instead of a thin 3D ellipse.
+ * Fully rested (>54) characters retain their original bright-eyed pose. */
+int world_baby_drowsy_lid(int energy){
+ if(energy<=0)return 96;
+ if(energy>=55)return 256;
+ return 96+energy*160/55;
+}
+/* Deterministic idle impatience, not a repeating care animation.
+ * Hunger and chaos raise the amplitude, with only a four-degree maximum
+ * motion at the attached neck pivot. No heap, random impulses or polygons. */
+int world_baby_need_fidget(int hunger,int chaos,uint32_t frame){
+ int amplitude=0,phase,triangle;
+ if(hunger>=70)amplitude=1+(hunger-70)/15;
+ if(chaos>=70)amplitude+=1+(chaos-70)/25;
+ if(amplitude>4)amplitude=4;
+ if(!amplitude)return 0;
+ phase=(int)(frame%120u);
+ triangle=phase<=60?phase:120-phase;
+ return (triangle-30)*amplitude/30;
+}
 int world_baby_care_weight(uint32_t age){
  if(age<12u)return smooth8(age,12u);
  if(age<30u)return 256;
@@ -580,7 +602,12 @@ static void baby_model(const Game *s,uint32_t frame,int action,
  const float settle=rag?(float)rag->impact*.0025f:0.f;
  /* Care IDs: FEED=1, CHAT=2, PLAY=3, NAP=4. Each reaches using
   * a shared shoulder pivot, not isolated upward-moving arm balls. */
- const int base_reach=7+(world_baby_arm_reach(action)-7)*weight/256;
+ /* A sleepy baby lets the arms hang slightly after the last care action.
+  * Toybox collision physics remains untouched and retains its recoil. */
+ const int sleepy_reach=!rag&&s->energy<25?
+                        -4*(25-(int)s->energy)/25:0;
+ const int base_reach=7+(world_baby_arm_reach(action)-7)*weight/256+
+                      sleepy_reach;
  const int wave_deg=(int)(wave*160.f);
  /* A roll that has already settled must not hold one hand in a
   * permanent asymmetric 'impact' pose. Only real angular velocity
@@ -593,11 +620,15 @@ static void baby_model(const Game *s,uint32_t frame,int action,
  /* The fractured-baby FILM must show recognizable eyes in its first
   * shot. Ordinary care keeps natural blinking, including NAP; the
   * view-only staged damaged doll holds its eyes open for the reveal. */
- const int lid=rag&&!rag->moving&&
-               rag->charge>=ROUGHHOUSE_CRACK_CHARGE?
-               256:world_baby_lid_open(frame,action,action_age);
+ int lid=rag&&!rag->moving&&
+         rag->charge>=ROUGHHOUSE_CRACK_CHARGE?
+         256:world_baby_lid_open(frame,action,action_age);
+ if(!rag)lid=lid*world_baby_drowsy_lid(s->energy)/256;
  const float lid_height=(float)lid/256.f;
- const int happy=s->mood>35;
+ /* Hungry and exhausted infants should look unsettled even when
+  * an old positive mood score hasn't yet caught up with their needs.
+  * NAP/FEED restores the same face without adding new visual states. */
+ const int happy=s->mood>35&&s->hunger<80&&s->energy>15;
  const int glitch=game_glitch_tier(s)>=2&&!s->safe_visuals&&
                   (frame%151u)<12u;
  glPushMatrix();
@@ -639,6 +670,11 @@ static void baby_model(const Game *s,uint32_t frame,int action,
  glPushMatrix();
  {
   int neck=world_baby_neck_tilt(action,action_age)*weight/256;
+  if(!rag){
+   int rest=256-weight;
+   int fidget=world_baby_need_fidget(s->hunger,s->chaos,frame);
+   neck+=fidget*rest/256; /* care commands take priority over idle unrest */
+  }
   if(rag&&rag->moving)neck-=rag->vr/3;
   if(neck>16)neck=16;
   if(neck< -16)neck=-16;

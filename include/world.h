@@ -49,6 +49,9 @@ int world_baby_arm_reach(int action);
 int world_baby_neck_tilt(int action,uint32_t age);
 /* Gentle 0..256 integer inhale/exhale on the attached torso. */
 int world_baby_breath(uint32_t frame);
+/* Low-energy eyelid response and bounded hunger/chaos idle fidget. */
+int world_baby_drowsy_lid(int energy);
+int world_baby_need_fidget(int hunger,int chaos,uint32_t frame);
 /* Q8 gesture and eye-aperture channels, cheap deterministic samples. */
 int world_baby_care_weight(uint32_t age);
 int world_baby_lid_open(uint32_t frame,int action,uint32_t age);

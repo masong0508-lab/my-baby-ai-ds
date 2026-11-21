@@ -203,6 +203,56 @@ int main(void){
    assert(play==world_baby_neck_tilt(3,age+80u));
   }
  }
+ /* Live baby needs must read as physical feelings on the existing rig.
+  * A fully rested infant stays wide-eyed; a depleted baby looks sleepy
+  * and hungry without ever disappearing or changing the save format. */
+ assert(world_baby_drowsy_lid(-100)==96);
+ assert(world_baby_drowsy_lid(0)==96);
+ assert(world_baby_drowsy_lid(55)==256);
+ assert(world_baby_drowsy_lid(100)==256);
+ assert(world_baby_drowsy_lid(20)<world_baby_drowsy_lid(40));
+ {
+  int energy;
+  for(energy=0;energy<=100;energy++){
+   int lid=world_baby_drowsy_lid(energy);
+   assert(lid>=96&&lid<=256);
+   if(energy)assert(lid>=world_baby_drowsy_lid(energy-1));
+  }
+ }
+ assert(world_baby_need_fidget(35,12,0u)==0);
+ assert(world_baby_need_fidget(70,12,0u)==-1);
+ assert(world_baby_need_fidget(35,70,0u)==-1);
+ assert(world_baby_need_fidget(100,100,0u)==-4);
+ assert(world_baby_need_fidget(100,100,60u)==4);
+ {
+  unsigned frame;
+  int old=world_baby_need_fidget(100,100,0u);
+  for(frame=1u;frame<=250u;frame++){
+   int current=world_baby_need_fidget(100,100,frame);
+   assert(current>=-4&&current<=4);
+   assert(current-old<=1&&old-current<=1);
+   assert(current==world_baby_need_fidget(100,100,frame+120u));
+   old=current;
+  }
+ }
+ {
+  Game baseline=s;
+  unsigned rested,exhausted,distressed;
+  s.mood=90;s.energy=80;s.hunger=35;s.chaos=12;
+  world_draw_care(&s,128u,0,56u);
+  rested=world_polygon_count();
+  assert(world_vertex_count()<=5000&&rested<=1850);
+  s.energy=5;s.hunger=92;s.chaos=96;
+  world_draw_care(&s,128u,0,56u);
+  exhausted=world_polygon_count();
+  assert(exhausted>=rested&&exhausted<=1850);
+  assert(world_vertex_count()<=5000);
+  /* A care gesture must still look coherent when sleep is low. */
+  world_draw_care(&s,145u,2,20u);
+  distressed=world_polygon_count();
+  assert(distressed<=1850&&world_vertex_count()<=5000);
+  s=baseline;
+ }
  /* No abrupt chest pop at wrap, no idle breathing during Toybox
   * collisions, and no new render geometry at the breath peak. */
  assert(world_baby_breath(0u)==0);
