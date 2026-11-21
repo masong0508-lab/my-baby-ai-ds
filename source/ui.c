@@ -27,6 +27,11 @@
 #define BLUE RGB(9,17,27)
 #define SHADOW RGB(22,19,24)
 #define GRAY RGB(26,25,27)
+#define NIGHT RGB(8,9,18)
+#define SILVER RGB(23,25,30)
+#define ROSE RGB(30,13,22)
+#define AQUA RGB(16,29,29)
+static uint16_t screen_accent=TEAL;
 static volatile uint16_t *pixels;
 /* 11x11 cursor backup: 242 bytes. Restores exactly the underlying UI.
  * No additional framebuffers or per-frame allocations. */
@@ -148,11 +153,17 @@ static void outline(int x,int y,int width,int height,uint16_t color){
  solid(x,y,width,1,color);solid(x,y+height-1,width,1,color);
  solid(x,y,1,height,color);solid(x+width-1,y,1,height,color);
 }
+/* Shared dimensional cards and buttons: no textures, allocations or
+ * secondary buffer. All geometry is clipped by solid() to DS bitmap VRAM. */
 static void panel(int x,int y,int width,int height,uint16_t fill,uint16_t border){
  solid(x+2,y+3,width,height,SHADOW);
  solid(x,y,width,height,fill);
  outline(x,y,width,height,border);
- solid(x+1,y+1,width-2,2,WHITE);
+ if(width>=9&&height>=9){
+  solid(x+2,y+2,width-4,2,WHITE);
+  solid(x+2,y+4,2,height-7,WHITE);
+  solid(x+3,y+height-3,width-6,1,border);
+ }
 }
 static void char_at(int x,int y,char value,uint16_t color,int scale){
  int i,j,dx,dy;unsigned ch=(unsigned char)value;
@@ -178,29 +189,48 @@ static void capsule(int x,int y,int width,int height,uint16_t fill,uint16_t edge
  solid(x,y+3,width,height-6,fill);
  solid(x+3,y,width-6,1,edge);solid(x+3,y+height-1,width-6,1,edge);
  solid(x,y+3,1,height-6,edge);solid(x+width-1,y+3,1,height-6,edge);
+ if(width>=15&&height>=13){
+  solid(x+5,y+2,width-10,2,WHITE);
+  solid(x+5,y+height-3,width-10,1,edge);
+ }
 }
 static void meter(int x,int y,int value,uint16_t fill){
  int v=value;
  if(v<0)v=0;
  if(v>100)v=100;
- solid(x,y,71,8,WHITE);outline(x,y,71,8,INK);
+ solid(x,y,71,8,WHITE);
+ outline(x,y,71,8,PURPLE);
  solid(x+2,y+2,(v*67)/100,4,fill);
+ solid(x+2,y+2,(v*67)/100,1,WHITE);
+}
+static void insignia(int x,int y,uint16_t c){
+ solid(x+3,y,3,3,c);
+ solid(x,y+3,9,3,c);
+ solid(x+3,y+6,3,3,c);
+ solid(x+3,y+3,3,3,WHITE);
 }
 static void header(const char *title,const Game *s){
  char tmp[32];int x;
- solid(0,0,W,27,PURPLE);
- solid(0,24,W,3,DEEP_PINK);
- for(x=0;x<256;x+=18)solid(x+4,22,9,2,LEMON);
- label(9,7,title,WHITE,1,24);
+ solid(0,0,W,27,NIGHT);
+ solid(0,0,W,2,screen_accent);
+ solid(0,3,3,21,screen_accent);
+ solid(0,24,W,3,screen_accent);
+ for(x=8;x<142;x+=24)solid(x,22,12,1,SILVER);
+ insignia(7,9,screen_accent);
+ label(20,9,title,WHITE,1,21);
  snprintf(tmp,sizeof(tmp),"DAY %lu",(unsigned long)s->days);
- capsule(191,5,58,17,PINK,WHITE);
- label(196,10,tmp,INK,1,9);
+ capsule(192,4,57,18,LILAC,screen_accent);
+ fit(196,10,tmp,INK,9);
  snprintf(tmp,sizeof(tmp),"$%u",s->dollars);
- fit(153,10,tmp,LEMON,6);
+ fit(151,10,tmp,LEMON,6);
 }
 static void foot(uint16_t color){
- solid(0,176,256,16,color);
- for(int x=0;x<256;x+=16)solid(x,176,8,1,WHITE);
+ solid(0,176,256,16,NIGHT);
+ solid(0,176,256,2,screen_accent);
+ solid(0,178,256,1,SILVER);
+ solid(0,179,3,13,screen_accent);
+ solid(253,179,3,13,screen_accent);
+ (void)color;
 }
 static void icon_bottle(int x,int y){
  solid(x+8,y+3,9,5,BLUE);solid(x+10,y,5,3,WHITE);
