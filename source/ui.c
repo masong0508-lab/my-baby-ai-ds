@@ -302,43 +302,6 @@ static const char *const nick[16]={
  "BOTTLE","DIAPER","TAX","KART","BEATS","SOCKS","NAP","RATTLE",
  "CRAWL","DRIFT","CIPHER","BLOCKS","AUDIT","GARDEN","COURT","CEO"
 };
-/* Four generous, readable cabinets per page. The selected index is the
- * single source of truth: page = selected / 4, so keyboard, touch and
- * unlock state never drift apart. Page controls sit above the cards. */
-static void arcade_list(const Game *s,int selection){
- int slot,id,x,y,opened,page=selection/4;
- char tmp[40];
- solid(0,27,256,149,IVORY);
- capsule(8,32,55,23,SKY,TEAL);
- fit(20,40,"< PREV",INK,8);
- capsule(193,32,55,23,SKY,TEAL);
- fit(203,40,"NEXT >",INK,8);
- snprintf(tmp,sizeof(tmp),"PAGE %d / 4",page+1);
- fit(89,39,tmp,PURPLE,13);
- snprintf(tmp,sizeof(tmp),"%s",game_names[selection]);
- fit(12,60,tmp,PURPLE,38);
- for(slot=0;slot<4;slot++){
-  uint16_t fill,edge;
-  char num[8];
-  id=page*4+slot;
-  x=9+(slot%2)*123;
-  y=73+(slot/2)*50;
-  opened=game_unlocked(s,id);
-  fill=id==selection?LEMON:(opened?WHITE:GRAY);
-  edge=id==selection?ROSE:(opened?TEAL:MUTED);
-  panel(x,y,115,44,fill,edge);
-  if(id==selection)solid(x+3,y+3,109,3,ROSE);
-  capsule(x+6,y+8,34,30,id==selection?PINK:opened?MINT:SILVER,edge);
-  snprintf(num,sizeof(num),"%02d",id+1);
-  label(x+11,y+15,num,INK,2,2);
-  fit(x+45,y+10,nick[id],INK,10);
-  fit(x+45,y+25,opened?"READY":"LOCKED",opened?TEAL:ROSE,10);
- }
- foot(PURPLE);
- fit(12,181,"A PLAY",WHITE,10);
- fit(101,181,"X UNLOCK",WHITE,14);
- fit(199,181,"B BACK",WHITE,10);
-}
 static void arrow(int x,int y,int dir,uint16_t fill){
  int i;
  /* Purposefully chunky hardware-era arrows, not Unicode glyphs. */
@@ -582,6 +545,64 @@ static void sprite(int x,int y,int scale,const char *const *rows,int count){
    if(color)solid(x+start*scale,y+yy*scale,(xx-start)*scale,scale,color);
   }
  }
+}
+/* Reuse the game's existing ROM-native thumbnails instead of another
+ * sprite sheet, decoder or new VRAM allocation. Actual mini-game objects
+ * identify each arcade cabinet at a glance. */
+static void cabinet_thumb(int id,int x,int y){
+ switch(id){
+ case 0:sprite(x,y,1,spr_bottle,18);break;
+ case 1:sprite(x-1,y+2,1,spr_diaper,11);break;
+ case 2:case 12:sprite(x+1,y+2,1,spr_receipt,13);break;
+ case 3:sprite(x,y+2,1,spr_kart,11);break;
+ case 4:case 7:sprite(x,y,1,spr_rattle,17);break;
+ case 5:sprite(x+1,y+2,1,spr_sock,13);break;
+ case 6:case 8:sprite(x-2,y,1,spr_baby,18);break;
+ case 9:case 15:sprite(x,y+1,1,spr_stroller,13);break;
+ case 10:sprite(x,y+2,1,spr_cereal,11);break;
+ case 11:sprite(x,y+4,1,spr_stack,9);break;
+ case 13:sprite(x,y+2,1,spr_flower,13);break;
+ case 14:sprite(x,y+2,1,spr_gavel,12);break;
+ default:break;
+ }
+}
+/* Four generous, readable cabinets per page. The selected index is the
+ * single source of truth: page = selected / 4, so keyboard, touch and
+ * unlock state never drift apart. Page controls sit above the cards. */
+static void arcade_list(const Game *s,int selection){
+ int slot,id,x,y,opened,page=selection/4;
+ char tmp[40];
+ solid(0,27,256,149,IVORY);
+ capsule(8,32,55,23,SKY,TEAL);
+ fit(20,40,"< PREV",INK,8);
+ capsule(193,32,55,23,SKY,TEAL);
+ fit(203,40,"NEXT >",INK,8);
+ snprintf(tmp,sizeof(tmp),"PAGE %d / 4",page+1);
+ fit(89,39,tmp,PURPLE,13);
+ snprintf(tmp,sizeof(tmp),"%s",game_names[selection]);
+ fit(12,60,tmp,PURPLE,38);
+ for(slot=0;slot<4;slot++){
+  uint16_t fill,edge;
+  char num[8];
+  id=page*4+slot;
+  x=9+(slot%2)*123;
+  y=73+(slot/2)*50;
+  opened=game_unlocked(s,id);
+  fill=id==selection?LEMON:(opened?WHITE:GRAY);
+  edge=id==selection?ROSE:(opened?TEAL:MUTED);
+  panel(x,y,115,44,fill,edge);
+  if(id==selection)solid(x+3,y+3,109,3,ROSE);
+  capsule(x+6,y+5,36,34,id==selection?PINK:opened?MINT:SILVER,edge);
+  cabinet_thumb(id,x+14,y+8);
+  snprintf(num,sizeof(num),"%02d",id+1);
+  fit(x+18,y+32,num,INK,2);
+  fit(x+47,y+10,nick[id],INK,10);
+  fit(x+47,y+26,opened?"READY":"LOCKED",opened?TEAL:ROSE,10);
+ }
+ foot(PURPLE);
+ fit(12,181,"A PLAY",WHITE,10);
+ fit(101,181,"X UNLOCK",WHITE,14);
+ fit(199,181,"B BACK",WHITE,10);
 }
 static void sparkle(int x,int y,uint16_t color){
  solid(x+3,y,2,9,color);solid(x,y+3,9,2,color);
