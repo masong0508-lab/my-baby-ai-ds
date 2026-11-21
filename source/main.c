@@ -85,7 +85,7 @@ int main(void){
  }
  /* Always show a visible title before touching the filesystem or heavy 3D.
   * Some older emulators hang during their emulated DLDI/FAT setup. */
- ui_draw(&baby,&arc,view,view==6?album_page:view==8?(int)rag.charge+(toy_tool==ROUGHHOUSE_KICK?32:0):view==9?(int)egg_frame:selected,last_ending,reset_step,storage_ok,message);
+ ui_draw(&baby,&arc,view,view==6?album_page:view==8?((int)rag.charge|(toy_tool==ROUGHHOUSE_KICK?32:0)|((int)rag.hits<<6)):view==9?(int)egg_frame:selected,last_ending,reset_step,storage_ok,message);
  /* Stay in RAM-only mode until the player explicitly requests save access.
   * New and old .nds game saves remain compatible when FAT is available. */
  while(GAME_LOOP_ACTIVE()){
@@ -314,7 +314,11 @@ int main(void){
    }else if(hit==ROUGHHOUSE_KICK||(down&(KEY_R|KEY_X))){
     toy_tool=ROUGHHOUSE_KICK;dirty=1;
    }else if((down&KEY_A)||hit==4){
-    if(roughhouse_strike(&rag,toy_tool)){
+    /* Lower LCD contacts move the synthetic toy with different impulses;
+     * physical A retains a neutral, accessible centered strike. */
+    int sx=hit==4?touch.px:128;
+    int sy=hit==4?touch.py:110;
+    if(roughhouse_strike_at(&rag,toy_tool,sx,sy)){
      pose=0;
      message=toy_tool==ROUGHHOUSE_KICK?
              "BOING! THE SYNTHETIC SHELL BOUNCES.":
@@ -418,7 +422,7 @@ int main(void){
   /* Keep bitmap VRAM writes off the hot path unless UI state changed. */
   if(dirty||previous!=view||
      (view==2&&frame%arcade_redraw_period(&arc)==0u)){
-   ui_draw(&baby,&arc,view,view==6?album_page:view==8?(int)rag.charge+(toy_tool==ROUGHHOUSE_KICK?32:0):view==9?(int)egg_frame:selected,last_ending,reset_step,storage_ok,message);
+   ui_draw(&baby,&arc,view,view==6?album_page:view==8?((int)rag.charge|(toy_tool==ROUGHHOUSE_KICK?32:0)|((int)rag.hits<<6)):view==9?(int)egg_frame:selected,last_ending,reset_step,storage_ok,message);
    dirty=0;
   }
   if(view==7)ui_touch_diag_update();
