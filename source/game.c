@@ -35,12 +35,24 @@ int game_room_quiet_rest(Game *s,int daylight,int lamp_on){
  return 1;
 }
 int game_unlocked(const Game *s,int id){return id>=0&&id<MBAI_GAMES&&!!(s->unlocked&(1u<<id));}
+int game_unlock_requirements(int id,unsigned *wins,
+                             unsigned *dollars,unsigned *favors){
+ unsigned level;
+ if(id<8||id>=MBAI_GAMES)return 0;
+ level=(unsigned)(id-8);
+ if(wins)*wins=(level+1u)*2u;
+ if(dollars)*dollars=10u+level*2u;
+ if(favors)*favors=level/2u+1u;
+ return 1;
+}
 int game_unlock(Game *s,int id){
- int level=id-8;unsigned cost,favors;
- if(level<0||id>=MBAI_GAMES||game_unlocked(s,id))return 0;
- cost=10u+level*2u;favors=(unsigned)(level/2)+1u;
- if(s->wins<(unsigned)((level+1)*2)||s->dollars<cost||s->favors<favors)return 0;
- s->dollars-=cost;s->favors-=favors;s->unlocked|=(uint16_t)(1u<<id);return 1;
+ unsigned cost,favors,wins;
+ if(!game_unlock_requirements(id,&wins,&cost,&favors)||
+    game_unlocked(s,id))return 0;
+ if(s->wins<wins||s->dollars<cost||s->favors<favors)return 0;
+ s->dollars-=cost;s->favors-=favors;
+ s->unlocked|=(uint16_t)(1u<<id);
+ return 1;
 }
 /* Ending IDs 1..4 and secret 9 are bad, IDs 5..8 are good. The existing 16-bit
  * ending_mask records both categories without changing on-disk save layout. */
