@@ -583,7 +583,7 @@ static void arcade_list(const Game *s,int selection){
  fit(12,60,tmp,PURPLE,38);
  for(slot=0;slot<4;slot++){
   uint16_t fill,edge;
-  char num[8];
+  char num[16]; /* int formatting needs up to 11 bytes under -Werror */
   id=page*4+slot;
   x=9+(slot%2)*123;
   y=73+(slot/2)*50;
