@@ -767,10 +767,12 @@ float world_egg_creature_depth(uint32_t frame){
  uint32_t elapsed,beat;
  if(frame<EGG_SCARE_FRAME)return 0.f;
  elapsed=frame-EGG_SCARE_FRAME;
- if(elapsed<=7u)return (float)elapsed*.025f;
- if(elapsed<=15u)return .175f-(float)(elapsed-7u)*.006f;
- beat=(elapsed-15u)%40u;
- return .127f+(float)(beat<20u?beat:40u-beat)*.00055f;
+ /* One unmistakable lunge: surge for nine frames, then deliberately
+  * withdraw. A continuous idle pulse follows, not repeated jump cuts. */
+ if(elapsed<=9u)return (float)elapsed*(.31f/9.f);
+ if(elapsed<=22u)return .31f-(float)(elapsed-9u)*.0075f;
+ beat=(elapsed-22u)%40u;
+ return .2125f+(float)(beat<20u?beat:40u-beat)*.0004f;
 }
 /* A barely perceptible pulse inside the shell; the embryonic eyes and
  * mouth share one pivot so nothing floats away from the skull. */
