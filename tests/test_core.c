@@ -129,13 +129,15 @@ int main(void){
  g.mood=60;g.corruption=90;g.chaos=75;
  assert(game_end_day(&g)==END_REBOOT);
  assert(g.bad_endings==3&&game_reset_unlocked(&g));
- /* The first eight cabinets are bespoke now; keep old arrow rules tested
-  * against locked cabinet 8 via an isolated unlock flag. */
- g.unlocked|=(uint16_t)(1u<<8);
- g.corruption=80;game_arcade_start(&g,&a,8);assert(a.active);
- for(i=0;i<2;i++)game_arcade_input(&g,&a,game_arcade_expected(&a));
- assert(a.round==2&&a.reverse&&game_arcade_expected(&a)==(a.direction^2));
- for(i=2;i<MBAI_ROUNDS;i++)game_arcade_input(&g,&a,game_arcade_expected(&a));
+ /* New cabinet 12 verifies accounting approval/flag rules at high glitch. */
+ g.unlocked|=(uint16_t)(1u<<12);
+ g.corruption=80;game_arcade_start(&g,&a,12);assert(a.active);
+ assert(a.timer==125&&game_arcade_expected(&a)==a.target);
+ for(i=0;i<MBAI_ROUNDS;i++){
+  int should_flag=a.stage!=a.direction;
+  assert(a.target==(unsigned)should_flag);
+  game_arcade_input(&g,&a,game_arcade_expected(&a));
+ }
  assert(a.finished==1&&g.wins==1);
  assert(save_write(base,&g));g.dollars=203;assert(save_write(base,&g));
  assert(save_load(base,&h)&&h.dollars==203);
