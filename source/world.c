@@ -665,7 +665,11 @@ static EggCamera nursery_preset(int focus){
  * The whole motion remains a single smooth 16-tick continuous journey. */
 EggCamera world_nursery_camera_from(EggCamera from,int focus,uint32_t age){
  EggCamera to=nursery_preset(focus),c;
- float t=age>=16u?1.f:(float)age/16.f;
+ float t;
+ /* Return the exact destination, not an extra six float operations,
+  * after the 16-tick animation completes; helps stable camera equality. */
+ if(age>=16u)return to;
+ t=(float)age/16.f;
  t=t*t*(3.f-2.f*t);
  c.x=from.x+(to.x-from.x)*t;c.y=from.y+(to.y-from.y)*t;
  c.z=from.z+(to.z-from.z)*t;
