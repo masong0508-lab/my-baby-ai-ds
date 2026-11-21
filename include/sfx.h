@@ -8,6 +8,7 @@ typedef enum {
 } SfxCue;
 void sfx_init(void);
 void sfx_play(SfxCue cue);
+void sfx_stop(void);
 void sfx_tick(void);
 void sfx_set_enabled(int enabled);
 int sfx_is_enabled(void);
