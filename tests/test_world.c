@@ -41,6 +41,36 @@ int main(void){
  assert(world_baby_neck_tilt(2,0u)==world_baby_neck_tilt(2,80u));
  assert(world_baby_arm_reach(3)>world_baby_arm_reach(2));
  assert(world_baby_arm_reach(2)>world_baby_arm_reach(1));
+ /* Finite staged animation: anticipatory ease-in, expressive hold,
+  * graceful return to idle (not indefinitely repeating CHAT/PLAY forever). */
+ assert(world_baby_care_weight(0u)==0);
+ assert(world_baby_care_weight(6u)>0);
+ assert(world_baby_care_weight(12u)==256);
+ assert(world_baby_care_weight(25u)==256);
+ assert(world_baby_care_weight(30u)==256);
+ assert(world_baby_care_weight(42u)>0);
+ assert(world_baby_care_weight(55u)>=0);
+ assert(world_baby_care_weight(56u)==0);
+ {
+  unsigned f;
+  int prev=world_baby_care_weight(0);
+  for(f=1u;f<58u;f++){
+   int weight=world_baby_care_weight(f);
+   assert(weight>=0&&weight<=256);
+   assert(weight-prev<=35&&prev-weight<=35);
+   prev=weight;
+  }
+ }
+ assert(world_baby_lid_open(10u,0,25u)==256);
+ assert(world_baby_lid_open(10u,4,25u)==0);
+ assert(world_baby_lid_open(10u,4,0u)==256);
+ assert(world_baby_lid_open(10u,4,56u)==256);
+ assert(world_baby_lid_open(3u,0,25u)<80);
+ for(i=0;i<58;i++){
+  world_draw_care(&s,(uint32_t)(200+i),3,(uint32_t)i);
+  assert(world_vertex_count()<=5000);
+  assert(world_polygon_count()<=1850);
+ }
  /* Normal care gestures should actually alter the infant's mouth geometry:
   * HAPPY CHAT / PLAY displays a connected, shallow open smile. */
  {
