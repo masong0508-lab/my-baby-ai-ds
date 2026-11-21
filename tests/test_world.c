@@ -26,6 +26,15 @@ int main(void){
   assert(world_vertex_count()<=5000);
   assert(world_polygon_count()<=1850);
  }
+ /* Arm gestures now rotate one connected shoulder-to-hand structure.
+  * FEED reaches, CHAT invites, PLAY reaches farther, NAP folds in. */
+ assert(world_baby_arm_reach(0)==7);
+ assert(world_baby_arm_reach(1)==28);
+ assert(world_baby_arm_reach(2)==45);
+ assert(world_baby_arm_reach(3)==57);
+ assert(world_baby_arm_reach(4)==-8);
+ assert(world_baby_arm_reach(3)>world_baby_arm_reach(2));
+ assert(world_baby_arm_reach(2)>world_baby_arm_reach(1));
  /* Normal care gestures should actually alter the infant's mouth geometry:
   * HAPPY CHAT / PLAY displays a connected, shallow open smile. */
  {
