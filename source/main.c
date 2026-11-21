@@ -354,7 +354,7 @@ int main(void){
   /* Keep bitmap VRAM writes off the hot path unless UI state changed. */
   if(dirty||previous!=view||
      (view==2&&frame%arcade_redraw_period(&arc)==0u)){
-   ui_draw(&baby,&arc,view,selected,last_ending,reset_step,storage_ok,message);
+   ui_draw(&baby,&arc,view,view==6?album_page:selected,last_ending,reset_step,storage_ok,message);
    dirty=0;
   }
   if(view==7)ui_touch_diag_update();
