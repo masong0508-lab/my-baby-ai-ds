@@ -260,27 +260,23 @@ static void icon_nap(int x,int y){
 static void home(const Game *s,int can_save,const char *message){
  int i,n,start=0,split=0;
  const char *speech=message?message:"";
- char first[27],second[27];
+ char first[37],second[37];
  solid(0,27,W,149,IVORY);
  panel(8,31,240,34,WHITE,TEAL);
  fit(17,35,"BABY SAYS",TEAL,12);
  n=(int)strlen(speech);
- if(n>26){
-  split=26;
-  for(i=26;i>14;i--)if(speech[i]==' '){split=i;break;}
+ if(n>36){
+  split=36;
+  for(i=36;i>18;i--)if(speech[i]==' '){split=i;break;}
  }else split=n;
- for(i=0;i<split&&i<26;i++)first[i]=speech[i];
+ for(i=0;i<split&&i<36;i++)first[i]=speech[i];
  first[i]=0;
  start=split;
  while(speech[start]==' ')start++;
- for(i=0;speech[start+i]&&i<26;i++)second[i]=speech[start+i];
+ for(i=0;speech[start+i]&&i<36;i++)second[i]=speech[start+i];
  second[i]=0;
- fit(17,45,first,INK,26);
- if(second[0])fit(17,55,second,INK,26);
- /* Dark-comedy secret: the optional synthetic roughhouse room never
-  * overlaps care cards or displaces native touch coordinates. */
- capsule(184,36,59,24,LILAC,PURPLE);
- fit(196,45,"PRANK",WHITE,6);
+ fit(17,45,first,INK,36);
+ if(second[0])fit(17,55,second,INK,36);
  panel(8,68,240,36,WHITE,LILAC);
  fit(17,72,"HUNGER",PURPLE,7);meter(61,70,s->hunger,ROSE);
  fit(144,72,"MOOD",PURPLE,5);meter(178,70,s->mood,GREEN);
@@ -305,9 +301,17 @@ static void home(const Game *s,int can_save,const char *message){
  capsule(132,143,116,30,PINK,ROSE);
  icon_nap(135,145);label(172,146,"NAP",INK,2,3);
  fit(172,163,"ENERGY +25",PURPLE,11);
+ /* Talking-Tom-style three-choice bottom dock. Choose TOYBOX before
+  * any slapstick interaction: CARE and GAME stay separate and accessible. */
  foot(PURPLE);
- fit(12,181,"START  ARCADE",WHITE,20);
- fit(157,181,"END  DAY",WHITE,14);
+ capsule(7,178,80,13,NIGHT,TEAL);
+ fit(20,183,"ARCADE",WHITE,10);
+ capsule(93,178,70,13,LEMON,GOLD);
+ solid(99,182,8,7,PINK);
+ solid(100,180,6,3,WHITE);
+ fit(112,183,"TOYBOX",INK,9);
+ capsule(169,178,80,13,NIGHT,TEAL);
+ fit(189,183,"END DAY",WHITE,10);
  (void)can_save;
 }
 /* Five-character art-directed wordmarks can occupy a genuine 2x font,
@@ -1319,26 +1323,44 @@ static void finale(const Game *s,int ending){
 }
 /* Synthetic-only slapstick lab: no realistic injury or gore, just
  * a toy shell that rebounds and develops an ominous stress signal. */
-static void roughhouse_screen(int charge){
- int filled=charge*214/(int)ROUGHHOUSE_CRACK_CHARGE;
- if(filled>214)filled=214;
- solid(0,27,256,149,LILAC);
- panel(9,32,238,45,WHITE,ROSE);
- label(18,38,"PRANK LAB",PURPLE,2,9);
- fit(18,57,"ARTIFICIAL SHELL / TEST SUBJECT",MUTED,38);
- capsule(12,82,232,40,IVORY,ROSE);
- sprite(105,83,2,spr_baby,18);
- fit(16,125,"SHELL STRESS",PURPLE,18);
- solid(17,135,222,7,GRAY);
- solid(21,137,filled,3,ROSE);
- /* All weapons are imaginary comic-book buttons, not realistic violence.
-  * Player can back out at any time; the arcade/care controls are untouched. */
- capsule(9,146,115,28,PINK,ROSE);
- label(36,152,"SLAP",INK,2,4);
- capsule(132,146,115,28,LEMON,GOLD);
- label(160,152,"KICK",INK,2,4);
+/* Talking-Tom-like tool selection on the DS's *lower* touch display:
+ * select SLAP/KICK on the dock, then tap the doll to apply the selected
+ * impulse. The upper DS 3D screen is intentionally not a touchscreen. */
+static void roughhouse_screen(int encoded){
+ int selected=encoded>=32?ROUGHHOUSE_KICK:ROUGHHOUSE_SLAP;
+ int charge=encoded%32;
+ int filled=charge*208/(int)ROUGHHOUSE_CRACK_CHARGE;
+ if(filled>208)filled=208;
+ solid(0,27,256,149,IVORY);
+ panel(9,31,238,45,WHITE,ROSE);
+ label(14,36,"TOYBOX",PURPLE,2,6);
+ fit(139,42,"SELECT A TOOL",MUTED,16);
+ fit(15,57,"SHELL STRESS",ROSE,18);
+ solid(15,68,219,5,GRAY);
+ solid(19,69,filled,3,ROSE);
+ panel(10,79,236,62,WHITE,LILAC);
+ capsule(95,83,65,52,LEMON,GOLD);
+ sprite(111,87,2,spr_baby,18);
+ label(21,97,"TAP",INK,2,3);
+ fit(20,115,"TO USE",PURPLE,9);
+ label(184,97,"DOLL",INK,2,4);
+ fit(184,115,"BOING!",ROSE,9);
+ capsule(9,145,115,29,selected==ROUGHHOUSE_SLAP?PINK:GRAY,
+         selected==ROUGHHOUSE_SLAP?ROSE:PURPLE);
+ /* A mitten/hand is the selection icon, not a violent depiction. */
+ solid(20,151,7,11,WHITE);
+ solid(21,148,5,5,WHITE);
+ solid(28,156,3,7,WHITE);
+ label(46,153,"SLAP",INK,2,4);
+ capsule(132,145,115,29,selected==ROUGHHOUSE_KICK?LEMON:GRAY,
+         selected==ROUGHHOUSE_KICK?GOLD:PURPLE);
+ /* Boot-shaped tool icon remains an 8-polygon fixed bitmap primitive. */
+ solid(143,151,7,10,WHITE);
+ solid(148,159,13,5,WHITE);
+ solid(157,161,3,3,PURPLE);
+ label(171,153,"KICK",INK,2,4);
  foot(PURPLE);
- fit(11,181,"A SLAP   X KICK   B BACK",WHITE,40);
+ fit(12,181,"A USE   L/R TOOL   B BACK",WHITE,40);
 }
 static void egg_scene_screen(int frame){
  int phase=frame<85?0:frame<210?1:frame<366?2:3;
@@ -1590,15 +1612,18 @@ void ui_draw(const Game *s,const Arcade *a,int view,int selection,
  }
 }
 int ui_prank_entry_touch(int x,int y){
- return x>=184&&x<243&&y>=36&&y<60;
+ return x>=93&&x<163&&y>=176&&y<192;
 }
+/* Tool selection is separate from activation (4). Never trigger physics
+ * when a user only meant to switch to the other cartoon instrument. */
 int ui_roughhouse_touch(int x,int y){
  if(x<0||x>=256||y<0||y>=192)return 0;
  if(y>=176)return 3;
- if(y>=146&&y<174){
+ if(y>=145&&y<174){
   if(x>=9&&x<124)return ROUGHHOUSE_SLAP;
   if(x>=132&&x<247)return ROUGHHOUSE_KICK;
  }
+ if(y>=79&&y<141&&x>=10&&x<246)return 4;
  return 0;
 }
 int ui_nursery_touch(int x,int y){
@@ -1608,8 +1633,10 @@ int ui_nursery_touch(int x,int y){
  return -1;
 }
 int ui_home_navigation(int x,int y){
- if(y<176||y>=192)return 0;
- return x<128?1:2;
+ if(x<0||x>=256||y<176||y>=192)return 0;
+ if(x<89)return 1;
+ if(x>=167)return 2;
+ return 0; /* selected Toybox lives in the center of the dock */
 }
 int ui_album_page_touch(int x,int y){
  if(y<32||y>=61)return 0;
