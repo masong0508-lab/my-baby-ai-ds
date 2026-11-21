@@ -560,6 +560,32 @@ def test_actual_game(path: Path, output: Path) -> dict:
         "Scare cut lost its readable split porcelain egg: "
         f"left={scare_shell_left}, right={scare_shell_right}"
     )
+    # The former glRotateZ(degreesToAngle(...)) passed fixed-angle values
+    # into a FLOAT-DEGREES API. The alien was rotated sideways, leaving
+    # a vertical mouth and one eye below the other. Protect actual 3D
+    # framing: TWO green eyes above ONE dark, centered mouth.
+    left_iris = egg_scare.crop((65, 40, 111, 80))
+    right_iris = egg_scare.crop((139, 40, 190, 80))
+    def luminous_eye(img):
+        return sum(
+            1 for r, g, b in img.get_flattened_data()
+            if g > r + 25 and g > b + 18 and g > 115
+        )
+    left_iris_pixels = luminous_eye(left_iris)
+    right_iris_pixels = luminous_eye(right_iris)
+    mouth_cut = egg_scare.crop((111, 108, 160, 150))
+    central_mouth_dark = sum(
+        1 for r, g, b in mouth_cut.get_flattened_data()
+        if r < 50 and g < 70 and b < 85
+    )
+    assert left_iris_pixels > 250 and right_iris_pixels > 250, (
+        "Alien eyes are no longer a centered horizontal pair: "
+        f"left={left_iris_pixels}, right={right_iris_pixels}"
+    )
+    assert central_mouth_dark > 450, (
+        "Alien skull tilted sideways; no deep mouth below the eyes "
+        f"({central_mouth_dark} center dark pixels)"
+    )
     # Capture the NEW animated reaction, not just the first scare frame.
     # The jaw, fangs, eyes and brow must lunge as one 3D subject.
     frames(emu, 12)
@@ -660,6 +686,8 @@ def test_actual_game(path: Path, output: Path) -> dict:
         "Alien_jump_scare_changed_pixels": scare_difference,
         "Jump_scare_porcelain_left_pixels": scare_shell_left,
         "Jump_scare_porcelain_right_pixels": scare_shell_right,
+        "Jump_scare_right_eye_pixels": right_iris_pixels,
+        "Jump_scare_center_mouth_dark_pixels": central_mouth_dark,
         "Alien_lunge_animation_changed_pixels": lunge_changed,
         "Alien_ending_finale_changed_pixels": finale_difference,
         "Egg_green_stage": movie_stage(egg_green),
