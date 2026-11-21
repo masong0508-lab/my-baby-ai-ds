@@ -46,6 +46,20 @@ int main(void){
  ui_draw(&g,&a,0,0,0,0,1,"TELL HR I'M TEETHING.");
  for(i=0;i<256u*192u;i++)if(screen[i])changed++;
  assert(changed>30000);
+ /* Polished care screen retains readable numbers and action hitboxes.
+  * A changed hunger value must update the real rendered meter/number. */
+ {
+  uint32_t initial=fingerprint();
+  g.hunger=13;
+  ui_draw(&g,&a,0,0,0,0,1,"TELL HR I'M TEETHING.");
+  verify_coverage();
+  assert(fingerprint()!=initial);
+  assert(screen[71u*256u+120u]!=screen[71u*256u+116u] ||
+         screen[75u*256u+116u]!=screen[75u*256u+112u]);
+  g.hunger=80;
+  ui_draw(&g,&a,0,0,0,0,1,"TELL HR I'M TEETHING.");
+  verify_coverage();
+ }
  assert(ui_nursery_touch(25,131)==FEED);
  assert(ui_nursery_touch(175,131)==CHAT);
  assert(ui_nursery_touch(25,159)==PLAY);
@@ -136,6 +150,19 @@ int main(void){
   }
   ui_draw(&g,&a,9,EGG_SCARE_FRAME,0,0,1,"EGG");
   verify_coverage();
+  /* Large containment alert and diagnostic icon have distinct high
+   * contrast states; progress meter sample coordinates stay untouched. */
+  {
+   uint16_t danger=screen[57u*256u+20u];
+   uint16_t lit=screen[137u*256u+31u];
+   uint16_t warning_icon=screen[96u*256u+201u];
+   assert(lit==screen[137u*256u+187u]);
+   ui_draw(&g,&a,9,0,0,0,1,"EGG");
+   verify_coverage();
+   assert(screen[57u*256u+20u]!=danger ||
+          screen[96u*256u+201u]!=warning_icon);
+   assert(lit!=screen[137u*256u+187u]);
+  }
   ui_draw(&g,&a,6,2,0,0,1,"ALBUM");
   verify_coverage();
  }

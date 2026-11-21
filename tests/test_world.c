@@ -26,6 +26,20 @@ int main(void){
   assert(world_vertex_count()<=5000);
   assert(world_polygon_count()<=1850);
  }
+ /* Normal care gestures should actually alter the infant's mouth geometry:
+  * HAPPY CHAT / PLAY displays a connected, shallow open smile. */
+ {
+  unsigned idle,expressive;
+  s.mood=95;s.safe_visuals=0;
+  world_draw(&s,15u,0);
+  idle=world_polygon_count();
+  world_draw(&s,15u,2);
+  expressive=world_polygon_count();
+  assert(expressive>idle);
+  assert(expressive-idle<=26u);
+  assert(world_vertex_count()<=5000);
+  assert(world_polygon_count()<=1850);
+ }
  /* Both the new moving doll and the three egg film states MUST fit within
   * hardware command budgets, with no new framebuffer or geometry spike. */
  roughhouse_init(&r);
@@ -64,9 +78,10 @@ int main(void){
    assert(world_vertex_count()>=730);
   }
   if(frames[i]>=EGG_SCARE_FRAME){
-   /* The creature's eye sockets and actual pointed teeth are a scene
-    * transition, not the old generic low-poly turquoise egg portrait. */
-   assert(world_polygon_count()>=320);
+   /* Scene must NOT collapse to a floating head on a featureless plane.
+    * Nursery, split porcelain sides, cavity and attached face all remain
+    * submitted after the hard cut, but fit the same DS polygon budget. */
+   assert(world_polygon_count()>=650);
   }
  }
  /* The room darkens monotonically during the SAME physical camera move,
