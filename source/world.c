@@ -572,7 +572,10 @@ static void baby_model(const Game *s,uint32_t frame,int action,
   * a shared shoulder pivot, not isolated upward-moving arm balls. */
  const int base_reach=7+(world_baby_arm_reach(action)-7)*weight/256;
  const int wave_deg=(int)(wave*160.f);
- const int recoil=rag&&rag->moving?(rag->vr>0?5:-5):0;
+ /* A roll that has already settled must not hold one hand in a
+  * permanent asymmetric 'impact' pose. Only real angular velocity
+  * produces a short connected arm reaction. */
+ const int recoil=rag&&rag->moving?(rag->vr>3?5:rag->vr< -3?-5:0):0;
  const int lean=(action==1?3:action==2?-3:action==3?5:
                  action==4?-3:0)*weight/256;
  const int reach_forward=(action==1?13:action==2?8:
@@ -689,7 +692,15 @@ static void baby_model(const Game *s,uint32_t frame,int action,
  soft_mark(-.205f,.734f,.459f,.105f,.014f,17,11,9);
  soft_mark(.205f,.734f,.459f,.105f,.014f,17,11,9);
  ellipse(0,.375f,.467f,.047f,.034f,.019f,31,23,20);
- if(happy&&(action==2||action==3)&&weight>40){
+ if(rag&&rag->impact){
+  /* Fresh toy-shell collision: a short shocked open mouth is actually
+   * tied to the impact pulse. Once it fades, the same model returns
+   * to its ordinary expression. Reuse the CHAT mouth geometry, no
+   * new material, sprites, or animation allocations. */
+  float gasp=.42f+(float)rag->impact/9.f*.48f;
+  ellipse(0,.252f,.451f,.094f,.085f*gasp,.020f,12,4,9);
+  soft_mark(0,.212f,.476f,.095f,.025f*gasp,30,15,19);
+ }else if(happy&&(action==2||action==3)&&weight>40){
   /* Syllabic CHAT jaw, or one broad PLAY smile. Both return to the
    * original closed grin after the one-shot action recovery. */
   float speech=action==2?(float)world_baby_speech_open(action_age)/256.f:1.f;
