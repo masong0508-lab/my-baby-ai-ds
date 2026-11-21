@@ -446,7 +446,10 @@ int main(void){
    }
   }else if(view==5){
    if(down&KEY_SELECT){view=7;dirty=1;}
-   else if(down&KEY_X){
+   else if((down&KEY_X)||
+           (tap&&ui_title_save_touch(touch.px,touch.py))){
+    /* Touch-only play can now opt into the SAME proven X-key save load.
+     * Never initialize FAT automatically at boot or when touching START. */
     message="CHECKING SAVE STORAGE...";
     ui_draw(&baby,&arc,view,selected,last_ending,reset_step,0,message);
     storage_ok=fatInitDefault();
