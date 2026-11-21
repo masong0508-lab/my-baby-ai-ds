@@ -1400,7 +1400,9 @@ static void roughhouse_screen(int encoded){
  foot(PURPLE);
  fit(7,181,"A USE  L/R TOOL  B BACK  Y SFX",WHITE,40);
 }
-static void egg_scene_screen(int frame){
+static void egg_scene_screen(int selection){
+ int frame=selection&0xffff;
+ int paused=(selection&EGG_FILM_PAUSED_FLAG)!=0;
  int phase=frame<(int)EGG_CRACK_FRAME?0:
            frame<(int)EGG_PUSH_FRAME?1:
            frame<(int)EGG_SCARE_FRAME?2:3;
@@ -1433,8 +1435,12 @@ static void egg_scene_screen(int frame){
  /* Four non-blinking film-phase segments remain at the exact positions
   * used by the native DeSmuME phase assertions. */
  for(i=0;i<4;i++)solid(27+i*52,136,45,3,i<=phase?LEMON:GRAY);
+ fit(paused?42:45,152,paused?"FILM PAUSED - X RESUME":"TAP READOUT TO ADVANCE",
+     paused?LEMON:MINT,39);
  foot(PURPLE);
- fit(23,181,"B SKIP  /  A CONTINUE",WHITE,39);
+ fit(9,181,"B SKIP",WHITE,10);
+ fit(94,181,paused?"X RESUME":"X PAUSE",paused?LEMON:WHITE,12);
+ fit(190,181,"A NEXT",WHITE,10);
 }
 /* Redraw diagnostic panel once on entry, then update only tiny regions.
  * Repainting 256x192 VRAM every stylus-held frame was tearing/flickering
@@ -1662,6 +1668,14 @@ void ui_draw(const Game *s,const Arcade *a,int view,int selection,
  case 8:roughhouse_screen(selection);break;
  case 9:egg_scene_screen(selection);break;
  }
+}
+/* Three separated footer targets prevent accidental skip during the
+ * buildup. Tapping the center readout is equivalent to A NEXT. */
+int ui_egg_cinematic_touch(int x,int y){
+ if(x<0||x>=256||y<0||y>=192)return 0;
+ if(y>=176)return x<84?1:x<172?2:3;
+ if(x>=15&&x<241&&y>=35&&y<165)return 3;
+ return 0;
 }
 int ui_prank_entry_touch(int x,int y){
  return x>=93&&x<163&&y>=176&&y<192;
