@@ -476,6 +476,23 @@ def test_actual_game(path: Path, output: Path) -> dict:
     assert recovered_change > 25, (
         f"CHAT never recovered to an idle pose ({recovered_change})"
     )
+    # Exercise exhaustion through real gameplay: four PLAY taps subtract
+    # 48 energy from the starting 72, placing the idle 3D baby below the
+    # 25-energy arm-slump threshold. The action must fully recover before
+    # photographing it, so the difference is NEED-AWARE acting rather
+    # than a still-in-progress PLAY reach gesture.
+    for _ in range(4):
+        stylus_tap(emu, 66, 160)
+        frames(emu, 13)
+    frames(emu, 80)
+    tired_baby = picture(emu, output, "game_nursery_baby_low_energy")
+    tired_expression_changed = difference(
+        chat_recovered, tired_baby, (65, 28, 192, 146)
+    )
+    assert tired_expression_changed > 45, (
+        "Four normal PLAY actions failed to change the actual top-screen "
+        f"tired baby face/arms ({tired_expression_changed} pixels)"
+    )
     # The new 3D emotion/gesture pass must affect the actual TOP display:
     # FEED lifts an arm, while NAP closes both eyes and relaxes the arms.
     emu.input.touch_set_pos(187, 160)  # NAP on unchanged lower-screen hitbox
@@ -1023,6 +1040,7 @@ def test_actual_game(path: Path, output: Path) -> dict:
         "3D_nap_upright_romper_pixels": upright_romper_pixels,
         "3D_chat_reach_changed_pixels": chat_changed,
         "3D_chat_recovery_changed_pixels": recovered_change,
+        "3D_low_energy_baby_changed_pixels": tired_expression_changed,
         "3D_title_top_screen_colors": title_colors,
         "album_screen_changed_pixels": album_diff,
         "album_next_page_changed_pixels": album_next_diff,
