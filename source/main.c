@@ -27,6 +27,9 @@ static uint32_t pose_age;
 /* Transient room-tour state: save schema stays exactly the same. */
 static int room_focus=-1,room_previous=-1,room_daylight,room_lamp=1;
 static uint32_t room_camera_age=16u,room_prop_age=40u;
+/* Capture the EXACT in-flight viewpoint before switching focus. Without
+ * this, quick prop taps restart from the old preset and jerk the camera. */
+static EggCamera room_camera_anchor={.97f,1.05f,3.43f,-.12f,.035f,.17f};
 static int three_d_ready;
 static TouchGate gesture;
 static VirtualStylus vpen;
@@ -144,7 +147,9 @@ int main(void){
       (!vpen.enabled&&(down&KEY_DOWN))){
     /* Room Tour uses its own four large native touch cards. The care
      * buttons, Toybox and save/end-day shortcuts remain unchanged. */
-    view=10;room_previous=-1;room_focus=0;room_camera_age=0;
+    room_camera_anchor=world_nursery_camera_from(room_camera_anchor,
+                                                     room_focus,room_camera_age);
+    view=10;room_previous=room_focus;room_focus=0;room_camera_age=0;
     room_prop_age=40u;
     message="TOUCH A PROP, OR B TO RETURN.";dirty=1;
    }else if(((down&KEY_X)&&(held&KEY_R))||
@@ -461,6 +466,8 @@ int main(void){
   }else if(view==10){
    int picked=-1;
    if(down&(KEY_B|KEY_START)){
+    room_camera_anchor=world_nursery_camera_from(room_camera_anchor,
+                                                     room_focus,room_camera_age);
     room_previous=room_focus;room_focus=-1;room_camera_age=0;
     view=0;message="BACK IN BABY'S NURSERY.";dirty=1;
    }else{
@@ -474,10 +481,14 @@ int main(void){
      else if(down&KEY_A)picked=room_focus;
     }
     if(picked==4){
-     room_previous=room_focus;room_focus=-1;room_camera_age=0;
+     room_camera_anchor=world_nursery_camera_from(room_camera_anchor,
+                                                     room_focus,room_camera_age);
+    room_previous=room_focus;room_focus=-1;room_camera_age=0;
      view=0;message="BACK IN BABY'S NURSERY.";dirty=1;
     }else if(picked>=0&&picked<=3){
      if(picked!=room_focus){
+      room_camera_anchor=world_nursery_camera_from(room_camera_anchor,
+                                                      room_focus,room_camera_age);
       room_previous=room_focus;room_focus=picked;room_camera_age=0;
      }
      room_prop_age=0u; /* every tap restarts an interaction, not a loop */
@@ -521,7 +532,8 @@ int main(void){
    else if(view==0||view==10)
     world_draw_nursery(&baby,frame,pose,pose_age,
                        room_focus,room_previous,room_camera_age,
-                       room_daylight,room_lamp,room_prop_age);
+                       room_daylight,room_lamp,room_prop_age,
+                       &room_camera_anchor);
    else world_draw_care(&baby,frame,pose,pose_age);
   }
   /* Keep bitmap VRAM writes off the hot path unless UI state changed. */
