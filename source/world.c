@@ -492,11 +492,12 @@ void world_draw_secret(const Game *s,uint32_t frame,const Roughhouse *r){
  if(phase==1u){
   gluLookAt(0,.18f,4.30f,0,0,.0f,0,1,0);
  }else if(phase==2u){
-  float camera=4.30f-(float)(frame-EGG_PUSH_FRAME)*.014f;
-  if(camera<2.10f)camera=2.10f;
+  float camera=4.30f-(float)(frame-EGG_PUSH_FRAME)*.029f;
+  if(camera<2.06f)camera=2.06f;
   gluLookAt(0,.11f,camera,0,.08f,.13f,0,1,0);
  }else{
-  gluLookAt(0,.10f,1.60f,0,.12f,.52f,0,1,0);
+  /* Keep full head within view rather than clipping into giant flat planes. */
+  gluLookAt(0,.10f,2.70f,0,.10f,.37f,0,1,0);
  }
  glPolyFmt(POLY_ALPHA(31)|POLY_CULL_NONE);
  frame_vertices=0;frame_polygons=0;
@@ -522,7 +523,7 @@ void world_draw_secret(const Game *s,uint32_t frame,const Roughhouse *r){
   /* Gravity makes the alien ichor creep farther down the eggshell while the
    * camera approaches, using deterministic staggered pixel-world quads. */
   if(frame>=EGG_PUSH_FRAME){
-   float drip=(float)(frame-EGG_PUSH_FRAME)/156.f;
+   float drip=(float)(frame-EGG_PUSH_FRAME)/(float)(EGG_SCARE_FRAME-EGG_PUSH_FRAME);
    if(drip>1.f)drip=1.f;
    soft_mark(-.10f,-.25f-drip*.22f,.653f,.070f,.18f+drip*.30f,4,28,7);
    soft_mark(.17f,-.19f-drip*.12f,.649f,.058f,.10f+drip*.23f,8,30,5);
