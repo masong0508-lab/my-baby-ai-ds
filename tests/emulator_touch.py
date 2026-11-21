@@ -229,6 +229,22 @@ def test_actual_game(path: Path, output: Path) -> dict:
     assert album_diff > 400, (
         f"Shoulder shortcut failed to open ending scrapbook ({album_diff})"
     )
+    stylus_tap(emu, 221, 43)
+    album_second_page = picture(emu, output, "game_album_page_2")
+    album_next_diff = difference(
+        album, album_second_page, (0, 192 + 32, 256, 192 + 171)
+    )
+    assert album_next_diff > 200, (
+        f"Scrapbook NEXT failed to show second four memories ({album_next_diff})"
+    )
+    stylus_tap(emu, 34, 43)
+    album_first_page = picture(emu, output, "game_album_page_1_returned")
+    album_previous_diff = difference(
+        album_second_page, album_first_page, (0, 192 + 32, 256, 192 + 171)
+    )
+    assert album_previous_diff > 200, (
+        f"Scrapbook PREV failed to show first four memories ({album_previous_diff})"
+    )
     emu.input.keypad_add_key(keymask(Keys.KEY_B))
     frames(emu, 6)
     emu.input.keypad_rm_key(keymask(Keys.KEY_B))
@@ -338,6 +354,8 @@ def test_actual_game(path: Path, output: Path) -> dict:
         "3D_top_screen_full_height_dark_stripes": len(full_height_stripes),
         "3D_title_top_screen_colors": title_colors,
         "album_screen_changed_pixels": album_diff,
+        "album_next_page_changed_pixels": album_next_diff,
+        "album_previous_page_changed_pixels": album_previous_diff,
         "arcade_next_page_changed_pixels": page_changed,
         "arcade_previous_page_changed_pixels": page_returned,
         "diaper_heading_ink_pixels": dark_ink,
