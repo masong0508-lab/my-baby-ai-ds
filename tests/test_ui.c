@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include "ui.h"
+#include "roughhouse.h"
 static uint16_t screen[256*256];
 /* All rendering must remain inside the 256x192 visible bitmap. Each screen
  * now draws its own complete three-band surface without a blanket clear. */
