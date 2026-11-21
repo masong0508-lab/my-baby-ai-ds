@@ -249,7 +249,51 @@ static void soft_mark(float x,float y,float z,float sx,float sy,
 }
 unsigned world_vertex_count(void){return frame_vertices;}
 unsigned world_polygon_count(void){return frame_polygons;}
-static void room(void){
+/* Four physically anchored hanging charms. One shared parent transform
+ * carries each string and its decoration as one attached mobile element.
+ * Twelve DS-native quads total: no texture, buffer or heap allocation. */
+static void crib_mobile(int tilt){
+ int i;
+ for(i=0;i<4;i++){
+  float arm=-.38f+(float)i*.26f;
+  glPushMatrix();
+  glTranslatef(2.28f+arm,1.25f,-1.43f);
+  glRotateZi(model_angle(tilt+(i&1?-tilt/4:tilt/5)));
+  glBegin(GL_QUADS);
+  color(24,23,19,0);
+  face(-.018f,-.02f,.025f,.018f,-.02f,.025f,
+       .018f,-.24f,.025f,-.018f,-.24f,.025f);
+  color(i&1?27:26,i&1?17:26,i&1?22:14,0);
+  face(0,-.19f,.047f,.14f,-.32f,.047f,
+       0,-.48f,.047f,-.14f,-.32f,.047f);
+  color(i&1?30:20,i&1?26:23,i&1?20:29,0);
+  face(-.045f,-.30f,.053f,.045f,-.30f,.053f,
+       .045f,-.36f,.053f,-.045f,-.36f,.053f);
+  glEnd();
+  frame_vertices+=12;frame_polygons+=3;
+  glPopMatrix(1);
+ }
+}
+/* Pure frame sampler for one intentional slow swing after CRIB is tapped.
+ * At 40 ticks it rests. No repeated rocking and no detached ornaments. */
+int world_crib_mobile_swing(int focus,uint32_t age){
+ int t,e;
+ if(focus!=3||age>=40u)return 0;
+ if(age<10u){
+  t=(int)(age*256u/10u);
+  e=(t*t*(768-2*t)+32768)/65536;
+  return -12*e/256;
+ }
+ if(age<22u){
+  t=(int)((age-10u)*256u/12u);
+  e=(t*t*(768-2*t)+32768)/65536;
+  return -12+20*e/256;
+ }
+ t=(int)((age-22u)*256u/18u);
+ e=(t*t*(768-2*t)+32768)/65536;
+ return 8-8*e/256;
+}
+static void room(int mobile_tilt){
  int i;
  /* Floor/walls/skirting have real thickness and meet at the corners. */
  block(0,-1.43,0,7.0,.25,7.0,24,19,14);
@@ -377,6 +421,7 @@ static void room(void){
  /* Solid mobile support; floating unanchored quads removed. */
  block(2.28,.93,-1.49,.065,.75,.065,24,21,16);
  block(2.28,1.29,-1.49,.91,.07,.10,24,21,16);
+ crib_mobile(mobile_tilt); /* strings originate at the real crib bar */
  for(i=0;i<6;i++)wall_sticker(-.27f+i*.42f,2.34f+(i&1)*.08f,
                                 -3.015f,.11,.11,27,25,19);
  /* Individual decorative labels on the shelf's toy blocks. */
@@ -714,7 +759,7 @@ void world_draw_nursery(const Game *s,uint32_t frame,int activity,
   * the baby or permanently altering care/egg scenes. */
  nursery_ambient=tour_daylight?(tour_lamp_on?2:1):
                  (tour_lamp_on?0:-3);
- room();
+ room(world_crib_mobile_swing(focus,prop_age));
  /* Reset visual state BEFORE drawing baby: the lamp affects room surfaces,
   * but must not tint the actual baby or leak into Toybox / egg replay. */
  nursery_ambient=0;
@@ -755,7 +800,7 @@ void world_draw_roughhouse(const Game *s,uint32_t frame,const Roughhouse *r){
  gluLookAt(.97f,1.05f,3.43f,-.12f,.035f,.17f,0,1,0);
  glPolyFmt(POLY_ALPHA(31)|POLY_CULL_NONE);
  frame_vertices=0;frame_polygons=0;
- room();
+ room(0);
  if(r){
   /* The shadow moves WITH the synthetic doll and tightens as it falls.
    * One floor quad adds no texture VRAM or per-frame image operations. */
@@ -1085,7 +1130,7 @@ void world_draw_secret(const Game *s,uint32_t frame,const Roughhouse *r){
   * only the first three acts. The previous final cut erased the entire
   * room and made the face look like a floating abstract polygon head. */
  nursery_ambient=phase==3u?-6:world_egg_nursery_ambient(frame);
- room();
+ room(0);
  nursery_ambient=0; /* never bleed cinematic dimming into care scenes */
  if(phase<3u){
   if(phase==2u)opened=world_egg_shell_open(frame);
