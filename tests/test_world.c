@@ -263,6 +263,20 @@ int main(void){
   assert(world_vertex_count()<=5000);
   assert(world_polygon_count()<=1850);
  }
+ /* CHAT has three visible syllables at either mood. In particular an
+  * unhappy baby must not produce a full babble soundtrack with an
+  * unmoving flat mouth when nursery audio is enabled. */
+ {
+  unsigned sad_idle,sad_chat;
+  s.mood=10;
+  world_draw_care(&s,15u,0,20u);
+  sad_idle=world_polygon_count();
+  world_draw_care(&s,15u,2,20u);
+  sad_chat=world_polygon_count();
+  assert(sad_chat>sad_idle && sad_chat-sad_idle<=25u);
+  assert(world_vertex_count()<=5000);
+  assert(world_polygon_count()<=1850);
+ }
  /* Normal care gestures should actually alter the infant's mouth geometry:
   * HAPPY CHAT / PLAY displays a connected, shallow open smile. */
  {
