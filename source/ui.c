@@ -1279,10 +1279,10 @@ void ui_draw(const Game *s,const Arcade *a,int view,int selection,
  if(view==2&&a){
   snprintf(cabinet_title,sizeof(cabinet_title),"CABINET %02u/16",
            (unsigned)a->id+1u);
-  screen_title=cabinet_title;
- }else screen_title=view==0?"MY BABY A.I.!":view==1?"BABY ARCADE":
-         view==3?"SAVE MEMORY":view==4?"ENDING!":view==5?"WELCOME":
-         view==6?"MEMORY ALBUM":"TOUCH TEST";
+  screen_title="MINIGAME";
+ }else screen_title=view==0?"CARE":view==1?"ARCADE":
+         view==3?"RESET":view==4?"ENDING":view==5?"WELCOME":
+         view==6?"ALBUM":"TOUCH TEST";
  /* Every screen paints its own content band (y=27..175), and header/foot
   * repaint the other two bands. The previous blanket 256x192 clear was
   * 49,152 redundant 16-bit VRAM writes on every animation refresh. */
@@ -1318,8 +1318,8 @@ void ui_draw(const Game *s,const Arcade *a,int view,int selection,
 }
 int ui_nursery_touch(int x,int y){
  if(x<7||x>=249)return -1;
- if(y>=121&&y<145)return x<127?FEED:CHAT;
- if(y>=148&&y<172)return x<127?PLAY:NAP;
+ if(y>=108&&y<139)return x<128?FEED:CHAT;
+ if(y>=143&&y<174)return x<128?PLAY:NAP;
  return -1;
 }
 int ui_home_navigation(int x,int y){
