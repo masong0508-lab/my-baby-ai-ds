@@ -20,7 +20,7 @@
 #define SAVE_BASE "fat:/my_baby_ai"
 static Game baby;
 static Arcade arc;
-static int storage_ok,view=5,selected,reset_step,last_ending,pose;
+static int storage_ok,view=5,selected,album_page,reset_step,last_ending,pose;
 static int three_d_ready;
 static TouchGate gesture;
 static VirtualStylus vpen;
@@ -80,7 +80,7 @@ int main(void){
  }
  /* Always show a visible title before touching the filesystem or heavy 3D.
   * Some older emulators hang during their emulated DLDI/FAT setup. */
- ui_draw(&baby,&arc,view,selected,last_ending,reset_step,storage_ok,message);
+ ui_draw(&baby,&arc,view,view==6?album_page:selected,last_ending,reset_step,storage_ok,message);
  /* Stay in RAM-only mode until the player explicitly requests save access.
   * New and old .nds game saves remain compatible when FAT is available. */
  while(GAME_LOOP_ACTIVE()){
@@ -134,7 +134,7 @@ int main(void){
     else if(nav==2){end_day();dirty=1;}
    }else if((held&(KEY_L|KEY_R))==(KEY_L|KEY_R)&&game_reset_unlocked(&baby)){
     view=3;reset_step=0;dirty=1;
-   }else if(down&KEY_L){view=6;dirty=1;}
+   }else if(down&KEY_L){view=6;album_page=0;dirty=1;}
    else if(down&KEY_R){
     baby.safe_visuals^=1;
     message=baby.safe_visuals?"QUIET GRAPHICS, SAME GAMEPLAY.":"VISUAL GLITCHES RESTORED.";
@@ -327,8 +327,17 @@ int main(void){
     dirty=1;
    }
   }else if(view==6){
-   if((down&(KEY_B|KEY_START|KEY_A))||tap){
+   if(down&(KEY_B|KEY_START|KEY_A)){
     view=0;message="COLLECTION CLOSED.";dirty=1;
+   }else if(down&(KEY_LEFT|KEY_L)){album_page=0;dirty=1;}
+   else if(down&(KEY_RIGHT|KEY_R)){album_page=1;dirty=1;}
+   else if(tap){
+    int page=ui_album_page_touch(touch.px,touch.py);
+    if(page<0){album_page=0;dirty=1;}
+    else if(page>0){album_page=1;dirty=1;}
+    else if(touch.py>=176){
+     view=0;message="COLLECTION CLOSED.";dirty=1;
+    }
    }
   }else if(view==7){
    if(down&(KEY_B|KEY_SELECT|KEY_START)){view=5;dirty=1;}
