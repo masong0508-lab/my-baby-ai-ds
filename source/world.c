@@ -418,6 +418,14 @@ int world_baby_care_weight(uint32_t age){
 /* Natural 8-tick blink with continuous eyelid height. NAP closes over
  * the same action envelope; opening occurs during gesture recovery.
  * A closed eye is an existing narrow lid, never a floating eyeball. */
+/* Three readable syllable pulses during CHAT. The jaw and tongue share
+ * one existing mouth aperture; no separate facial bits bouncing in space. */
+int world_baby_speech_open(uint32_t age){
+ uint32_t beat;
+ if(age<8u||age>=44u)return 0;
+ beat=(age-8u)%12u;
+ return (int)(beat<=6u?beat:12u-beat)*42;
+}
 int world_baby_lid_open(uint32_t frame,int action,uint32_t age){
  uint32_t beat=frame%173u;
  int openness=256,nap;
@@ -556,11 +564,13 @@ static void baby_model(const Game *s,uint32_t frame,int action,
  soft_mark(-.205f,.734f,.459f,.105f,.014f,17,11,9);
  soft_mark(.205f,.734f,.459f,.105f,.014f,17,11,9);
  ellipse(0,.375f,.467f,.047f,.034f,.019f,31,23,20);
- if(happy&&(action==2||action==3)){
-  /* The cheerful speech/play reaction now has an actual shallow open
-   * mouth and connected rosy tongue, instead of the same frozen line. */
-  ellipse(0,.252f,.451f,.094f,.085f,.020f,12,4,9);
-  soft_mark(0,.212f,.476f,.095f,.025f,30,15,19);
+ if(happy&&(action==2||action==3)&&weight>40){
+  /* Syllabic CHAT jaw, or one broad PLAY smile. Both return to the
+   * original closed grin after the one-shot action recovery. */
+  float speech=action==2?(float)world_baby_speech_open(action_age)/256.f:1.f;
+  float open=.26f+.74f*speech;
+  ellipse(0,.252f,.451f,.094f,.085f*open,.020f,12,4,9);
+  soft_mark(0,.212f,.476f,.095f,.025f*open,30,15,19);
  }else if(happy){
   soft_mark(-.065f,.278f,.444f,.052f,.017f,18,9,11);
   soft_mark(0,.251f,.454f,.081f,.017f,18,9,11);
@@ -864,6 +874,27 @@ int world_egg_eye_glow(uint32_t frame){
 }
 /* Embryo comes forward inside the shell, not through its porcelain lips.
  * Its whole face, eyes and jaw use the same parent model matrix. */
+/* Organic shell breach: cubic smoothstep has zero velocity at each
+ * film beat, unlike the old linear opening with abrupt start/stop. */
+float world_egg_shell_open(uint32_t frame){
+ float t;
+ if(frame<=EGG_PUSH_FRAME)return 0.f;
+ if(frame>=EGG_SCARE_FRAME)return 1.f;
+ t=(float)(frame-EGG_PUSH_FRAME)/
+   (float)(EGG_SCARE_FRAME-EGG_PUSH_FRAME);
+ return t*t*(3.f-2.f*t);
+}
+/* A restrained asymmetric whole-head reaction. All eyes/teeth/jaw move
+ * under the SAME model matrix; no detached moving features or jitter. */
+int world_egg_head_tilt(uint32_t frame){
+ uint32_t elapsed,beat;
+ if(frame<EGG_SCARE_FRAME)return 0;
+ elapsed=frame-EGG_SCARE_FRAME;
+ if(elapsed<=9u)return -3+(int)(elapsed*5u/9u);
+ if(elapsed<=22u)return 2-(int)((elapsed-9u)*2u/13u);
+ beat=(elapsed-22u)%80u;
+ return (int)(beat<40u?beat/20u:(80u-beat)/20u)-1;
+}
 float world_egg_embryo_approach(uint32_t frame){
  uint32_t elapsed;
  if(frame<=EGG_PUSH_FRAME)return 0.f;
@@ -922,11 +953,7 @@ void world_draw_secret(const Game *s,uint32_t frame,const Roughhouse *r){
  room();
  nursery_ambient=0; /* never bleed cinematic dimming into care scenes */
  if(phase<3u){
-  if(phase==2u){
-   opened=(float)(frame-EGG_PUSH_FRAME)/
-          (float)(EGG_SCARE_FRAME-EGG_PUSH_FRAME);
-   if(opened>1.f)opened=1.f;
-  }
+  if(phase==2u)opened=world_egg_shell_open(frame);
   block(0,-1.09f,-.26f,1.91f,.13f,1.45f,9,13,13);
   flat_floor(0,-1.016f,-.23f,1.67f,1.18f,5,7,8);
   /* The dark backing is a SINGLE continuous incubation sac, not pale
@@ -990,6 +1017,7 @@ void world_draw_secret(const Game *s,uint32_t frame,const Roughhouse *r){
    * A single parent transform lunges ALL facial components together. */
   glPushMatrix();
   glTranslatef(0.f,0.f,world_egg_creature_depth(frame));
+  glRotateZ(degreesToAngle(world_egg_head_tilt(frame)));
   soft_head(0,.085f,.34f,1.00f,1.08f,.51f,5,10,12);
   soft_head(0,.68f,.36f,.66f,.29f,.28f,7,15,14);
   alien_face_facets();
