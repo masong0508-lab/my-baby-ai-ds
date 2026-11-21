@@ -1,6 +1,8 @@
 #!/bin/sh
 set -eu
 cd "$(dirname "$0")/.."
+# Validate DS ROM metadata without requiring a cross-compiler or emulator.
+python3 tests/test_rom_identity.py
 cc -std=c11 -Wall -Wextra -Werror -pedantic -O2 -Iinclude source/game.c source/dialogue.c source/save.c tests/test_core.c -o /tmp/my_baby_ai_core_test
 cc -std=c11 -Wall -Wextra -Werror -pedantic -O2 -Iinclude source/roughhouse.c source/game.c source/dialogue.c source/save.c tests/test_roughhouse.c -o /tmp/my_baby_ai_secret_egg_test
 /tmp/my_baby_ai_secret_egg_test
