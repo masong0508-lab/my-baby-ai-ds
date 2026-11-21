@@ -644,11 +644,12 @@ void world_draw_secret(const Game *s,uint32_t frame,const Roughhouse *r){
  /* Keep the real nursery where the player last saw it: the patterned
   * rug, window and crib provide persistent parallax behind the synthetic
   * shell. Final scare still cuts to a stark silhouette for contrast. */
- if(phase<3u){
-  nursery_ambient=world_egg_nursery_ambient(frame);
-  room();
-  nursery_ambient=0; /* don't dim the specimen or subsequent normal views */
- }else block(0,0,-2.8f,11,8,.08f,3,5,9);
+ /* Keep the nursery around the alien egg for the COMPLETE film, not
+  * only the first three acts. The previous final cut erased the entire
+  * room and made the face look like a floating abstract polygon head. */
+ nursery_ambient=phase==3u?-6:world_egg_nursery_ambient(frame);
+ room();
+ nursery_ambient=0; /* never bleed cinematic dimming into care scenes */
  if(phase<3u){
   if(phase==2u){
    opened=(float)(frame-EGG_PUSH_FRAME)/
@@ -720,6 +721,20 @@ void world_draw_secret(const Game *s,uint32_t frame,const Roughhouse *r){
    ellipse(.27f,-.94f,.63f,.14f,.026f,.045f,14,31,10);
   }
  }else{
+  /* The egg DOES NOT vanish on the jump-scare cut. Two separate
+   * porcelain wings frame the creature with a black incubation recess
+   * between them, while the original crib, window and dresser persist
+   * as real 3D nursery geography behind the subject. These shapes
+   * are static DS geometry and use no extra texture/buffer allocations. */
+  block(0,-1.08f,-.28f,2.10f,.16f,1.44f,10,13,12);
+  soft_head(0,-.10f,-.08f,.86f,1.12f,.23f,1,3,7);
+  soft_head(-.92f,-.08f,.29f,.35f,1.15f,.22f,28,29,24);
+  soft_head(.92f,-.08f,.29f,.35f,1.15f,.22f,27,28,23);
+  /* Acid-green rim/rivulets tell the same story as the push-in. */
+  soft_mark(-.67f,.12f,.535f,.055f,.54f,7,30,9);
+  soft_mark(.67f,.02f,.535f,.055f,.56f,6,31,9);
+  soft_mark(-.67f,-.36f,.540f,.070f,.28f,15,31,8);
+  soft_mark(.67f,-.38f,.540f,.062f,.26f,17,31,9);
   /* The reveal is a DESIGNED creature portrait rather than overlapping
    * random ellipsoids: cranium, socketed eyes, slit pupils, jaw and teeth.
    * A single parent transform lunges ALL facial components together. */
