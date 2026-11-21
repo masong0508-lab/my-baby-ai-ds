@@ -716,7 +716,7 @@ void world_draw_nursery(const Game *s,uint32_t frame,int activity,
 }
 void world_draw_care(const Game *s,uint32_t frame,int activity,
                      uint32_t action_age){
- world_draw_nursery(s,frame,activity,action_age,-1,-1,16u,0,1,40u,NULL);
+ world_draw_nursery(s,frame,activity,action_age,-1,-1,16u,0,1,40u,0);
 }
 /* Compatibility for existing host callers and noninteractive views: they
  * sample the deliberately posed hold, while live gameplay uses action age. */
