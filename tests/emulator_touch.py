@@ -225,9 +225,13 @@ def test_actual_game(path: Path, output: Path) -> dict:
                     longest = max(longest, xx - start)
                     start = -1
         return longest
-    dresser_streak = longest_pale_run((9, 75, 112, 112), (245, 218, 178))
+    # At y=75..81 the real dresser TOP is a legitimately continuous 40px
+    # ivory slab. The reported corruption was an isolated 91px ribbon at
+    # y=89, across the drawer, wall and infant cheek. Check the corruption
+    # height only, and tighten the threshold from 40px to 10px.
+    dresser_streak = longest_pale_run((9, 84, 112, 112), (245, 218, 178))
     wall_streak = longest_pale_run((149, 77, 220, 115), (232, 220, 190))
-    assert dresser_streak < 40, (
+    assert dresser_streak < 10, (
         f"Bright dresser/face surface streak still visible ({dresser_streak}px)"
     )
     assert wall_streak < 28, (
