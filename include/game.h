@@ -35,6 +35,10 @@ const char *game_care(Game *s,Care action);
 int game_room_quiet_rest(Game *s,int daylight,int lamp_on);
 unsigned game_glitch_tier(const Game *s);
 int game_unlocked(const Game *s,int id);
+/* One shared source of truth for what a locked cabinet requires.
+ * Returns 0 for the eight free cabinets or an invalid id. */
+int game_unlock_requirements(int id,unsigned *wins,
+                             unsigned *dollars,unsigned *favors);
 int game_unlock(Game *s,int id);
 int game_end_day(Game *s);
 const char *game_ending_name(int ending);
