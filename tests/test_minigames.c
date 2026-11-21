@@ -174,8 +174,9 @@ static void naptime(void){
  assert(a.mistakes==1&&a.round==0); /* Early wake-up costs a strike. */
  for(i=0;i<4;i++){
   unsigned green_start=a.hold_frames*38u/100u;
-  while(a.active&&a.elapsed%a.hold_frames!=green_start)
-   game_arcade_tick(&g,&a);
+  /* Advance at least once: subsequent successes need a NEW lullaby cycle. */
+  do{game_arcade_tick(&g,&a);}
+  while(a.active&&a.elapsed%a.hold_frames!=green_start);
   assert(a.active);
   game_arcade_input(&g,&a,0);
   assert(a.round==(unsigned)(i+1));
