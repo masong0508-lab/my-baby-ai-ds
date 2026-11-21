@@ -670,11 +670,18 @@ def test_actual_game(path: Path, output: Path) -> dict:
         f"({recognizable_features} dark facial/hair pixels)"
     )
 
+    last_approach = None
     def seek_phase(target: int, name: str):
+        nonlocal last_approach
         for _ in range(100):
             frames(emu, 12)
             sample = emu.screenshot().convert("RGB")
             current = movie_stage(sample)
+            if target == 3 and current == 2:
+                # Keep the LAST real pre-scare DS frame. Screenshot at the
+                # normal cadence, rather than estimating film time from
+                # wall-clock FPS or synthesizing a mockup.
+                last_approach = sample
             if current == target:
                 return picture(emu, output, name)
             if current > target:
@@ -729,6 +736,17 @@ def test_actual_game(path: Path, output: Path) -> dict:
         "Eye-anticipation frame exited the egg camera sequence"
     )
     egg_scare = seek_phase(3, "game_egg_jump_scare")
+    assert last_approach is not None, (
+        "Did not observe a late in-egg anticipation frame before scare"
+    )
+    assert movie_stage(last_approach) == 2
+    last_approach.save(output / "game_egg_final_recoil_before_cut.png")
+    recoil_changed = difference(
+        egg_anticipation, last_approach, (55, 18, 200, 172)
+    )
+    assert recoil_changed > 30, (
+        f"Final egg approach/recoil appears visually frozen ({recoil_changed})"
+    )
     scare_difference = difference(
         egg_push, egg_scare, (8, 7, 248, 182)
     )
@@ -895,6 +913,7 @@ def test_actual_game(path: Path, output: Path) -> dict:
         "Egg_dark_cavity_pixels": cavity_dark_pixels,
         "Egg_visible_porcelain_pixels": ivory_shell_pixels,
         "Alien_jump_scare_changed_pixels": scare_difference,
+        "Egg_pre_scare_motion_changed_pixels": recoil_changed,
         "Jump_scare_porcelain_left_pixels": scare_shell_left,
         "Jump_scare_porcelain_right_pixels": scare_shell_right,
         "Jump_scare_right_eye_pixels": right_iris_pixels,
