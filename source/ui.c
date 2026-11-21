@@ -207,6 +207,24 @@ static void meter(int x,int y,int value,uint16_t fill){
  solid(x+2,y+2,(v*67)/100,4,fill);
  solid(x+2,y+2,(v*67)/100,1,WHITE);
 }
+/* A stat reads numerically as well as by color at native 256x192.
+ * The small ivory counter is the same size in every health row. */
+static void meter_value(int x,int y,int value,uint16_t fill){
+ char tmp[8];
+ int bounded=value<0?0:value>100?100:value;
+ meter(x,y,bounded,fill);
+ solid(x+48,y+1,21,6,IVORY);
+ snprintf(tmp,sizeof(tmp),"%d",bounded);
+ fit(x+50,y+1,tmp,INK,3);
+}
+/* Thin highlights give the four large touch cards physical depth without
+ * any new tiles, sprites, buffers or changes to their touch rectangles. */
+static void action_gloss(int x,int y,int right,uint16_t trim){
+ solid(x+6,y+2,100,2,WHITE);
+ solid(x+6,y+26,100,2,trim);
+ solid(x+right-8,y+5,3,3,WHITE);
+ solid(x+right-9,y+10,2,2,WHITE);
+}
 static void insignia(int x,int y,uint16_t c){
  solid(x+3,y,3,3,c);
  solid(x,y+3,9,3,c);
@@ -257,13 +275,25 @@ static void icon_nap(int x,int y){
 }
 /* The nursery follows an actual DS pet-care layout:
  * dialogue, a compact health summary, then FOUR large actions. */
+/* Art-directed nursery-care touchscreen. The original interactive
+ * FEED/CHAT/PLAY/NAP rectangles and the three-part footer dock are exact.
+ * 5-bit color gradients are suggested with two broad pixel bands, not a
+ * slow per-pixel compositor. Bitmap repaints occur only on state changes. */
 static void home(const Game *s,int can_save,const char *message){
  int i,n,start=0,split=0;
  const char *speech=message?message:"";
  char first[37],second[37];
- solid(0,27,W,149,IVORY);
- panel(8,31,240,34,WHITE,TEAL);
- fit(17,35,"BABY SAYS",TEAL,12);
+ solid(0,27,W,149,LILAC);
+ solid(0,27,W,41,BLUSH);
+ /* Playful but slightly uncanny voice-message panel, inspired by the care
+  * art target. Text stays at the existing safe one-pixel font grid. */
+ panel(8,31,240,34,WHITE,PURPLE);
+ solid(13,34,24,14,LILAC);
+ solid(18,36,14,10,PINK);
+ solid(20,38,3,3,PURPLE);
+ solid(27,38,3,3,PURPLE);
+ fit(42,35,"BABY SAYS...",PURPLE,15);
+ solid(42,43,192,1,PINK);
  n=(int)strlen(speech);
  if(n>36){
   split=36;
@@ -275,34 +305,42 @@ static void home(const Game *s,int can_save,const char *message){
  while(speech[start]==' ')start++;
  for(i=0;speech[start+i]&&i<36;i++)second[i]=speech[start+i];
  second[i]=0;
- fit(17,45,first,INK,36);
- if(second[0])fit(17,55,second,INK,36);
- panel(8,68,240,36,WHITE,LILAC);
- fit(17,72,"HUNGER",PURPLE,7);meter(61,70,s->hunger,ROSE);
- fit(144,72,"MOOD",PURPLE,5);meter(178,70,s->mood,GREEN);
- fit(17,85,"ENERGY",PURPLE,7);meter(61,83,s->energy,TEAL);
- fit(144,85,"CHAOS",PURPLE,5);meter(178,83,s->chaos,GOLD);
+ fit(17,47,first,INK,36);
+ if(second[0])fit(17,56,second,INK,36);
+ /* Numerical overlays keep all FIVE stats legible when a bar is nearly
+  * empty. Existing positions are unchanged for returning players. */
+ panel(8,68,240,36,WHITE,PURPLE);
+ fit(17,72,"HUNGER",PURPLE,7);meter_value(61,70,s->hunger,ROSE);
+ fit(144,72,"MOOD",PURPLE,5);meter_value(178,70,s->mood,GREEN);
+ fit(17,85,"ENERGY",PURPLE,7);meter_value(61,83,s->energy,TEAL);
+ fit(144,85,"CHAOS",PURPLE,5);meter_value(178,83,s->chaos,GOLD);
  fit(17,96,"GLITCH",MUTED,7);
- solid(62,97,175,4,GRAY);
+ solid(62,97,175,5,GRAY);
  solid(62,97,s->corruption*175/100,4,ROSE);
- /* The icon is secondary; 2x words are the primary tap targets. */
- /* Two-line action cards explain the ACTUAL state effects rather than
-  * leaving a new player to guess. The 4 established touch rectangles do
-  * not move by a pixel. Big 2x verbs + smaller quantified consequences. */
+ /* Large, contrasted cards; gradients and icons drawn entirely with
+  * the existing single-screen bitmap primitives, no texture assets. */
+ solid(8,109,116,30,SHADOW);
  capsule(8,108,116,30,SKY,BLUE);
+ action_gloss(8,108,116,TEAL);
  icon_bottle(12,110);label(50,111,"FEED",INK,2,4);
  fit(50,128,"HUNGER -30",BLUE,12);
+ solid(132,109,116,30,SHADOW);
  capsule(132,108,116,30,LEMON,GOLD);
+ action_gloss(132,108,116,GOLD);
  icon_chat(135,110);label(173,111,"CHAT",INK,2,4);
  fit(172,128,"MOOD +7",PURPLE,10);
+ solid(8,144,116,30,SHADOW);
  capsule(8,143,116,30,MINT,GREEN);
+ action_gloss(8,143,116,GREEN);
  icon_play(12,144);label(50,146,"PLAY",INK,2,4);
  fit(50,163,"MOOD +10",GREEN,10);
+ solid(132,144,116,30,SHADOW);
  capsule(132,143,116,30,PINK,ROSE);
+ action_gloss(132,143,116,ROSE);
  icon_nap(135,145);label(172,146,"NAP",INK,2,3);
  fit(172,163,"ENERGY +25",PURPLE,11);
- /* Talking-Tom-style three-choice bottom dock. Choose TOYBOX before
-  * any slapstick interaction: CARE and GAME stay separate and accessible. */
+ /* The center dock remains the hidden Toybox entry; introducing decorative
+  * details must never move ARCADE / TOYBOX / END DAY hitboxes. */
  foot(PURPLE);
  capsule(7,178,80,13,NIGHT,TEAL);
  fit(20,183,"ARCADE",WHITE,10);
@@ -1400,6 +1438,23 @@ static void roughhouse_screen(int encoded){
  foot(PURPLE);
  fit(7,181,"A USE  L/R TOOL  B BACK  Y SFX",WHITE,40);
 }
+/* Containment-monitor staging. Layout is intentionally compact enough
+ * for a real DS: broad 2x warning, high-contrast readout, tiny wireframe
+ * silhouette and three ACTUAL tappable controls. */
+static void egg_icon(int x,int y,int scary){
+ uint16_t c=scary?GREEN:TEAL;
+ outline(x+3,y+1,39,42,c);
+ /* Silhouette, pointed eyes, jaw and four unmistakable fangs. */
+ solid(x+12,y+8,22,3,c);
+ solid(x+8,y+11,30,15,NIGHT);
+ solid(x+10,y+13,12,5,c);solid(x+25,y+13,12,5,c);
+ solid(x+14,y+14,4,4,INK);solid(x+29,y+14,4,4,INK);
+ solid(x+11,y+25,25,4,c);
+ solid(x+13,y+29,21,9,INK);
+ solid(x+13,y+29,3,7,IVORY);solid(x+20,y+29,3,8,IVORY);
+ solid(x+28,y+29,3,8,IVORY);solid(x+34,y+29,3,7,IVORY);
+ solid(x+16,y+38,15,2,c);
+}
 static void egg_scene_screen(int selection){
  int frame=selection&0xffff;
  int paused=(selection&EGG_FILM_PAUSED_FLAG)!=0;
@@ -1407,40 +1462,63 @@ static void egg_scene_screen(int selection){
            frame<(int)EGG_PUSH_FRAME?1:
            frame<(int)EGG_SCARE_FRAME?2:3;
  int i;
- /* The lower screen belongs to the SAME horror scene as the upper screen.
-  * Deep black/green monitoring UI replaces the old pastel-pink dialogue
-  * card that clashed with the creature and made it feel like a toy menu. */
+ uint16_t warning=phase==3?ROSE:GREEN;
  solid(0,27,256,149,NIGHT);
- panel(10,35,236,130,INK,phase==3?ROSE:TEAL);
- capsule(21,45,214,28,phase==3?ROSE:NIGHT,phase==3?PINK:GREEN);
- label(phase==3?43:phase==2?57:phase==1?59:55,52,
-       phase==3?"IT CAN SEE YOU":
-       phase==2?"COME CLOSER":
-       phase==1?"DO NOT OPEN":"NO SIGNAL",WHITE,2,14);
- fit(27,81,"SPECIMEN 09 / UNIDENTIFIED",MINT,35);
- solid(22,98,4,31,phase==3?ROSE:GREEN);
+ panel(8,30,240,142,INK,warning);
+ solid(12,33,232,2,TEAL);
+ fit(17,37,"INCUBATOR",WHITE,12);
+ fit(142,37,"SPECIMEN 09",MINT,16);
+ /* Wide alert banner is intentionally the screen's focal heading. */
+ capsule(14,49,228,27,phase==3?ROSE:PURPLE,phase==3?PINK:GREEN);
+ if(phase==3)label(20,55,"CONTAINMENT BREACH",WHITE,2,18);
+ else if(phase==2)label(37,55,"IT IS AWAKE",WHITE,2,13);
+ else if(phase==1)label(31,55,"SHELL BREACH",WHITE,2,14);
+ else label(43,55,"SIGNAL FOUND",WHITE,2,13);
+ fit(18,82,"SPECIMEN 09 / UNIDENTIFIED",MINT,29);
+ solid(18,95,3,29,phase==3?ROSE:GREEN);
  if(phase==0){
-  fit(34,100,"SYNTHETIC SHELL BREACH",WHITE,34);
-  fit(34,116,"A SECOND HEARTBEAT.",LEMON,30);
+  fit(27,96,"SYNTHETIC SHELL",WHITE,26);
+  fit(27,109,"SECOND HEARTBEAT",LEMON,26);
  }else if(phase==1){
-  fit(34,100,"PORCELAIN SHELL SEPARATING",WHITE,35);
-  fit(34,116,"GREEN BIOFLUID DETECTED",LEMON,31);
+  fit(27,96,"PORCELAIN FRACTURED",WHITE,26);
+  fit(27,109,"BIOFLUID DETECTED",LEMON,26);
  }else if(phase==2){
-  fit(34,100,"SOMETHING IS LOOKING BACK",WHITE,35);
-  fit(34,116,"DO NOT ENTER THE CAVITY",LEMON,31);
+  fit(27,96,"EYES IN THE CAVITY",WHITE,26);
+  fit(27,109,"SOMETHING SEES YOU",LEMON,26);
  }else{
-  fit(34,100,"SUBJECT 09 HAS RECOGNIZED YOU",WHITE,35);
-  fit(34,116,"CONTAINMENT HAS FAILED",LEMON,31);
+  fit(27,96,"IT RECOGNIZED YOU",WHITE,26);
+  fit(27,109,"CONTAINMENT FAILED",PINK,26);
  }
- /* Four non-blinking film-phase segments remain at the exact positions
-  * used by the native DeSmuME phase assertions. */
+ egg_icon(190,83,phase>=2);
+ /* The meter is at y=137, x=31+52*i by contract: emulator playback tests
+  * identify the four phases using THESE pixels. Do not move them. */
  for(i=0;i<4;i++)solid(27+i*52,136,45,3,i<=phase?LEMON:GRAY);
- fit(paused?42:45,152,paused?"FILM PAUSED - X RESUME":"TAP READOUT TO ADVANCE",
-     paused?LEMON:MINT,39);
+ /* Below the fixed phase meter: microtelemetry like the art target.
+  * Tiny bands remain readable without constantly re-uploading 256x192. */
+ outline(15,143,73,17,TEAL);
+ outline(92,143,72,17,TEAL);
+ outline(168,143,74,17,TEAL);
+ fit(20,146,"VITALS",MINT,10);
+ fit(97,146,"SIGNAL",MINT,10);
+ fit(174,146,phase==3?"DANGER":"BREACH",phase==3?PINK:MINT,10);
+ solid(20,155,6,1,GREEN);solid(26,152,2,4,GREEN);
+ solid(28,155,5,1,GREEN);solid(33,151,2,5,GREEN);
+ solid(35,155,12,1,GREEN);solid(47,154,2,3,GREEN);
+ solid(49,155,28,1,GREEN);
+ for(i=0;i<6;i++)solid(98+i*9,157-i,6,i+1,GREEN);
+ for(i=0;i<5;i++)solid(175+i*12,155,9,2,i<=phase?ROSE:GRAY);
+ fit(paused?76:43,163,
+     paused?"FILM PAUSED":phase==3?"SUBJECT AT CAMERA":"TAP READOUT FOR NEXT",
+     paused?LEMON:phase==3?PINK:MINT,35);
+ /* These are actual footer controls, aligned to their unchanged three
+  * touch zones. B/Start, X, and A remain direct button equivalents. */
  foot(PURPLE);
- fit(9,181,"B SKIP",WHITE,10);
- fit(94,181,paused?"X RESUME":"X PAUSE",paused?LEMON:WHITE,12);
- fit(190,181,"A NEXT",WHITE,10);
+ capsule(4,178,79,13,NIGHT,TEAL);
+ capsule(88,178,79,13,paused?ROSE:NIGHT,paused?PINK:TEAL);
+ capsule(173,178,79,13,NIGHT,GREEN);
+ fit(23,181,"B SKIP",WHITE,9);
+ fit(105,181,paused?"X RESUME":"X PAUSE",WHITE,9);
+ fit(194,181,"A NEXT",WHITE,9);
 }
 /* Redraw diagnostic panel once on entry, then update only tiny regions.
  * Repainting 256x192 VRAM every stylus-held frame was tearing/flickering
