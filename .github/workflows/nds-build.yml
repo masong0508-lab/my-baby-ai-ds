@@ -14,6 +14,32 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  host-sanitizers:
+    name: Check original C game engine under ASan and UBSan
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      # This same tests/run.sh list also runs in the devkitARM container
+      # without these optional flags. Test sets cannot silently diverge.
+      MBAI_HOST_CC: cc
+      MBAI_HOST_FLAGS: "-O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all"
+      ASAN_OPTIONS: "detect_leaks=1:halt_on_error=1"
+      UBSAN_OPTIONS: "halt_on_error=1:print_stacktrace=1"
+    steps:
+      - name: Check out identical tested game revision
+        uses: actions/checkout@v4
+      - name: Check native sanitizer availability
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cc --version
+          python3 --version
+      - name: Exercise game, UI, graphics, input and save stress under sanitizers
+        shell: bash
+        run: |
+          set -euxo pipefail
+          sh tests/run.sh
+
   test-and-build:
     name: Compile My Baby A.I. (.nds)
     runs-on: ubuntu-latest
