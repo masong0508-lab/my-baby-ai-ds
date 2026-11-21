@@ -21,8 +21,9 @@ int main(void){
  assert(!touch_gate_step(&t,0,0,0));
  assert(!touch_gate_step(&t,1,0,0));
  assert(!touch_gate_step(&t,1,0,0));
+ assert(!touch_gate_coordinates_ready(&t,1,0,0)); /* only two held frames */
+ assert(touch_gate_step(&t,1,0,0)); /* third frame: legitimate top-left point */
  assert(touch_gate_coordinates_ready(&t,1,0,0));
- assert(touch_gate_step(&t,1,0,0)); /* legitimate upper-left point */
  assert(!touch_gate_step(&t,1,-1,25));
  puts("PASS: delayed stylus coordinates, one action per touch, release re-arm");
  return 0;
