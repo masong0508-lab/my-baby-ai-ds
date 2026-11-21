@@ -1150,6 +1150,29 @@ float world_egg_embryo_breath(uint32_t frame){
  uint32_t phase=frame%64u;
  return (float)(phase<32u?phase:64u-phase)*.0005f;
 }
+/* The egg is observing the PLAYER, not merely rocking in place.
+ * Pure integer gaze keyframes keep both pupils and their catchlights on
+ * a shared motion track: look aside, recognize the approaching camera,
+ * then lock dead ahead during the lunge. 1 unit is 0.005 world units in
+ * the close-up and smaller in the distant embryo shot. */
+int world_egg_gaze(uint32_t frame){
+ uint32_t age,phase;
+ if(frame<EGG_PUSH_FRAME)return 0;
+ if(frame<EGG_SCARE_FRAME){
+  age=frame-EGG_PUSH_FRAME;
+  if(age<12u)return -(int)age;
+  if(age<48u)return -12;
+  if(age<72u)return -12+(int)((age-48u)/2u);
+  if(age<112u)return 0;
+  return (int)((age-112u)*8u/
+               (EGG_SCARE_FRAME-EGG_PUSH_FRAME-112u));
+ }
+ age=frame-EGG_SCARE_FRAME;
+ if(age<9u)return 8-(int)(age*8u/9u);
+ if(age<23u)return 0;
+ phase=(age-23u)%64u;
+ return (int)((phase<32u?phase:64u-phase)/11u)-1;
+}
 /* A low-frequency cavity membrane motion. The dark sac remains part of
  * the same fixed geometry; no independent floating object or particles. */
 float world_egg_membrane_pulse(uint32_t frame){
@@ -1278,6 +1301,7 @@ void world_draw_secret(const Game *s,uint32_t frame,const Roughhouse *r){
   /* A subtle moving silhouette inside makes the chamber feel inhabited. */
   {
    float sway=phase==2u?opened*.032f:0.f;
+   float gaze=(float)world_egg_gaze(frame)*.0014f;
    int glow=world_egg_eye_glow(frame);
    glPushMatrix();
    glTranslatef(0.f,world_egg_embryo_breath(frame),
@@ -1291,14 +1315,14 @@ void world_draw_secret(const Game *s,uint32_t frame,const Roughhouse *r){
            5+glow*19/31,7+glow*23/31,5+glow*12/31);
    ellipse(.096f+sway,-.07f,.652f,.055f,.044f,.012f,
            5+glow*19/31,7+glow*23/31,5+glow*12/31);
-   soft_mark(-.086f+sway,-.066f,.667f,.025f,.042f,3,6,7);
-   soft_mark(.099f+sway,-.066f,.667f,.025f,.042f,3,6,7);
+   soft_mark(-.086f+sway+gaze,-.066f,.667f,.025f,.042f,3,6,7);
+   soft_mark(.099f+sway+gaze,-.066f,.667f,.025f,.042f,3,6,7);
    soft_mark(sway,-.36f,.650f,.083f,.15f,0,1,3);
    /* Catchlights follow the same rise and fall as the eye surfaces,
     * without an extra polygon or high-frequency strobe effect. */
-   soft_mark(-.104f+sway,-.092f,.682f,.038f,.026f,
+   soft_mark(-.104f+sway+gaze,-.092f,.682f,.038f,.026f,
              7+glow*16/31,9+glow*22/31,4+glow*6/31);
-   soft_mark(.078f+sway,-.092f,.682f,.038f,.026f,
+   soft_mark(.078f+sway+gaze,-.092f,.682f,.038f,.026f,
              7+glow*16/31,9+glow*22/31,4+glow*6/31);
    glPopMatrix(1);
   }
@@ -1343,14 +1367,17 @@ void world_draw_secret(const Game *s,uint32_t frame,const Roughhouse *r){
   ellipse(.36f,.28f,.832f,.286f,.192f,.048f,1,3,6);
   ellipse(-.36f,.276f,.887f,.195f,.117f,.022f,17,31,7);
   ellipse(.36f,.276f,.887f,.195f,.117f,.022f,17,31,7);
-  /* Pupils subtly converge toward the camera during the one-shot
-   * lunge while remaining wholly inside their parent eye sockets. */
+  /* Gaze pulls both irises and catchlights together: first sideways,
+   * then straight into the camera as the skull lunges. The original
+   * small convergence remains, and both pupils stay inside their
+   * bright eye surfaces at every frame (no detached glints). */
   {
    float focus=world_egg_creature_depth(frame)*.08f;
-   ellipse(-.346f+focus,.278f,.918f,.062f,.117f,.010f,1,4,5);
-   ellipse(.374f-focus,.278f,.918f,.062f,.117f,.010f,1,4,5);
-   soft_mark(-.398f+focus,.325f,.934f,.044f,.031f,31,31,24);
-   soft_mark(.324f-focus,.325f,.934f,.044f,.031f,31,31,24);
+   float gaze=(float)world_egg_gaze(frame)*.005f;
+   ellipse(-.346f+focus+gaze,.278f,.918f,.062f,.117f,.010f,1,4,5);
+   ellipse(.374f-focus+gaze,.278f,.918f,.062f,.117f,.010f,1,4,5);
+   soft_mark(-.398f+focus+gaze,.325f,.934f,.044f,.031f,31,31,24);
+   soft_mark(.324f-focus+gaze,.325f,.934f,.044f,.031f,31,31,24);
   }
   /* Nose bridge and cheek masses define where the mouth belongs. */
   soft_mark(0,-.002f,.879f,.074f,.26f,14,22,15);
