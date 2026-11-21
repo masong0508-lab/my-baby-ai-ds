@@ -248,17 +248,15 @@ unsigned world_polygon_count(void){return frame_polygons;}
 static void room(void){
  int i;
  /* Floor/walls/skirting have real thickness and meet at the corners. */
- block(0,-1.37,0,7.0,.25,7.0,24,19,14);
- block(0,.67,-3.23,7.0,4.05,.18,29,28,25);
+ block(0,-1.43,0,7.0,.25,7.0,24,19,14);
+ block(0,.67,-3.29,7.0,4.05,.18,29,28,25);
  block(-3.45,.67,0,.18,4.05,7.0,25,27,25);
  nursery_light_planes();
  block(0,-1.15,-3.12,6.9,.16,.12,24,22,19);
  block(-3.32,-1.15,0,.12,.16,6.9,24,22,19);
- /* Wainscot panel on the large side wall; a few restrained surfaces give
-  * the room structure, unlike the old solid saturated wall plane. */
- side_wall_mark(-3.33f,.20f,-.96f,2.05f,.045f,21,24,21);
- side_wall_mark(-3.33f,-.57f,-.96f,2.05f,.035f,21,24,21);
- /* Removed two hairline-width vertical wainscot details that alias. */
+ /* The old .035/.045 tall wainscot strips projected into unstable
+  * one-pixel rulers over the dresser at 256x192. Clean broad painted
+  * plaster replaces them: no more floating horizontal lines. */
  /* Continuous nursery floor: removed 14 subpixel strips. Those long
   * narrow decals produced vertical seams across the DS floor image. */
  /* One darkened ground plane under the play mat gives contact shadow
@@ -312,8 +310,13 @@ static void room(void){
  block(-2.55,-.48,-.48,1.20,1.36,.94,27,24,20);
  block(-2.55,.23,-.48,1.36,.16,1.11,29,26,22);
  for(i=0;i<3;i++){
-  block(-2.55,-.13f-i*.36f,.011,1.05,.28,.05,29,27,23);
-  ellipse(-2.55,-.13f-i*.36f,.063,.059,.055,.04,28,13,18);
+  const float drawer_y=-.13f-(float)i*.36f;
+  /* Wide, intentionally separated cabinet faces instead of six-faced
+   * shallow cuboids with subpixel side caps. No coplanar drawer edges.
+   * Two FRONT quads at 0.068/0.095 world-Z replace each old 6-face box. */
+  wall_sticker(-2.55f,drawer_y,.068f,1.03f,.305f,21,18,16);
+  wall_sticker(-2.55f,drawer_y,.095f,.970f,.243f,30,27,23);
+  ellipse(-2.55f,drawer_y,.128f,.073f,.054f,.038f,27,13,18);
  }
  block(-2.55,.42,-.48,.14,.28,.14,29,23,21);
  ellipse(-2.55,.65,-.48,.34,.16,.32,31,25,15);
@@ -321,10 +324,10 @@ static void room(void){
   * noisy fake bloom or per-frame translucent screen effects. */
  ellipse(-2.55,.76,-.48,.20,.06,.18,31,30,20);
  wall_sticker(-2.73f,.78f,-.012f,.40f,.03f,31,25,18);
- /* Warm white wall panels and a subtle horizontal chair rail ground
-  * the room visually without large textures or extra 3D geometry. */
- wall_sticker(.35f,-.69f,-3.125f,5.65f,.035f,23,23,20);
- wall_sticker(.36f,-1.01f,-3.125f,5.65f,.04f,24,23,21);
+ /* REMOVE 5.6-unit, one-pixel wall ribbons. They z-fought with the
+  * color-interpolated back wall and made bright 40+ pixel horizontal
+  * cracks through the dresser and crib in real DeSmuME captures.
+  * Plaster and crib geometry still define the room naturally. */
  /* 3D crib with rails on two visible sides, mattresses and legs. */
  block(2.28,-.64,-1.49,1.49,.20,1.61,29,28,24);
  block(2.28,-.48,-1.49,1.23,.10,1.35,31,20,24);
@@ -338,10 +341,12 @@ static void room(void){
  block(1.55,-.14,-1.49,.13,1.13,1.72,30,29,25);
  block(3.03,-.14,-1.49,.13,1.13,1.72,30,29,25);
  /* The nursery's slightly too-cheerful flower decals. */
- tulip(-.44f,.84f,-3.122f,1);
- tulip(.12f,.76f,-3.122f,0);
- tulip(.74f,.70f,-3.122f,1);
- tulip(1.29f,.70f,-3.122f,0);
+ /* The flower decals are a full 0.050 units in front of the smoothed
+  * wall plane, not 0.009 units apart (which risks depth quantization). */
+ tulip(-.44f,.84f,-3.080f,1);
+ tulip(.12f,.76f,-3.080f,0);
+ tulip(.74f,.70f,-3.080f,1);
+ tulip(1.29f,.70f,-3.080f,0);
  /* A single soft daisy on the green side wall. */
  side_wall_mark(-3.328f,1.51f,.38f,.34f,.31f,29,15,20);
  side_wall_mark(-3.327f,1.51f,.38f,.12f,.13f,31,25,10);
@@ -613,7 +618,10 @@ void world_draw_care(const Game *s,uint32_t frame,int activity,
  glPolyFmt(POLY_ALPHA(31)|POLY_CULL_NONE);
  frame_vertices=0;frame_polygons=0;
  room();
- flat_floor(-.10f,-1.105f,.34f,.96f,.32f,17,22,12);
+ /* A muted plum contact shadow belongs ON the lavender rug, below the
+  * cream shoes. The former olive green quad hovered at y=-1.105 and
+  * read as a glowing green wedge stuck between the infant's legs. */
+ flat_floor(-.10f,-1.124f,.31f,.84f,.255f,18,16,23);
  baby_model(s,frame,activity,0,action_age);
  teddy();
  glFlush(0);
@@ -640,10 +648,10 @@ void world_draw_roughhouse(const Game *s,uint32_t frame,const Roughhouse *r){
    * One floor quad adds no texture VRAM or per-frame image operations. */
   shadow=1.f-(float)r->y/850.f;
   if(shadow<.60f)shadow=.60f;
-  flat_floor(-.10f+(float)r->x/256.f,-1.105f,
-             .34f+(float)r->z/256.f,
-             .96f*shadow,.32f*shadow,17,22,12);
- }else flat_floor(-.10f,-1.105f,.34f,.96f,.32f,17,22,12);
+  flat_floor(-.10f+(float)r->x/256.f,-1.124f,
+             .31f+(float)r->z/256.f,
+             .84f*shadow,.255f*shadow,18,16,23);
+ }else flat_floor(-.10f,-1.124f,.31f,.84f,.255f,18,16,23);
  glPushMatrix();
  if(r){
   tilt=r->roll<0?-r->roll:r->roll;
