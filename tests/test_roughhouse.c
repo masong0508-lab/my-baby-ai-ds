@@ -97,6 +97,16 @@ int main(void){
   assert(memcmp(&a,&b,sizeof(a))==0);
  }
  assert(!a.moving);
+ /* A advances one film act; B/START are the only immediate full skip.
+  * Strictly monotonic checkpoints avoid stuck/cycled cinematics. */
+ assert(roughhouse_egg_next_act(0u)==EGG_CRACK_FRAME);
+ assert(roughhouse_egg_next_act(EGG_CRACK_FRAME-1u)==EGG_CRACK_FRAME);
+ assert(roughhouse_egg_next_act(EGG_CRACK_FRAME)==EGG_PUSH_FRAME);
+ assert(roughhouse_egg_next_act(EGG_PUSH_FRAME-1u)==EGG_PUSH_FRAME);
+ assert(roughhouse_egg_next_act(EGG_PUSH_FRAME)==EGG_SCARE_FRAME);
+ assert(roughhouse_egg_next_act(EGG_SCARE_FRAME-1u)==EGG_SCARE_FRAME);
+ assert(roughhouse_egg_next_act(EGG_SCARE_FRAME)==EGG_TOTAL_FRAMES);
+ assert(roughhouse_egg_next_act(EGG_TOTAL_FRAMES)==EGG_TOTAL_FRAMES);
  /* Golden endings still have exactly the old meaning. */
  game_init(&state);
  state.ending_mask=(uint16_t)(0x01e0u);
