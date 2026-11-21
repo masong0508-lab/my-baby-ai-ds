@@ -506,6 +506,13 @@ def test_actual_game(path: Path, output: Path) -> dict:
     egg_push = picture(emu, output, "game_egg_slow_push")
     assert movie_stage(egg_push) == 2, "Approach shot advanced too soon"
 
+    # Archive a later buildup frame while the lens remains inside the egg.
+    # Give the eye glow enough film ticks to change before taking it.
+    frames(emu, 30)
+    egg_anticipation = picture(emu, output, "game_egg_anticipation_close")
+    assert movie_stage(egg_anticipation) == 2, (
+        "Eye-anticipation frame exited the egg camera sequence"
+    )
     egg_scare = seek_phase(3, "game_egg_jump_scare")
     scare_difference = difference(
         egg_push, egg_scare, (8, 7, 248, 182)

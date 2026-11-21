@@ -795,6 +795,30 @@ float world_egg_embryo_breath(uint32_t frame){
  uint32_t phase=frame%64u;
  return (float)(phase<32u?phase:64u-phase)*.0005f;
 }
+/* The eye glow is a deliberate story beat, not a full-screen flash.
+ * Dim during fracture, brighten as the camera finds the cavity, then
+ * recede for the final 20 frames before the single surprise cut. */
+int world_egg_eye_glow(uint32_t frame){
+ uint32_t remaining,elapsed;
+ int glow;
+ if(frame<EGG_CRACK_FRAME)return 0;
+ if(frame<EGG_PUSH_FRAME)return 7;
+ if(frame>=EGG_SCARE_FRAME)return 0;
+ remaining=EGG_SCARE_FRAME-frame;
+ if(remaining<=20u)return 3+(int)(remaining*28u/20u);
+ elapsed=frame-EGG_PUSH_FRAME;
+ glow=7+(int)(elapsed*24u/(EGG_SCARE_FRAME-EGG_PUSH_FRAME-20u));
+ return glow>31?31:glow;
+}
+/* Embryo comes forward inside the shell, not through its porcelain lips.
+ * Its whole face, eyes and jaw use the same parent model matrix. */
+float world_egg_embryo_approach(uint32_t frame){
+ uint32_t elapsed;
+ if(frame<=EGG_PUSH_FRAME)return 0.f;
+ elapsed=frame-EGG_PUSH_FRAME;
+ if(elapsed>EGG_SCARE_FRAME-EGG_PUSH_FRAME)elapsed=EGG_SCARE_FRAME-EGG_PUSH_FRAME;
+ return (float)elapsed*.00032f;
+}
 /* Stage the fracture as a readable close-to-frontal nursery portrait.
  * A sixth hit might have flung the ragdoll behind the camera or turned its
  * hair into an enormous brown disk. That impulse remains in toy physics,
@@ -861,20 +885,27 @@ void world_draw_secret(const Game *s,uint32_t frame,const Roughhouse *r){
   /* A subtle moving silhouette inside makes the chamber feel inhabited. */
   {
    float sway=phase==2u?opened*.032f:0.f;
+   int glow=world_egg_eye_glow(frame);
    glPushMatrix();
-   glTranslatef(0.f,world_egg_embryo_breath(frame),0.f);
+   glTranslatef(0.f,world_egg_embryo_breath(frame),
+                world_egg_embryo_approach(frame));
    soft_head(sway,-.17f,.54f,.23f,.42f,.10f,5,11,12);
-   /* Two intentionally placed eyes and a dark breathing aperture.
-    * Nothing floats outside the chamber's silhouette. */
-   ellipse(-.090f+sway,-.07f,.652f,.055f,.044f,.012f,25,30,17);
-   ellipse(.096f+sway,-.07f,.652f,.055f,.044f,.012f,24,30,18);
+   /* Dim eyes awaken gradually as the camera drifts toward the recess.
+    * Both irises remain parented to the creature, not floating in room
+    * space. A momentary dimness before the hard cut builds anticipation. */
+   ellipse(-.090f+sway,-.07f,.652f,.055f,.044f,.012f,
+           5+glow*19/31,7+glow*23/31,5+glow*12/31);
+   ellipse(.096f+sway,-.07f,.652f,.055f,.044f,.012f,
+           5+glow*19/31,7+glow*23/31,5+glow*12/31);
    soft_mark(-.086f+sway,-.066f,.667f,.025f,.042f,3,6,7);
    soft_mark(.099f+sway,-.066f,.667f,.025f,.042f,3,6,7);
    soft_mark(sway,-.36f,.650f,.083f,.15f,0,1,3);
-   /* Two strong catchlights keep the captive organism readable during
-    * the camera approach even after the nursery light has dimmed. */
-   soft_mark(-.104f+sway,-.092f,.682f,.038f,.026f,23,31,10);
-   soft_mark(.078f+sway,-.092f,.682f,.038f,.026f,23,31,10);
+   /* Catchlights follow the same rise and fall as the eye surfaces,
+    * without an extra polygon or high-frequency strobe effect. */
+   soft_mark(-.104f+sway,-.092f,.682f,.038f,.026f,
+             7+glow*16/31,9+glow*22/31,4+glow*6/31);
+   soft_mark(.078f+sway,-.092f,.682f,.038f,.026f,
+             7+glow*16/31,9+glow*22/31,4+glow*6/31);
    glPopMatrix(1);
   }
   /* Unlike a sphere elongated vertically, the new concave crescent has a
