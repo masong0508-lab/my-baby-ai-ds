@@ -31,6 +31,9 @@ typedef struct {
 extern const char *const game_names[MBAI_GAMES];
 void game_init(Game *s);
 const char *game_care(Game *s,Care action);
+/* Pure, non-automatic nursery hint, -1 when no need is urgent.
+ * Does not mutate the Game or consume its deterministic RNG. */
+int game_care_hint(const Game *s);
 /* Adds calm/energy only when Room Tour crib is moonlit and lamp off. */
 int game_room_quiet_rest(Game *s,int daylight,int lamp_on);
 unsigned game_glitch_tier(const Game *s);
