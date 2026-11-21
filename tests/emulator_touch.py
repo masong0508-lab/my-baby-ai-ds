@@ -123,6 +123,30 @@ def test_actual_game(path: Path, output: Path) -> dict:
     # Title screen should be painted by game's own bitmap UI, not white.
     center = title.getpixel((128, 192 + 75))
     assert center != (255, 255, 255), "Game remained all white at title."
+    # Preserve original touch-to-START at (128,115), but present a second
+    # distinct right-hand SAVE/LOAD card. Its hitbox and native screenshot
+    # must agree with the host C test (x=159..236, y=140..167).
+    save_card = title.crop((159, 192 + 140, 237, 192 + 168))
+    assert len(set(save_card.get_flattened_data())) >= 6, (
+        "Title SAVE/LOAD card is blank or fails to render on real DS"
+    )
+    emu.input.touch_set_pos(201, 154)
+    frames(emu, 15)
+    emu.input.touch_release()
+    frames(emu, 24)
+    title_after_save_touch = picture(
+        emu, output, "game_title_after_touch_save_load"
+    )
+    save_touch_status_change = difference(
+        title, title_after_save_touch,
+        (18, 192 + 127, 239, 192 + 140)
+    )
+    assert save_touch_status_change > 20, (
+        "SAVE/LOAD touch failed to trigger the visible storage status "
+        f"({save_touch_status_change} changed pixels)"
+    )
+    # The touch action must keep the user on TITLE, not start the nursery.
+    # The SELECT diagnostic is still reachable afterward.
     emu.input.keypad_add_key(keymask(Keys.KEY_SELECT))
     frames(emu, 6)
     emu.input.keypad_rm_key(keymask(Keys.KEY_SELECT))
@@ -1097,6 +1121,7 @@ def test_actual_game(path: Path, output: Path) -> dict:
         "diaper_start_illustration_colors": diaper_start_colors,
         "diaper_after_wipe_illustration_colors": diaper_next_colors,
         "title_to_diagnostic_changed_pixels": new_screen,
+        "title_touch_save_status_changed_pixels": save_touch_status_change,
         "live_geometry_vertex_label_pixels": visible_vertices,
         "live_geometry_polygon_label_pixels": visible_polygons,
         "KEY_TOUCH_status_changed_pixels": status,
