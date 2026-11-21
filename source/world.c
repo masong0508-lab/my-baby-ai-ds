@@ -148,7 +148,8 @@ static void hair_cap(float x,float y,float z,float rx,float ry,float rz,
    float lower;
    j=i%12;
    /* Keep the hairline above the eyes but let it fall behind the ears. */
-   lower=.01f+(ring_z[j]>0?.52f*ring_z[j]:.08f*ring_z[j]);
+   /* Short cap: keep the hairline ABOVE the eyes with no cheek-length bob. */
+   lower=.40f+(ring_z[j]>0?.14f*ring_z[j]:.03f*ring_z[j]);
    color(red,green,blue,(j<5?2:-1)+(a==2?2:0));
    glVertex3f(x+rx*radius[a]*ring_x[j],
               y+ry*(a==0?lower:a==1?.64f:.86f),
@@ -165,12 +166,12 @@ static void hair_cap(float x,float y,float z,float rx,float ry,float rz,
  * Top edge is tucked toward the scalp; lower edge is in front of skin. */
 static void hair_fringe(float x,float y,float z,float sx,float sy,float skew){
  glBegin(GL_QUADS);
- color(8,5,4,1);
- glVertex3f(x-sx*.5f,y+sy*.5f,z-.045f);
- glVertex3f(x+sx*.5f,y+sy*.5f,z-.045f);
- color(7,5,4,-1);
- glVertex3f(x+sx*.43f+skew,y-sy*.5f,z+.015f);
- glVertex3f(x-sx*.43f+skew,y-sy*.5f,z+.015f);
+ color(17,11,8,1);
+ glVertex3f(x-sx*.5f,y+sy*.5f,z-.016f);
+ glVertex3f(x+sx*.5f,y+sy*.5f,z-.016f);
+ color(15,10,8,-1);
+ glVertex3f(x+sx*.43f+skew,y-sy*.5f,z+.009f);
+ glVertex3f(x-sx*.43f+skew,y-sy*.5f,z+.009f);
  glEnd();
  frame_vertices+=4;frame_polygons++;
 }
@@ -224,15 +225,9 @@ static void room(void){
   * the room structure, unlike the old solid saturated wall plane. */
  side_wall_mark(-3.33f,.20f,-.96f,2.05f,.045f,21,24,21);
  side_wall_mark(-3.33f,-.57f,-.96f,2.05f,.035f,21,24,21);
- side_wall_mark(-3.33f,-.17f,-1.99f,.035f,.73f,21,24,21);
- side_wall_mark(-3.33f,-.17f,.07f,.035f,.73f,21,24,21);
- /* Floor boards, big soft nursery rug and stitched edging. */
- for(i=0;i<8;i++)flat_floor(-3.1f+i*.84f,-1.227f,0,.025,6.7,19,14,11);
- /* Stagger plank-end seams instead of a tiled/checkerboard grid. */
- for(i=0;i<3;i++){
-  flat_floor(-1.72f,-1.227f,-2.45f+i*1.70f,3.25f,.024f,21,16,12);
-  flat_floor(2.12f,-1.227f,-1.59f+i*1.70f,2.70f,.024f,21,16,12);
- }
+ /* Removed two hairline-width vertical wainscot details that alias. */
+ /* Continuous nursery floor: removed 14 subpixel strips. Those long
+  * narrow decals produced vertical seams across the DS floor image. */
  /* One darkened ground plane under the play mat gives contact shadow
   * without expensive translucent blending or extra VRAM. */
  flat_floor(.04f,-1.222f,.78f,3.00f,2.58f,20,17,14);
@@ -294,12 +289,9 @@ static void room(void){
  /* Shelf and a row of toy blocks, no giant texture atlas needed. */
  block(2.59,1.06,-3.00,1.09,.13,.38,24,20,16);
  for(i=0;i<4;i++)block(2.16f+i*.26f,1.28,-2.91,.20,.30,.24,19+i*2,20-i,20+i);
- /* A crib mobile, star decals and frame accents make the room feel lived in. */
+ /* Solid mobile support; floating unanchored quads removed. */
  block(2.28,.93,-1.49,.065,.75,.065,24,21,16);
  block(2.28,1.29,-1.49,.91,.07,.10,24,21,16);
- wall_sticker(2.01,.88,-1.02,.19,.23,28,25,18);
- wall_sticker(2.55,.79,-1.02,.19,.23,20,25,24);
- wall_sticker(2.24,.68,-1.02,.15,.17,26,20,20);
  for(i=0;i<6;i++)wall_sticker(-.27f+i*.42f,2.34f+(i&1)*.08f,
                                 -3.015f,.11,.11,27,25,19);
  /* Individual decorative labels on the shelf's toy blocks. */
@@ -420,18 +412,20 @@ static void baby_model(const Game *s,uint32_t frame,int action){
 }
 void world_init(void){
  glInit();
- glEnable(GL_ANTIALIAS);
+ /* Edge AA produces dark cracks between adjacent untextured DS polygons. */
+ glDisable(GL_ANTIALIAS);
  glClearColor(27,28,28,31);
  glClearPolyID(63);
  glClearDepth(0x7fff);
  glViewport(0,0,255,191);
  glMatrixMode(GL_PROJECTION);glLoadIdentity();
- gluPerspective(55,256.0f/192.0f,.1f,30);
+ gluPerspective(51,256.0f/192.0f,.1f,30);
 }
 void world_draw(const Game *s,uint32_t frame,int activity){
  glMatrixMode(GL_MODELVIEW);glLoadIdentity();
  /* This is a room with true depth and perspective, not a flat orthographic collage. */
- gluLookAt(1.42f,1.30f,3.26f,-.12f,.08f,.18f,0,1,0);
+ /* More frontal portrait: avoids exaggerated protruding facial geometry. */
+ gluLookAt(.97f,1.05f,3.43f,-.12f,.035f,.17f,0,1,0);
  glPolyFmt(POLY_ALPHA(31)|POLY_CULL_NONE);
  frame_vertices=0;frame_polygons=0;
  room();
