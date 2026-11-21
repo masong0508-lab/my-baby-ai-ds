@@ -38,8 +38,17 @@ static uint32_t egg_frame;
 static int egg_paused;
 static int toy_tool=ROUGHHOUSE_SLAP;
 static const char *message="WELCOME TO DAYCARE 2.0";
-static void persist(void){if(storage_ok)(void)save_write(SAVE_BASE,&baby);}
-static void care(Care action){
+/* Failed writes must NEVER be silent: the game remains fully playable
+ * in RAM, but a real UI warning tells the player their latest care/day
+ * is not yet on disk. Each later action retries the same two-slot save. */
+static int persist(void){
+ if(storage_ok&&!save_write(SAVE_BASE,&baby)){
+  message="SAVE WRITE FAILED. PROGRESS IN RAM!";
+  return 0;
+ }
+ return 1;
+}
+static int care(Care action){
  message=game_care(&baby,action);
  pose=(int)action+1;
  pose_age=0; /* restart this care gesture: do not loop it forever */
@@ -53,12 +62,13 @@ static void care(Care action){
  case NAP:sfx_play(SFX_NAP);break;
  default:break;
  }
- persist();
+ return persist();
 }
 static void end_day(void){
  int e=game_end_day(&baby);
  last_ending=e;
- message=game_ending_name(e);
+ message=e==END_OK?"NEXT DAY: +8 HUNGER, -6 ENERGY.":
+                         game_ending_name(e);
  if(e!=END_OK)view=4;
  persist();
 }
@@ -74,12 +84,10 @@ static unsigned arcade_redraw_period(const Arcade *a){
  switch(a->id){
  case 0:case 3:case 6:case 7:case 8:case 9:case 11:return 3u;
  case 1:
-  /* Diaper Dash has a large, software-drawn illustrated changing mat.
-   * Do not repaint all 49K pixels every four frames while nobody is
-   * touching it: DeSmuME captured only the background halfway through
-   * that expensive redraw. Dirty flags still redraw immediately for
-   * each step, mistake and every meaningful gesture; during an active
-   * wipe/drag the cursor scene refreshes at a steady cadence. */
+  /* Avoid repainting Diaper Dash's large 256x192 changing mat every
+   * fourth frame while idle. Native DeSmuME captured blank pink panels
+   * halfway through these unnecessary VRAM writes. Active drag/wipe
+   * still refreshes frequently; dirty steps render immediately. */
   return a->touch_active?5u:60u;
  case 4:return 4u;
  case 2:return a->touch_active?4u:60u;
@@ -533,17 +541,17 @@ int main(void){
       sfx_play(SFX_ROOM_SWITCH);
       message=room_lamp?"LAMP ON. BUDGET APPROVED.":"LIGHTS OUT. OVERTIME DENIED.";
      }else if(picked==2){
-      care(PLAY);
-      message="TEDDY RECEIVED A PROMOTION.";
+      /* Never overwrite a failed-write warning with a joke. */
+      if(care(PLAY))message="TEDDY RECEIVED A PROMOTION.";
      }else{
-      care(NAP);
+      int saved=care(NAP);
       /* The attached mobile chimes while it performs its one-shot
        * 40-tick swing. It supersedes the ordinary NAP phrase only here. */
       sfx_play(SFX_MOBILE);
       if(game_room_quiet_rest(&baby,room_daylight,room_lamp)){
-       message="QUIET NIGHT: +8 ENERGY, -4 CHAOS.";
-       persist(); /* persist BOTH care and conditional quiet benefit */
-      }else message="CRIB NAP: BOARD APPROVED.";
+       message="QUIET: +8 ENERGY -4 CHAOS -2 GLITCH";
+       (void)persist(); /* save BOTH care and conditional quiet benefit */
+      }else if(saved)message="CRIB NAP: BOARD APPROVED.";
      }
      dirty=1;
     }

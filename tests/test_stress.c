@@ -18,8 +18,10 @@ int main(void){
  for(i=0;i<25000;i++){
   seed^=seed<<13;seed^=seed>>17;seed^=seed<<5;
   if(i%23==0){
+   unsigned prev_day=g.days;
    int ending=game_end_day(&g);
    assert(ending>=END_OK&&ending<=END_SECOND_CHANCE);
+   assert(g.days==prev_day+1u);
   }else if(i%17==0){
    int n=0,id=(int)((seed>>12)&15u);
     g.unlocked|=(uint16_t)(1u<<id);
