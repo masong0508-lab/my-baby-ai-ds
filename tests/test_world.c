@@ -8,6 +8,12 @@ int main(void){
  world_draw_title(0);
  assert(world_vertex_count()<=1024);
  assert(world_polygon_count()<=350);
+ /* The boot portrait must remain light enough for instant DS startup. */
+ for(i=1;i<12;i++){
+  world_draw_title((uint32_t)(i*11));
+  assert(world_vertex_count()<=1024);
+  assert(world_polygon_count()<=350);
+ }
  for(i=0;i<256;i++){
   s.corruption=(uint8_t)((i&1)?95:5);
   s.safe_visuals=0;
@@ -20,6 +26,17 @@ int main(void){
   assert(world_vertex_count()<=5000);
   assert(world_polygon_count()<=1850);
  }
- printf("PASS: 3D budget (max %u vertices / 6144, %u polygons / 2048)\n",worst_v,worst_p);
+ /* Visual glitch tiers must never summon stray cubes or consume extra
+  * polygons; corrupted/safe visual modes alter only existing colors. */
+ s.corruption=99;s.mood=75;s.safe_visuals=0;
+ world_draw(&s,0,0);
+ {
+  unsigned base_v=world_vertex_count(),base_p=world_polygon_count();
+  s.safe_visuals=1;
+  world_draw(&s,0,0);
+  assert(world_vertex_count()==base_v);
+  assert(world_polygon_count()==base_p);
+ }
+ printf("PASS: clean 3D portrait, stable glitch mesh, budget (max %u verts, %u polys)\n",worst_v,worst_p);
  return 0;
 }
