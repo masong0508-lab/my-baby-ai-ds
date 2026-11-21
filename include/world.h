@@ -20,6 +20,8 @@ int world_egg_nursery_ambient(uint32_t frame);
 /* Coherent, bounded 3D animation; pure frame samplers for film replay. */
 float world_egg_creature_depth(uint32_t frame);
 float world_egg_embryo_breath(uint32_t frame);
+/* Lower-jaw hinge angle, degree units, bounded to 0..18. */
+int world_egg_jaw_angle(uint32_t frame);
 /* Deterministic, shared shoulder-joint reach for each care action. */
 int world_baby_arm_reach(int action);
 int world_baby_neck_tilt(int action,uint32_t frame);
