@@ -1462,7 +1462,10 @@ static void egg_scene_screen(int selection){
            frame<(int)EGG_PUSH_FRAME?1:
            frame<(int)EGG_SCARE_FRAME?2:3;
  int i;
+ char integrity[8];
+ static const unsigned integrity_steps[4]={98u,64u,12u,3u};
  uint16_t warning=phase==3?ROSE:GREEN;
+ snprintf(integrity,sizeof(integrity),"%02u%%",integrity_steps[phase]);
  solid(0,27,256,149,NIGHT);
  panel(8,30,240,142,INK,warning);
  solid(12,33,232,2,TEAL);
@@ -1490,6 +1493,13 @@ static void egg_scene_screen(int selection){
   fit(27,109,"CONTAINMENT FAILED",PINK,26);
  }
  egg_icon(190,83,phase>=2);
+ /* The fictional monitor progressively loses containment in lockstep with
+  * the cinematic acts. Staged numbers update ONLY at phase changes: no
+  * busy per-frame VRAM repaint or simulated live medical data. */
+ fit(19,126,"SHELL",MINT,6);
+ fit(61,126,integrity,phase==3?PINK:LEMON,6);
+ fit(120,126,phase==3?"BREACHED":paused?"ON HOLD":"UNSTABLE",
+     phase==3?PINK:LEMON,12);
  /* The meter is at y=137, x=31+52*i by contract: emulator playback tests
   * identify the four phases using THESE pixels. Do not move them. */
  for(i=0;i<4;i++)solid(27+i*52,136,45,3,i<=phase?LEMON:GRAY);
