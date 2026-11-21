@@ -407,7 +407,8 @@ def test_actual_game(path: Path, output: Path) -> dict:
         f"Ragdoll did not visibly bounce after tapping doll ({bounce_motion})"
     )
     for _ in range(5):
-        stylus_tap(emu, 126, 110)  # release frames re-arm cooldown
+        frames(emu, 12)  # stress slower 20-30 FPS gameplay; allow debounce
+        stylus_tap(emu, 126, 110)
     egg_begin = picture(emu, output, "game_egg_shell_fracture")
     fracture_changed = difference(
         selected_kick, egg_begin, (0, 192 + 32, 256, 192 + 174)
