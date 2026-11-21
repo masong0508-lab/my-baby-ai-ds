@@ -261,6 +261,53 @@ def test_actual_game(path: Path, output: Path) -> dict:
     assert room_opened > 500, (
         f"Room button did not open an interactive prop screen ({room_opened})"
     )
+    # The original global mute lived only in Toybox. Room Tour now has a
+    # clearly visible Y SOUND option. Test the *physical* DS Y key, and
+    # ensure a second press restores the normal state without leaving ROOM.
+    emu.input.keypad_add_key(keymask(Keys.KEY_Y))
+    frames(emu, 6)
+    emu.input.keypad_rm_key(keymask(Keys.KEY_Y))
+    frames(emu, 12)
+    room_muted = picture(emu, output, "game_room_audio_muted")
+    room_mute_change = difference(
+        room_night, room_muted, (112, 192 + 178, 187, 192 + 192)
+    )
+    assert room_mute_change > 12, (
+        "Y mute did not change the visible Room Tour audio indicator "
+        f"({room_mute_change} pixels)"
+    )
+    emu.input.keypad_add_key(keymask(Keys.KEY_Y))
+    frames(emu, 6)
+    emu.input.keypad_rm_key(keymask(Keys.KEY_Y))
+    frames(emu, 12)
+    room_unmuted = picture(emu, output, "game_room_audio_restored")
+    room_restore_change = difference(
+        room_muted, room_unmuted, (112, 192 + 178, 187, 192 + 192)
+    )
+    assert room_restore_change > 12, (
+        "Y audio could not be switched back on in Room Tour "
+        f"({room_restore_change} pixels)"
+    )
+    # Real stylus users must be able to tap the visible SOUND footer;
+    # those without a stylus use Y. Both manipulate one shared mute flag.
+    stylus_tap(emu, 180, 183)
+    room_touch_muted = picture(emu, output, "game_room_audio_touch_muted")
+    room_touch_mute_change = difference(
+        room_unmuted, room_touch_muted, (148, 192 + 178, 207, 192 + 192)
+    )
+    assert room_touch_mute_change > 12, (
+        "Tapping the visible sound label did not mute audio "
+        f"({room_touch_mute_change} footer pixels)"
+    )
+    stylus_tap(emu, 180, 183)
+    room_touch_restored = picture(emu, output, "game_room_audio_touch_restored")
+    room_touch_restore_change = difference(
+        room_touch_muted, room_touch_restored, (148, 192 + 178, 207, 192 + 192)
+    )
+    assert room_touch_restore_change > 12, (
+        "Tapping the sound label again did not restore audio "
+        f"({room_touch_restore_change} footer pixels)"
+    )
     stylus_tap(emu, 35, 94)  # WINDOW: toggle daylight
     room_day = picture(emu, output, "game_room_tour_daylight")
     day_scene_change = difference(
@@ -884,6 +931,10 @@ def test_actual_game(path: Path, output: Path) -> dict:
         "3D_nursery_wall_streak_length": wall_streak,
         "3D_nursery_green_shadow_artifact_pixels": olive_artifact,
         "Room_tour_open_changed_pixels": room_opened,
+        "Room_audio_mute_changed_pixels": room_mute_change,
+        "Room_audio_restore_changed_pixels": room_restore_change,
+        "Room_audio_touch_mute_changed_pixels": room_touch_mute_change,
+        "Room_audio_touch_restore_changed_pixels": room_touch_restore_change,
         "Room_daylight_top_changed_pixels": day_scene_change,
         "Room_daylight_wall_changed_pixels": daylight_room_change,
         "Room_daylight_status_changed_pixels": day_label_change,
