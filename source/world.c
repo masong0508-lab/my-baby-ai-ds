@@ -381,6 +381,35 @@ static void teddy(void){
  soft_mark(x-.175f,y-.285f,z+.263f,.078f,.065f,30,25,18);
  soft_mark(x+.175f,y-.285f,z+.263f,.078f,.065f,30,25,18);
 }
+/* Articulated shoulders. The sleeve, forearm, hand all share ONE local
+ * shoulder transform; no independent bobbing parts and no new polygons.
+ * A horizontal PLAY reach or CHAT gesture is visible from the front,
+ * while NAP naturally folds both arms toward the torso. */
+/* The entire face, hair, eyes, mouth and cheeks lean together. NAP
+ * nods toward the lap; PLAY and CHAT glance subtly toward the player. */
+int world_baby_neck_tilt(int action,uint32_t frame){
+ int phase=(int)(frame%80u);
+ int sway=phase<40?phase:80-phase;
+ if(action==4)return -9;
+ if(action==2)return 3+(sway-20)/5;
+ if(action==3)return 5+(sway-20)/7;
+ return 0;
+}
+int world_baby_arm_reach(int action){
+ return action==3?57:action==2?45:action==1?28:
+        action==4?-8:action==5?-6:7;
+}
+static void baby_arm(int direction,int angle){
+ float side=(float)direction;
+ glPushMatrix();
+ glTranslatef(side*.45f,-.21f,-.025f);
+ glRotateZ(degreesToAngle(direction*angle));
+ ellipse(0,0,0,.205f,.22f,.195f,19,26,27);
+ tilted_ellipse(side*.10f,-.16f,.17f,
+                .14f,.18f,.14f,direction*26,31,23,19);
+ ellipse(side*.18f,-.25f,.305f,.13f,.125f,.13f,31,24,20);
+ glPopMatrix(1);
+}
 /* Baby A.I. hero model. One stable chibi silhouette with a connected
  * romper, SHORT hair, embedded eyes and a small closed-mouth smile. The
  * previous dark bob, gaping mouth/teeth, flaring jeans and detached facial
@@ -398,12 +427,12 @@ static void baby_model(const Game *s,uint32_t frame,int action,
  /* Primary body rotation comes from the fixed-point toy simulation. The
   * secondary shoulder/neck reactions are tiny and remain physically
   * connected to the parent model rather than becoming floating parts. */
- const float swing=rag&&rag->moving?(float)rag->vr*.0022f:0.f;
  const float settle=rag?(float)rag->impact*.0025f:0.f;
- const float left_pose=wave+(action==2?.065f:action==3?.075f:
-                              action==4?-.035f:action==5?-.145f:0.f)+swing;
- const float right_pose=-wave+(action==1?.07f:action==3?.075f:
-                                action==4?-.035f:action==5?.145f:0.f)-swing;
+ /* Care IDs: FEED=1, CHAT=2, PLAY=3, NAP=4. Each reaches using
+  * a shared shoulder pivot, not isolated upward-moving arm balls. */
+ const int base_reach=world_baby_arm_reach(action);
+ const int wave_deg=(int)(wave*160.f);
+ const int recoil=rag&&rag->moving?(rag->vr>0?5:-5):0;
  const int blink=(frame%173u)<5u||action==4;
  const int happy=s->mood>35;
  const int glitch=game_glitch_tier(s)>=2&&!s->safe_visuals&&
@@ -428,26 +457,24 @@ static void baby_model(const Game *s,uint32_t frame,int action,
  soft_mark(-.075f,-.34f,.331f,.055f,.026f,30,25,14);
  soft_mark(.072f,-.34f,.331f,.052f,.026f,30,25,14);
  soft_mark(0,-.38f,.332f,.044f,.027f,30,25,14);
- /* Sleeves overlap the torso and the skin overlaps each sleeve; hands
-  * always remain attached while the animation cycles. */
- tilted_ellipse(-.45f,-.21f+swing*.45f,-.025f,
-                .205f,.22f,.195f,-20,19,26,27);
- tilted_ellipse(.45f,-.21f-swing*.45f,-.025f,
-                .205f,.22f,.195f,20,19,26,27);
- tilted_ellipse(-.55f,-.37f+left_pose,.15f,.14f,.18f,.14f,-26,31,23,19);
- tilted_ellipse(.55f,-.37f+right_pose,.15f,.14f,.18f,.14f,26,31,23,19);
- ellipse(-.63f,-.46f+left_pose,.28f,.13f,.125f,.13f,31,24,20);
- ellipse(.63f,-.46f+right_pose,.28f,.13f,.125f,.13f,31,24,20);
+ /* Rotating the whole forearm+hand hierarchy preserves contact with
+  * the sleeve in every action and during roughhouse recoil. */
+ baby_arm(-1,base_reach+wave_deg+recoil);
+ baby_arm(1,base_reach-wave_deg-recoil);
  /* Neck pivot moves the entire face, eyes, cheeks, hair, and mouth AS ONE.
   * The free head briefly lags the shell's rolling body by at most 16deg. */
  glPushMatrix();
- if(rag&&rag->moving){
-  int neck=-rag->vr/3;
+ {
+  int neck=world_baby_neck_tilt(action,frame);
+  if(rag&&rag->moving)neck-=rag->vr/3;
   if(neck>16)neck=16;
   if(neck< -16)neck=-16;
-  glTranslatef(0,.10f,0);
-  glRotateZ(degreesToAngle(neck));
-  glTranslatef(0,-.10f,0);
+  if(neck){
+   /* Pivot below the jaw, rather than spinning the head around its middle. */
+   glTranslatef(0,.10f,0);
+   glRotateZ(degreesToAngle(neck));
+   glTranslatef(0,-.10f,0);
+  }
  }
  /* Rounded unified face. No second oversized jaw shell, no floating teeth. */
  soft_head(0,.54f,.045f,.61f,.615f,.45f,30,22,19);
@@ -771,10 +798,15 @@ void world_draw_secret(const Game *s,uint32_t frame,const Roughhouse *r){
   ellipse(.36f,.28f,.832f,.286f,.192f,.048f,1,3,6);
   ellipse(-.36f,.276f,.887f,.195f,.117f,.022f,17,31,7);
   ellipse(.36f,.276f,.887f,.195f,.117f,.022f,17,31,7);
-  ellipse(-.346f,.278f,.918f,.062f,.117f,.010f,1,4,5);
-  ellipse(.374f,.278f,.918f,.062f,.117f,.010f,1,4,5);
-  soft_mark(-.398f,.325f,.934f,.044f,.031f,31,31,24);
-  soft_mark(.324f,.325f,.934f,.044f,.031f,31,31,24);
+  /* Pupils subtly converge toward the camera during the one-shot
+   * lunge while remaining wholly inside their parent eye sockets. */
+  {
+   float focus=world_egg_creature_depth(frame)*.08f;
+   ellipse(-.346f+focus,.278f,.918f,.062f,.117f,.010f,1,4,5);
+   ellipse(.374f-focus,.278f,.918f,.062f,.117f,.010f,1,4,5);
+   soft_mark(-.398f+focus,.325f,.934f,.044f,.031f,31,31,24);
+   soft_mark(.324f-focus,.325f,.934f,.044f,.031f,31,31,24);
+  }
   /* Nose bridge and cheek masses define where the mouth belongs. */
   soft_mark(0,-.002f,.879f,.074f,.26f,14,22,15);
   ellipse(-.60f,-.18f,.71f,.19f,.17f,.055f,7,16,13);
@@ -783,6 +815,12 @@ void world_draw_secret(const Game *s,uint32_t frame,const Roughhouse *r){
    * gum line, not a red rectangle or detached floating teeth. */
   ellipse(0,-.47f,.820f,.425f,.415f,.070f,16,5,11);
   ellipse(0,-.47f,.892f,.340f,.344f,.034f,1,2,4);
+  /* Layer the oral cavity INTO the face, not a detached overlay: dark
+   * throat at back, rosy tongue lower down and a single wet highlight.
+   * All parts share the SAME scare-lunge parent transform. */
+  ellipse(0,-.50f,.925f,.17f,.212f,.020f,3,1,5);
+  ellipse(0,-.68f,.931f,.195f,.079f,.019f,22,6,13);
+  soft_mark(-.04f,-.692f,.952f,.080f,.018f,30,14,21);
   ellipse(0,-.65f,.930f,.195f,.074f,.018f,19,5,13);
   for(i=0;i<5;i++){
    float x=-.245f+(float)i*.122f;
