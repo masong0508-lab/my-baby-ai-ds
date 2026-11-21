@@ -474,9 +474,11 @@ void world_draw_roughhouse(const Game *s,uint32_t frame,const Roughhouse *r){
  teddy();
  glFlush(0);
 }
-/* Original non-gory cosmic horror: a pastel synthetic shell gives way to an
- * alien egg and a lens-filling stare. Only one abrupt cut; no strobe loop,
- * blood, texture uploads or per-frame heap allocation. */
+/* Cosmic-horror reveal: the SYNTHETIC outer shell is filled with luminous
+ * poisonous-green extraterrestrial ichor, not human blood. A few opaque
+ * hardware quads form viscous dripping rivulets; no particles, alpha sort,
+ * extra framebuffer, textures, or per-frame allocations. The jump scare is
+ * a single sudden camera cut with no repeating flashes. */
 void world_draw_secret(const Game *s,uint32_t frame,const Roughhouse *r){
  float eye_z;
  unsigned phase;
@@ -510,6 +512,26 @@ void world_draw_secret(const Game *s,uint32_t frame,const Roughhouse *r){
   ellipse(0,-.05f,.58f,.23f,.35f,.038f,5,8,15);
   ellipse(0,-.06f,.62f,.14f,.22f,.020f,25,8,13);
   ellipse(0,-.075f,.643f,.055f,.14f,.011f,29,22,7);
+  /* Fracture fluid pools INSIDE the alien shell opening before leaking out.
+   * Staggered static shades create thick, wet, luminous green ichor. */
+  soft_mark(-.105f,.064f,.664f,.065f,.36f,6,28,10);
+  soft_mark(-.062f,-.065f,.666f,.059f,.32f,9,31,7);
+  soft_mark(.115f,.057f,.664f,.065f,.28f,5,27,13);
+  soft_mark(.168f,-.051f,.665f,.042f,.21f,12,31,9);
+  soft_mark(-.020f,-.224f,.667f,.17f,.067f,4,25,8);
+  /* Gravity makes the alien ichor creep farther down the eggshell while the
+   * camera approaches, using deterministic staggered pixel-world quads. */
+  if(frame>=EGG_PUSH_FRAME){
+   float drip=(float)(frame-EGG_PUSH_FRAME)/156.f;
+   if(drip>1.f)drip=1.f;
+   soft_mark(-.10f,-.25f-drip*.22f,.653f,.070f,.18f+drip*.30f,4,28,7);
+   soft_mark(.17f,-.19f-drip*.12f,.649f,.058f,.10f+drip*.23f,8,30,5);
+   soft_mark(-.10f,-.44f-drip*.27f,.650f,.060f,.06f,14,31,8);
+   soft_mark(.17f,-.36f-drip*.25f,.648f,.045f,.06f,16,31,8);
+   /* Sickly pooling at the base, visible in the slow push-in. */
+   ellipse(-.10f,-.76f,.49f,.25f,.045f,.048f,9,28,9);
+   ellipse(.18f,-.76f,.48f,.17f,.032f,.047f,14,31,10);
+  }
   if(frame>=EGG_PUSH_FRAME){
    /* A barely visible creature waits INSIDE while the camera peers in. */
    soft_mark(-.09f,.045f,.652f,.07f,.03f,30,9,20);
@@ -531,6 +553,12 @@ void world_draw_secret(const Game *s,uint32_t frame,const Roughhouse *r){
              .047f,.15f,29,28,22);
   }
   soft_mark(0,-.66f,.905f,.28f,.09f,30,11,19);
+  /* The thing behind the shell still carries streaks of bright green
+   * ichor; it is unmistakably alien when it fills the camera. */
+  soft_mark(-.70f,-.38f,.86f,.070f,.49f,7,30,9);
+  soft_mark(.70f,-.29f,.86f,.066f,.34f,13,31,8);
+  soft_mark(-.62f,-.66f,.91f,.22f,.078f,5,25,7);
+  soft_mark(.61f,-.53f,.92f,.14f,.065f,9,29,9);
   if(frame<EGG_SCARE_FRAME+5u){
    /* A SINGLE sharp highlight on the first reveal, not rapid flashing. */
    soft_mark(0,.71f,.88f,.74f,.055f,31,29,25);
