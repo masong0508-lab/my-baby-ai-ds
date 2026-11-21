@@ -221,7 +221,10 @@ int main(void){
  {
   unsigned baseline,peak;
   s.mood=12;
-  world_draw_care(&s,0u,0,56u);
+  /* Frame zero is also the first instant of the automatic eyelid blink:
+   * comparing it with 64 measures a blink, not the breathing pass.
+   * Frame 128 is the same zero-breath phase, safely outside blink. */
+  world_draw_care(&s,128u,0,56u);
   baseline=world_polygon_count();
   world_draw_care(&s,64u,0,56u);
   peak=world_polygon_count();
