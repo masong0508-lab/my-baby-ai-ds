@@ -40,7 +40,10 @@ int world_egg_head_tilt(uint32_t frame);
 int world_egg_jaw_angle(uint32_t frame);
 /* Deterministic, shared shoulder-joint reach for each care action. */
 int world_baby_arm_reach(int action);
-int world_baby_neck_tilt(int action,uint32_t frame);
+/* Neck sway is sampled from age since latest action, not wall-clock time. */
+int world_baby_neck_tilt(int action,uint32_t age);
+/* Gentle 0..256 integer inhale/exhale on the attached torso. */
+int world_baby_breath(uint32_t frame);
 /* Q8 gesture and eye-aperture channels, cheap deterministic samples. */
 int world_baby_care_weight(uint32_t age);
 int world_baby_lid_open(uint32_t frame,int action,uint32_t age);
