@@ -1339,7 +1339,10 @@ void world_draw_secret(const Game *s,uint32_t frame,const Roughhouse *r){
    * silhouette like the target art, without multiplying face meshes. */
   soft_mark(-.67f,.07f,.790f,.10f,.15f,7,21,16);
   soft_mark(.67f,.07f,.790f,.10f,.15f,7,21,16);
-  soft_mark(0,.615f,.787f,.22f,.035f,11,27,12);
+  /* Removed the obsolete bright center forehead strip: real DeSmuME
+   * measured a 28-pixel fluorescent ruler at y=8 with exact RGB15
+   * (11,27,12). The broad brow masses and two compact reveal glints
+   * already establish the intended skull shape without this artifact. */
   /* Sickly reflective slime follows the facial contour rather than
    * obscuring pupils and teeth with arbitrary green rectangles. */
   soft_mark(-.77f,-.40f,.764f,.068f,.39f,8,29,11);
