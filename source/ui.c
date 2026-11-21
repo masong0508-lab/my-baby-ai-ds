@@ -842,8 +842,17 @@ static void arcade_list(const Game *s,int selection){
  fit(20,40,"< PREV",INK,8);
  capsule(193,32,55,23,SKY,TEAL);
  fit(203,40,"NEXT >",INK,8);
- snprintf(tmp,sizeof(tmp),"PAGE %d / 4",page+1);
- fit(89,34,tmp,PURPLE,13);
+ /* The header already shows current dollars. Surface the other two
+  * real resources here, so every paid cabinet can be compared against
+  * the requirement on the NEXT line without hidden menus. 99+ caps
+  * screen text, not inventory; the gameplay totals remain unchanged. */
+ {
+  unsigned w=s->wins>99u?99u:(unsigned)s->wins;
+  unsigned f=s->favors>99u?99u:(unsigned)s->favors;
+  snprintf(tmp,sizeof(tmp),"WINS %u%s FAVORS %u%s",
+           w,s->wins>99u?"+":"",f,s->favors>99u?"+":"");
+  fit(71,34,tmp,PURPLE,20);
+ }
  /* Two readable lines share the existing empty strip between arrows.
   * Locked cabinets now explain the precise gameplay goal without opening
   * another menu or allocating a string/buffer every frame. */
