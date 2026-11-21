@@ -283,49 +283,292 @@ static void arrow(int x,int y,int dir,uint16_t fill){
  if(dir==1){for(i=0;i<8;i++)solid(x+i,y-i,2,2*i+1,fill);solid(x-12,y-3,17,7,fill);}
  if(dir==3){for(i=0;i<8;i++)solid(x-i,y-i,2,2*i+1,fill);solid(x-5,y-3,17,7,fill);}
 }
-/* The first two cabinets have genuinely different native-resolution UIs. */
+
+/* Original hand-authored pixel sprites for the arcade. These are tiny indexed
+ * raster sheets, not the former boxes-and-arrows placeholders. The artwork is
+ * embedded in ROM as text rows so the existing bitmap renderer needs no PNG
+ * decoder, heap, asset loader, or second framebuffer. */
+static const char *const spr_baby[]={
+ ".......hhhhhh.......",
+ ".....hhsssssshh.....",
+ "....hssssssssssh....",
+ "...hssssssssssssh...",
+ "..hssshhhhhhhssssh..",
+ "..hsshssssssshsssh..",
+ ".hssssssssssssssssh.",
+ ".hssswwsssswwsssssh.",
+ ".hsssokssssoksssssh.",
+ ".hssssssssssssssssh.",
+ ".hssrrssssssrrssssh.",
+ ".hssssssppssssssssh.",
+ ".hssssspwwpsssssssh.",
+ ".hssssssppssssssssh.",
+ "..hssssssssssssssh..",
+ "...hssssssssssssh...",
+ "....hhsssssssshh....",
+ "......hhhhhhhh......"
+};
+static const char *const spr_bottle[]={
+ "......oooo......",
+ "......owwo......",
+ ".....owwwwo.....",
+ ".....oppppo.....",
+ "....oooooooo....",
+ "...owwwwwwwwo...",
+ "...owwwwwwwwo...",
+ "...owwbbbbwwo...",
+ "...owwbbbbwwo...",
+ "...owwbbbbwwo...",
+ "...owwbbbbwwo...",
+ "...owwbbbbwwo...",
+ "...owwbbbbwwo...",
+ "...owwwwwwwwo...",
+ "...owwwppwwwo...",
+ "...owwwppwwwo...",
+ "....owwwwwwo....",
+ ".....oooooo....."
+};
+static const char *const spr_rattle[]={
+ "......oooo......",
+ "....ooggggoo....",
+ "...ogggwwgggo...",
+ "..oggggwwggggo..",
+ "..oggggwwggggo..",
+ "..oggggggggggo..",
+ "...oggggggggo...",
+ "....ooggggoo....",
+ "......oooo......",
+ "......otto......",
+ "......otto......",
+ "......otto......",
+ "......otto......",
+ "......otto......",
+ ".....otttto.....",
+ ".....otttto.....",
+ "......oooo......"
+};
+static const char *const spr_diaper[]={
+ "...oooooooooooo...",
+ "..owwwwwwwwwwwwo..",
+ ".owwwwwwwwwwwwwwo.",
+ "owwwwwwwwwwwwwwwo",
+ "owwppwwwwwwwwppwwo",
+ "owwppwwwwwwwwppwwo",
+ ".owwwbbbbbbwwwwo.",
+ "..owbbbbbbbbwwo..",
+ "...owbbbbbbwwo...",
+ "....owwwwwwo....",
+ ".....oooooo....."
+};
+/* Receipt sheet with inked totals, folded corners and a bright stamp. */
+static const char *const spr_receipt[]={
+ "..oooooooooo..",
+ ".owwwwwwwwwwo.",
+ "owwwwwwwwwwwwo",
+ "owgwwwwwwwwgwo",
+ "owwwppppwwwwo",
+ "owwwwwwwwwwwo",
+ "owwwwwwwwwwwo",
+ "owttttttttwwo",
+ "owwwwwwwwwwwo",
+ "owppppwwppwwo",
+ "owwwwwwwwwwwo",
+ ".owwwwwwwwwwo.",
+ "..oooooooooo.."
+};
+static uint16_t art_ink(char p){
+ switch(p){
+ case 'o':return INK;
+ case 'h':return RGB(11,7,6);
+ case 's':return RGB(31,24,18);
+ case 'r':return RGB(31,15,17);
+ case 'p':return PINK;
+ case 'w':return WHITE;
+ case 'b':return SKY;
+ case 'g':return GOLD;
+ case 't':return TEAL;
+ case 'k':return INK;
+ default:return 0;
+ }
+}
+static void sprite(int x,int y,int scale,const char *const *rows,int count){
+ int yy,xx;
+ for(yy=0;yy<count;yy++){
+  const char *line=rows[yy];
+  for(xx=0;line[xx];xx++){
+   uint16_t color=art_ink(line[xx]);
+   if(color)solid(x+xx*scale,y+yy*scale,scale,scale,color);
+  }
+ }
+}
+static void sparkle(int x,int y,uint16_t color){
+ solid(x+3,y,2,9,color);solid(x,y+3,9,2,color);
+ solid(x+2,y+2,4,4,WHITE);
+}
+static void arcade_wall(uint16_t background){
+ int x,y;
+ solid(0,27,256,149,background);
+ for(y=31;y<173;y+=16)for(x=(y&16)?8:0;x<256;x+=16)
+  solid(x,y,2,2,WHITE);
+}
+static void bar(int x,int y,int width,int value,int total,uint16_t color){
+ int fill=total>0?value*(width-4)/total:0;
+ if(fill<0)fill=0;
+ if(fill>width-4)fill=width-4;
+ capsule(x,y,width,12,WHITE,INK);
+ solid(x+2,y+2,fill,8,color);
+}
 static void bottle_challenge(const Arcade *a){
- char text[40];int cursor=128+a->balance/2;
- solid(0,27,256,149,BLUSH);
- panel(7,31,242,45,WHITE,TEAL);
- fit(16,39,"BOTTLE BALANCE",PURPLE,32);
- fit(16,55,a->reverse?"GLITCH! CONTROLS FLIPPED":"KEEP BOTTLE UPRIGHT",a->reverse?DEEP_PINK:TEAL,35);
- solid(26,89,204,17,WHITE);outline(26,89,204,17,INK);
- solid(94,91,68,13,MINT);
- solid(cursor-2,86,5,24,DEEP_PINK);
- icon_bottle(cursor-15,107);
- snprintf(text,sizeof(text),"STABLE %u / 150",a->hold_frames);
- fit(58,117,text,INK,26);
- capsule(8,138,110,32,SKY,BLUE);
- capsule(138,138,110,32,LEMON,GOLD);
- label(33,149,"< LEFT",INK,1,11);
- label(162,149,"RIGHT >",INK,1,11);
+ char text[40];
+ int cursor=128+a->balance/2;
+ arcade_wall(BLUSH);
+ panel(7,31,242,41,WHITE,TEAL);
+ fit(15,38,"BOTTLE BALANCE",PURPLE,30);
+ fit(15,52,a->reverse?"GLITCH: LEFT IS RIGHT!":"STEADY HANDS, HAPPY BABY",a->reverse?DEEP_PINK:TEAL,37);
+ bar(16,76,224,a->hold_frames,150,MINT);
+ sprite(36,90,2,spr_baby,18);
+ sprite(cursor+14,91,2,spr_bottle,18);
+ sparkle(17,104,LEMON);sparkle(225,104,PINK);
+ solid(25,132,206,3,TEAL);
+ solid(92,129,72,9,MINT);
+ solid(cursor-2,127,5,14,DEEP_PINK);
+ snprintf(text,sizeof(text),"STEADY %u/150",a->hold_frames);
+ fit(83,115,text,PURPLE,27);
+ capsule(8,144,110,29,SKY,BLUE);
+ capsule(138,144,110,29,LEMON,GOLD);
+ label(29,153,"< LEFT",INK,1,11);
+ label(163,153,"RIGHT >",INK,1,11);
  foot(PURPLE);
- snprintf(text,sizeof(text),"SPILLS %u/3  TIME %u",a->mistakes,a->timer/60);
- fit(16,181,text,WHITE,36);
+ snprintf(text,sizeof(text),"SPILLS %u/3   %u SEC",a->mistakes,(a->timer+59)/60);
+ fit(19,181,text,WHITE,36);
+}
+static void teether_challenge(const Arcade *a){
+ char text[40];
+ arcade_wall(MINT);
+ panel(6,31,244,41,WHITE,TEAL);
+ fit(13,38,"TAX RETURN TEETHER",PURPLE,35);
+ snprintf(text,sizeof(text),"SORTED %u/6   %u SEC",a->round,(a->timer+59)/60);
+ fit(13,53,text,DEEP_PINK,36);
+ /* Office-nursery scene: receipts come from the baby executive's desk. */
+ solid(91,76,74,4,GOLD);
+ solid(94,79,6,48,TEAL);
+ solid(155,79,6,48,TEAL);
+ sprite(107,83,2,spr_baby,18);
+ capsule(94,121,68,24,SKY,BLUE);
+ sprite(114,111,2,spr_receipt,13);
+ if(a->touch_active&&a->touch_start_x>=99&&a->touch_start_x<160&&
+    a->touch_start_y>=91&&a->touch_start_y<150)
+  sprite(a->touch_last_x-14,a->touch_last_y-13,2,spr_receipt,13);
+ capsule(10,128,86,43,a->target==3?LEMON:SKY,GOLD);
+ capsule(160,128,86,43,a->target==1?PINK:SKY,DEEP_PINK);
+ for(int i=0;i<4;i++){
+  solid(18+i*18,135,8,3,INK);
+  solid(171+i*16,137,6,3,PURPLE);
+ }
+ fit(26,150,"KEEP",INK,9);
+ fit(174,150,"SHRED",INK,9);
+ sparkle(11,96,LEMON);sparkle(236,100,PINK);
+ fit(10,77,a->target==3?"REFUND: SAVE IT!":"JUNK BILL: SHRED!",PURPLE,35);
+ foot(PURPLE);
+ fit(9,181,"DRAG PAPER TO THE MATCHING BIN",WHITE,40);
+}
+static void beatbox_challenge(const Arcade *a){
+ static const char *const pads[4]={"BOOM","CLAP","BEEP","POP"};
+ static const uint16_t colors[4]={MINT,PINK,LEMON,SKY};
+ char text[40];
+ int active=-1;
+ arcade_wall(LILAC);
+ panel(6,31,244,42,WHITE,PURPLE);
+ fit(12,38,"BABY BEATBOX",PURPLE,37);
+ snprintf(text,sizeof(text),"TUNE %u/3  MISS %u/3",a->round+1,a->mistakes);
+ fit(12,54,text,DEEP_PINK,36);
+ if(!a->phase&&a->hold_frames){
+  int index=(int)(a->elapsed*3u/a->hold_frames);
+  if(index>2)index=2;
+  active=a->notes[index];
+ }
+ capsule(69,79,118,20,a->phase?MINT:LEMON,TEAL);
+ fit(83,85,a->phase?"YOUR TURN: REPEAT!":"WATCH THE PATTERN",INK,29);
+ sprite(111,101,1,spr_baby,18);
+ for(int i=0;i<3;i++)
+  capsule(143+i*18,103,13,11,a->phase?(i<a->stage?GREEN:GRAY):
+          (i==(int)(a->elapsed*3u/(a->hold_frames?a->hold_frames:1u))?GOLD:GRAY),INK);
+ for(int i=0;i<4;i++){
+  int x=12+i*62;
+  capsule(x,123,48,47,active==i?WHITE:colors[i],active==i?GOLD:PURPLE);
+  solid(x+17,131,14,14,active==i?LEMON:WHITE);
+  outline(x+16,130,16,16,PURPLE);
+  fit(x+7,152,pads[i],INK,6);
+ }
+ foot(PURPLE);
+ snprintf(text,sizeof(text),"%s  %u SEC   B BACK",a->phase?"REPEAT":"LISTEN",(a->timer+59)/60);
+ fit(11,181,text,WHITE,39);
 }
 static void diaper_challenge(const Arcade *a){
- static const char *const steps[4]={"WIPE","NEW DIAPER","FOLD","TAPE"};
- char text[40];int target=game_arcade_expected(a);
- solid(0,27,256,149,BLUSH);
- panel(6,31,244,51,WHITE,PINK);
- fit(15,39,"DIAPER DASH",PURPLE,28);
- snprintf(text,sizeof(text),"STEP %u/4 : %s",a->stage+1,steps[a->stage<4?a->stage:3]);
- fit(15,53,text,INK,36);
- fit(15,68,a->reverse?"CORRUPTION: OPPOSITE!":"TAP THE CORRECT TASK",a->reverse?DEEP_PINK:TEAL,36);
- capsule(77,88,103,29,target==0?LEMON:GRAY,GOLD);
- fit(108,99,"TAPE",INK,10);
- capsule(8,119,106,36,target==3?LEMON:SKY,TEAL);
- fit(40,132,"WIPE",INK,10);
- capsule(142,119,106,36,target==1?LEMON:SKY,TEAL);
- fit(180,132,"NEW",INK,8);
- capsule(77,155,103,19,target==2?LEMON:MINT,GREEN);
- fit(115,161,"FOLD",INK,8);
+ static const char *const steps[4]={
+  "RUB OVER THE MESS!",
+  "DRAG CLEAN DIAPER ON",
+  "SWIPE UP TO FOLD",
+  "TAP LEFT, THEN RIGHT"
+ };
+ char text[40];int i;
+ arcade_wall(BLUSH);
+ panel(6,31,244,41,WHITE,PINK);
+ fit(14,37,"DIAPER DASH",PURPLE,26);
+ snprintf(text,sizeof(text),"STEP %u/4",a->stage+1);
+ fit(184,37,text,DEEP_PINK,10);
+ fit(14,52,steps[a->stage<4?a->stage:3],TEAL,37);
+ /* Illustrated changing mat, not a directional-button quiz. */
+ capsule(46,78,164,86,WHITE,LILAC);
+ for(i=0;i<5;i++)solid(56+i*34,82,14,3,BLUSH);
+ sprite(108,84,2,spr_baby,18);
+ solid(103,119,51,23,SKY);
+ sprite(106,129,2,spr_diaper,11);
+ if(a->stage==0){
+  solid(116,132,12,7,GOLD);solid(134,135,10,6,GOLD);
+  sparkle(178,99,LEMON);
+  bar(74,158,108,a->progress,90,PINK);
+ }else if(a->stage==1){
+  sprite(16,143,2,spr_diaper,11);
+  if(a->touch_active&&a->touch_start_x<77&&a->touch_start_y>=143)
+   sprite(a->touch_last_x-18,a->touch_last_y-12,2,spr_diaper,11);
+  sparkle(178,117,LEMON);
+  fit(12,135,"DRAG",DEEP_PINK,5);
+ }else if(a->stage==2){
+  for(i=0;i<3;i++)arrow(130,146-i*12,0,TEAL);
+ }else{
+  capsule(68,121,39,20,a->taped?MINT:LEMON,DEEP_PINK);
+  capsule(149,121,39,20,LEMON,DEEP_PINK);
+  fit(75,127,a->taped?"OK":"1",INK,4);
+  fit(163,127,"2",INK,4);
+ }
  foot(PURPLE);
- snprintf(text,sizeof(text),"MISTAKES %u/3   %u F",a->mistakes,a->timer);
- fit(15,181,text,WHITE,37);
+ snprintf(text,sizeof(text),"MISS %u/3   %u SEC   B BACK",a->mistakes,(a->timer+59)/60);
+ fit(11,181,text,WHITE,40);
 }
-
+static void rattle_challenge(const Arcade *a){
+ char text[40];
+ int lane,y,i,fall;
+ arcade_wall(SKY);
+ panel(6,31,244,40,WHITE,TEAL);
+ fit(13,37,"RATTLE RESCUE",PURPLE,30);
+ snprintf(text,sizeof(text),"CAUGHT %u/6  MISSED %u/3",a->round,a->mistakes);
+ fit(13,53,text,TEAL,38);
+ for(i=0;i<3;i++){
+  int x=13+i*82;
+  capsule(x,76,66,91,i==a->target?WHITE:BLUSH,LILAC);
+  solid(x+4,130,58,29,LEMON);
+  outline(x+4,130,58,29,GOLD);
+  fit(x+27,159,i==0?"L":i==1?"D":"R",PURPLE,1);
+ }
+ lane=13+a->target*82;
+ fall=a->hold_frames?(int)((a->hold_frames-a->timer)*64u/a->hold_frames):0;
+ y=80+fall;
+ sprite(lane+17,y,2,spr_rattle,17);
+ sparkle(8,90,PINK);sparkle(240,105,LEMON);
+ foot(PURPLE);
+ fit(11,181,"TAP GOLD ZONE AS RATTLE FALLS",WHITE,39);
+}
 static void challenge(const Game *s,const Arcade *a){
  char tmp[40];int i;
  solid(0,27,256,149,IVORY);
@@ -498,6 +741,9 @@ void ui_draw(const Game *s,const Arcade *a,int view,int selection,
  case 1:arcade_list(s,selection);break;
  case 2:if(a->id==0)bottle_challenge(a);
         else if(a->id==1)diaper_challenge(a);
+        else if(a->id==2)teether_challenge(a);
+        else if(a->id==4)beatbox_challenge(a);
+        else if(a->id==7)rattle_challenge(a);
         else challenge(s,a);
         break;
  case 3:reset_screen(reset_step);break;
@@ -540,5 +786,21 @@ int ui_diaper_touch(int x,int y){
   if(x>=142&&x<249)return 1; /* NEW / right */
  }
  if(y>=155&&y<175&&x>=77&&x<181)return 2; /* FOLD / down */
+ return -1;
+}
+
+/* Four large rhythmic pads, each mapping to one D-pad equivalent. */
+int ui_beatbox_touch(int x,int y){
+ int i;
+ if(y<123||y>=171)return -1;
+ for(i=0;i<4;i++)if(x>=12+i*62&&x<60+i*62)return i;
+ return -1;
+}
+/* Three generous touchscreen lanes; the golden catch band is the target. */
+int ui_rattle_touch(int x,int y){
+ if(x<13||x>=243||y<130||y>=172)return -1;
+ if(x<79)return 0;
+ if(x>=95&&x<161)return 1;
+ if(x>=177&&x<243)return 2;
  return -1;
 }

@@ -10,7 +10,9 @@ int ui_nursery_touch(int x,int y);
 int ui_home_navigation(int x,int y);
 int ui_arcade_select(int x,int y);
 int ui_arcade_touch(int x,int y);
-int ui_diaper_touch(int x,int y);
+int ui_diaper_touch(int x,int y); /* legacy button accessibility */
+int ui_rattle_touch(int x,int y);
+int ui_beatbox_touch(int x,int y);
 void ui_touch_observe(int down,int x,int y,uint32_t count);
 void ui_touch_diag_update(void);
 void ui_virtual_cursor_update(int enabled,int x,int y,int pressed);

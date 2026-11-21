@@ -10,7 +10,7 @@ This is a source-based inventory of `main` as audited after the first successful
 | Dual-screen rendering | `source/world.c`: perspective-3D nursery with crib, dresser, window, floorboards, toys, teddy and a procedural 3D baby; `source/ui.c`: sub-screen 16-bit bitmap interface | Most art is procedural geometry with fixed camera; limited pose variation; no authored texture/rig pipeline or multiple explorable rooms |
 | Care loop | `source/game.c`: feed, chat, play and nap affect needs, mood, chaos and corruption | No rich touch-manipulation activities, time-of-day routine, meaningful room interaction, or evolving developmental skills |
 | Baby dialogue | `source/dialogue.c`: fixed-weight 6-input → 8-hidden → 6-output integer classifier; six response sets of four lines (24 authored lines) | Not a generative LLM or trained neural model. No durable conversational/event memory, word recognition, typed chat, or long-running relationship |
-| Arcade | 16 named cabinets; eight unlocked initially; distinct Bottle Balance steering and four-step Diaper Dash; the remaining 14 use directional/timing challenge | **Only 2 of 16 have distinct mechanics**. The remaining 14 need unique gameplay, controls and testing |
+| Arcade | 16 named cabinets; eight unlocked initially; distinct Bottle Balance steering, four gesture-based Diaper Dash tasks, receipt-drag Tax Return Teether, three-note Baby Beatbox memory, and timed three-lane Rattle Rescue; the remaining 11 use directional/timing challenge | **5 of 16 have distinct mechanics** on this branch. The remaining 13 need unique gameplay, controls and testing; the new modes still need ROM and emulator verification |
 | Economy | Diaper Dollars, Favors and unlock costs in `game_unlock`; wins award currency | Limited sinks/long-term rewards; no purchasable décor, apparel, talent upgrades, sticker collection, or balanced price curve |
 | Glitches | Five corruption tiers, occasional visual disruption, reverse directions, shorter arcade response windows | Effects are narrow; no per-mode corruption language, glitch frequency controls, or accessibility balancing beyond the visual effect toggle |
 | Endings | Four good, four bad, ending album, continuing play; separately confirmed optional reset | Basic text/bitmap endings rather than bespoke cinematics; needs stress testing around reset and recovery |
@@ -23,7 +23,7 @@ This is a source-based inventory of `main` as audited after the first successful
 
 1. Open the title screen and enter the nursery.
 2. Use A/B/X/Y or the touchscreen to feed/chat/play/nap; state updates immediately.
-3. Enter the arcade, select one of 16 named cabinets, and play the shared six-round directional challenge (or unlock cabinets when eligible).
+3. Enter the arcade, select one of 16 named cabinets, and play a distinct Bottle Balance, Diaper Dash, Tax Return Teether, Baby Beatbox, or Rattle Rescue challenge, or one of the 11 shared directional cabinets (or unlock cabinets when eligible).
 4. Progress days, gain currency/Favors, influence corruption and collect endings.
 5. Continue playing after a good or bad ending. Optionally access the secret, explicitly confirmed game-save reset after sufficient **bad** endings.
 
@@ -31,7 +31,7 @@ This is a source-based inventory of `main` as audited after the first successful
 
 **Critical before claiming a verified playable build:** boot and frame-by-frame rendering in melonDS, input testing on both screens, 30-minute play session, save/reload, and original-hardware flashcart testing. The GitHub Actions compiler cannot certify those.
 
-**Critical before claiming a complete game:** finish the other fourteen distinct minigames; authored baby animation and environment interactions; additional activities and progression; sounds/music; stronger personality memory; accessible settings; an achievable economy; and end-to-end game balance.
+**Critical before claiming a complete game:** finish the other eleven distinct minigames; authored baby animation and environment interactions; additional activities and progression; sounds/music; stronger personality memory; accessible settings; an achievable economy; and end-to-end game balance.
 
 **Important documentation correction:** The neural classifier is already implemented, but it is a compact hand-tuned integer intent classifier, not a modern language model. The ROM has cross-compiled successfully through GitHub Actions, but its runtime behavior has not been independently confirmed here.
 
@@ -47,3 +47,17 @@ This is a source-based inventory of `main` as audited after the first successful
 ## DeSmuME touchscreen verification (2026-11-20)
 
 The BlocksDS native-touch path **has now been verified in a real emulator**, not just compiled: automated DeSmuME tests run both the independent input probe and the full game, inject stylus events, check screenshots for KEY_TOUCH and X/Y changes, and activate START GAME and FEED via the touchscreen. See [QA_RELEASE.md](QA_RELEASE.md). The corresponding DraStic user still reports **no native stylus events** despite working gamepad buttons; the root cause specific to DraStic remains unverified. This does not supersede original-hardware testing or frame-rate profiling.
+
+## Illustrated arcade pass (feature branch, 2026-11-20)
+
+This change replaces the old first-two-cabinet placeholder panels with original ROM-embedded indexed pixel art (baby face, bottle, rattle, diaper), scene dressing, touch feedback and larger progress indicators. It does **not** yet provide imported production sprite sheets or music, and it does not claim all 16 cabinets are finished.
+
+- **Bottle Balance:** a baby/bottle scene, live stable-progress bar, clearer control regions and moving bottle indicator; physics preserved.
+- **Diaper Dash:** four actual stylus interactions (rub to clean, drag fresh diaper from tray, swipe upward to fold, tap two tabs), with D-pad assist for broken native-touch environments. Each stage has visual instructions and a separate gesture state.
+- **Rattle Rescue:** newly distinct falling-rattle game with three lanes, timed catch window, six catches to win, three misses to lose, touchscreen and D-pad controls.
+- **Tax Return Teether:** drag a paper receipt from the baby executive's desk into the correct KEEP or SHRED tray; six correct sorts win, three mistakes lose; D-pad alternative.
+- **Baby Beatbox:** watch a three-note light-up drum sequence then reproduce it on four touchscreen pads; three patterns win, with a three-strike limit and D-pad alternative.
+- **CI regressions repaired:** Rattle Rescue now has an active UI draw path and resets properly on timeout; emulator Diaper Dash script now performs real continuous gestures rather than obsolete one-tap tests.
+- **Testing:** new host tests cover gesture sequence, premature catches, lane matching, timeouts, high-glitch speed and lane hitboxes. The ROM build and emulator still need independent verification; these are source changes, not confirmed screenshots.
+
+The game save structure and on-disk save format remain unchanged. All new transient fields live in `Arcade` and are discarded when a cabinet ends.
