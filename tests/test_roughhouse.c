@@ -79,6 +79,24 @@ int main(void){
  assert(loaded.bad_endings==1);
  assert(!game_secret_egg(&loaded));
  assert(save_erase(base));
+ /* Landing never instantly pops a twisted doll to neutral orientation. */
+ roughhouse_init(&a);
+ a.y=0;a.vy=0;a.roll=400;a.pitch=-240;a.yaw=180;
+ a.moving=1;
+ roughhouse_step(&a);
+ assert(a.moving && a.roll>0 && a.roll<400);
+ assert(a.pitch<0 && a.pitch>-240 && a.yaw>0 && a.yaw<180);
+ for(i=0;i<100&&a.moving;i++)roughhouse_step(&a);
+ assert(!a.moving && a.roll==0 && a.pitch==0 && a.yaw==0);
+ /* The same landing sequence is bit-for-bit deterministic. */
+ roughhouse_init(&a);roughhouse_init(&b);
+ a.roll=b.roll=640;a.pitch=b.pitch=-400;a.yaw=b.yaw=300;
+ a.moving=b.moving=1;
+ for(i=0;i<100;i++){
+  roughhouse_step(&a);roughhouse_step(&b);
+  assert(memcmp(&a,&b,sizeof(a))==0);
+ }
+ assert(!a.moving);
  /* Golden endings still have exactly the old meaning. */
  game_init(&state);
  state.ending_mask=(uint16_t)(0x01e0u);
