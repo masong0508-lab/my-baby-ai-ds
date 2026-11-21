@@ -5,6 +5,29 @@
 #include <stddef.h>
 #include "game.h"
 #include "save.h"
+static void test_room_quiet_rest(void){
+ Game s,original;
+ game_init(&s);
+ s.energy=50;s.chaos=45;
+ original=s;
+ assert(!game_room_quiet_rest(&s,1,0));
+ assert(!game_room_quiet_rest(&s,0,1));
+ assert(!game_room_quiet_rest(NULL,0,0));
+ assert(memcmp(&s,&original,sizeof(s))==0);
+ /* CRIB uses the ordinary care path, then gets one small extra night
+  * bonus only when the player actually switches the lamp off. */
+ (void)game_care(&s,NAP);
+ assert(s.energy==75&&s.chaos==40);
+ assert(game_room_quiet_rest(&s,0,0));
+ assert(s.energy==83&&s.chaos==36);
+ /* Values must saturate safely in saved uint8 game state. */
+ s.energy=98;s.chaos=2;
+ assert(game_room_quiet_rest(&s,0,0));
+ assert(s.energy==100&&s.chaos==0);
+ original=s;
+ assert(!game_room_quiet_rest(&s,0,1));
+ assert(memcmp(&s,&original,sizeof(s))==0);
+}
 static void test_good_endings(void){
  Game s,loaded;unsigned day, dollars, favors;
  const char *base="/tmp/my_baby_ai_good_endings";
@@ -117,6 +140,7 @@ static void test_save_integrity(void){
 int main(void){
  Game g,h;Arcade a;int i;
  const char *base="/tmp/my_baby_ai_testslot";
+ test_room_quiet_rest();
  test_good_endings();
  test_save_integrity();
  save_erase(base);game_init(&g);
