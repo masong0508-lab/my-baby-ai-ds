@@ -251,6 +251,67 @@ def test_actual_game(path: Path, output: Path) -> dict:
         f"Stylus could be read, but touching START GAME did not enter nursery "
         f"({start_changed} changed pixels)"
     )
+    # ROOM TOUR IS REAL GAMEPLAY. Verify the HOME badge enters a different
+    # lower-screen mode, and the window/lamp change real TOP 3D pixels.
+    stylus_tap(emu, 216, 40)   # visible ROOM button above care cards
+    room_night = picture(emu, output, "game_room_tour_night")
+    room_opened = difference(
+        nursery, room_night, (0, 192 + 28, 256, 192 + 174)
+    )
+    assert room_opened > 500, (
+        f"Room button did not open an interactive prop screen ({room_opened})"
+    )
+    stylus_tap(emu, 35, 94)  # WINDOW: toggle daylight
+    room_day = picture(emu, output, "game_room_tour_daylight")
+    day_scene_change = difference(
+        room_night, room_day, (0, 0, 256, 191)
+    )
+    assert day_scene_change > 45, (
+        f"Window changed text but not 3D daylight ({day_scene_change})"
+    )
+    stylus_tap(emu, 35, 94)  # reset to the regular moonlit glass
+    room_night_again = picture(emu, output, "game_room_tour_moon_return")
+    night_scene_change = difference(
+        room_day, room_night_again, (0, 0, 256, 191)
+    )
+    assert night_scene_change > 45, (
+        f"Window cannot return to night scene ({night_scene_change})"
+    )
+    stylus_tap(emu, 180, 94)  # lamp goes dark, camera turns to dresser
+    room_lamp_off = picture(emu, output, "game_room_tour_lamp_off")
+    stylus_tap(emu, 180, 94)  # lamp comes back on, same camera position
+    room_lamp_on = picture(emu, output, "game_room_tour_lamp_on")
+    lamp_scene_change = difference(
+        room_lamp_off, room_lamp_on, (0, 0, 256, 191)
+    )
+    assert lamp_scene_change > 45, (
+        f"Lamp changes only a label, not actual room color ({lamp_scene_change})"
+    )
+    stylus_tap(emu, 34, 139)  # TEDDY triggers the connected PLAY gesture
+    room_teddy = picture(emu, output, "game_room_tour_teddy_play")
+    teddy_scene_change = difference(
+        room_lamp_on, room_teddy, (0, 0, 256, 191)
+    )
+    assert teddy_scene_change > 35, (
+        f"Teddy doesn't visibly animate or focus ({teddy_scene_change})"
+    )
+    stylus_tap(emu, 180, 139)  # CRIB: triggers actual NAP + 3D focus
+    room_crib = picture(emu, output, "game_room_tour_crib_nap")
+    crib_scene_change = difference(
+        room_teddy, room_crib, (0, 0, 256, 191)
+    )
+    assert crib_scene_change > 35, (
+        f"Crib doesn't animate a nap or change camera ({crib_scene_change})"
+    )
+    stylus_tap(emu, 128, 183)  # visible BACK footer, never End Day!
+    frames(emu, 20)
+    room_return = picture(emu, output, "game_room_tour_back_to_care")
+    room_back_change = difference(
+        room_crib, room_return, (0, 192 + 28, 256, 192 + 175)
+    )
+    assert room_back_change > 500, (
+        f"Room Tour trapped player or failed BACK ({room_back_change})"
+    )
     emu.input.touch_set_pos(67, 132)  # FEED on lower nursery touchscreen
     frames(emu, 12)
     emu.input.touch_release()
@@ -697,6 +758,13 @@ def test_actual_game(path: Path, output: Path) -> dict:
         "3D_nursery_dresser_streak_length": dresser_streak,
         "3D_nursery_wall_streak_length": wall_streak,
         "3D_nursery_green_shadow_artifact_pixels": olive_artifact,
+        "Room_tour_open_changed_pixels": room_opened,
+        "Room_daylight_top_changed_pixels": day_scene_change,
+        "Room_moon_return_top_changed_pixels": night_scene_change,
+        "Room_lamp_top_changed_pixels": lamp_scene_change,
+        "Room_teddy_top_changed_pixels": teddy_scene_change,
+        "Room_crib_top_changed_pixels": crib_scene_change,
+        "Room_back_to_care_changed_pixels": room_back_change,
         "3D_care_pose_changed_pixels": pose_changed,
         "3D_nap_upright_romper_pixels": upright_romper_pixels,
         "3D_chat_reach_changed_pixels": chat_changed,
