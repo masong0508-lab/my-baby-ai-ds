@@ -381,6 +381,21 @@ static void teddy(void){
  soft_mark(x-.175f,y-.285f,z+.263f,.078f,.065f,30,25,18);
  soft_mark(x+.175f,y-.285f,z+.263f,.078f,.065f,30,25,18);
 }
+/* Articulated shoulders. The sleeve, forearm, hand all share ONE local
+ * shoulder transform; no independent bobbing parts and no new polygons.
+ * A horizontal PLAY reach or CHAT gesture is visible from the front,
+ * while NAP naturally folds both arms toward the torso. */
+static void baby_arm(int direction,int angle){
+ float side=(float)direction;
+ glPushMatrix();
+ glTranslatef(side*.45f,-.21f,-.025f);
+ glRotateZ(degreesToAngle(direction*angle));
+ ellipse(0,0,0,.205f,.22f,.195f,19,26,27);
+ tilted_ellipse(side*.10f,-.16f,.17f,
+                .14f,.18f,.14f,direction*26,31,23,19);
+ ellipse(side*.18f,-.25f,.305f,.13f,.125f,.13f,31,24,20);
+ glPopMatrix(1);
+}
 /* Baby A.I. hero model. One stable chibi silhouette with a connected
  * romper, SHORT hair, embedded eyes and a small closed-mouth smile. The
  * previous dark bob, gaping mouth/teeth, flaring jeans and detached facial
@@ -400,10 +415,12 @@ static void baby_model(const Game *s,uint32_t frame,int action,
   * connected to the parent model rather than becoming floating parts. */
  const float swing=rag&&rag->moving?(float)rag->vr*.0022f:0.f;
  const float settle=rag?(float)rag->impact*.0025f:0.f;
- const float left_pose=wave+(action==2?.065f:action==3?.075f:
-                              action==4?-.035f:action==5?-.145f:0.f)+swing;
- const float right_pose=-wave+(action==1?.07f:action==3?.075f:
-                                action==4?-.035f:action==5?.145f:0.f)-swing;
+ /* Care IDs: FEED=1, CHAT=2, PLAY=3, NAP=4. Each reaches using
+  * a shared shoulder pivot, not isolated upward-moving arm balls. */
+ const int base_reach=action==3?57:action==2?45:action==1?28:
+                      action==4?-8:action==5?-6:7;
+ const int wave_deg=(int)(wave*160.f);
+ const int recoil=rag&&rag->moving?(rag->vr>0?5:-5):0;
  const int blink=(frame%173u)<5u||action==4;
  const int happy=s->mood>35;
  const int glitch=game_glitch_tier(s)>=2&&!s->safe_visuals&&
@@ -428,16 +445,10 @@ static void baby_model(const Game *s,uint32_t frame,int action,
  soft_mark(-.075f,-.34f,.331f,.055f,.026f,30,25,14);
  soft_mark(.072f,-.34f,.331f,.052f,.026f,30,25,14);
  soft_mark(0,-.38f,.332f,.044f,.027f,30,25,14);
- /* Sleeves overlap the torso and the skin overlaps each sleeve; hands
-  * always remain attached while the animation cycles. */
- tilted_ellipse(-.45f,-.21f+swing*.45f,-.025f,
-                .205f,.22f,.195f,-20,19,26,27);
- tilted_ellipse(.45f,-.21f-swing*.45f,-.025f,
-                .205f,.22f,.195f,20,19,26,27);
- tilted_ellipse(-.55f,-.37f+left_pose,.15f,.14f,.18f,.14f,-26,31,23,19);
- tilted_ellipse(.55f,-.37f+right_pose,.15f,.14f,.18f,.14f,26,31,23,19);
- ellipse(-.63f,-.46f+left_pose,.28f,.13f,.125f,.13f,31,24,20);
- ellipse(.63f,-.46f+right_pose,.28f,.13f,.125f,.13f,31,24,20);
+ /* Rotating the whole forearm+hand hierarchy preserves contact with
+  * the sleeve in every action and during roughhouse recoil. */
+ baby_arm(-1,base_reach+wave_deg+recoil);
+ baby_arm(1,base_reach-wave_deg-recoil);
  /* Neck pivot moves the entire face, eyes, cheeks, hair, and mouth AS ONE.
   * The free head briefly lags the shell's rolling body by at most 16deg. */
  glPushMatrix();
