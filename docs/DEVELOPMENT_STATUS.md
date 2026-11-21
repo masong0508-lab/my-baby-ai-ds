@@ -10,7 +10,7 @@ This is a source-based inventory of `main` as audited after the first successful
 | Dual-screen rendering | `source/world.c`: perspective-3D nursery with crib, dresser, window, floorboards, toys, teddy and a procedural 3D baby; `source/ui.c`: sub-screen 16-bit bitmap interface | Most art is procedural geometry with fixed camera; limited pose variation; no authored texture/rig pipeline or multiple explorable rooms |
 | Care loop | `source/game.c`: feed, chat, play and nap affect needs, mood, chaos and corruption | No rich touch-manipulation activities, time-of-day routine, meaningful room interaction, or evolving developmental skills |
 | Baby dialogue | `source/dialogue.c`: fixed-weight 6-input → 8-hidden → 6-output integer classifier; six response sets of four lines (24 authored lines) | Not a generative LLM or trained neural model. No durable conversational/event memory, word recognition, typed chat, or long-running relationship |
-| Arcade | 16 named cabinets; eight unlocked initially; distinct gameplay for Bottle Balance, Diaper Dash, Tax Return Teether, Crib Kart, Baby Beatbox, Sock Market, Naptime Negotiator and Rattle Rescue; the other eight use directional/timing challenge | **8 of 16 have distinct mechanics** on this branch. Eight cabinets still need unique gameplay, controls and tests; the new modes need ROM and emulator validation |
+| Arcade | 16 named cabinets; eight unlocked initially; distinct gameplay and art for all 16 named cabinets; the formerly generic cabinets 8–15 now have jump/duck, steering, counting, timing, audit, watering, path-tracing and management gameplay | **16 of 16 have individual mechanics** on the feature branch. Fresh emulator and DS builds are still required; original hardware and DraStic touch compatibility remain unconfirmed |
 | Economy | Diaper Dollars, Favors and unlock costs in `game_unlock`; wins award currency | Limited sinks/long-term rewards; no purchasable décor, apparel, talent upgrades, sticker collection, or balanced price curve |
 | Glitches | Five corruption tiers, occasional visual disruption, reverse directions, shorter arcade response windows | Effects are narrow; no per-mode corruption language, glitch frequency controls, or accessibility balancing beyond the visual effect toggle |
 | Endings | Four good, four bad, ending album, continuing play; separately confirmed optional reset | Basic text/bitmap endings rather than bespoke cinematics; needs stress testing around reset and recovery |
@@ -23,7 +23,7 @@ This is a source-based inventory of `main` as audited after the first successful
 
 1. Open the title screen and enter the nursery.
 2. Use A/B/X/Y or the touchscreen to feed/chat/play/nap; state updates immediately.
-3. Enter the arcade, select one of 16 named cabinets, and play one of eight distinct minigames (Bottle Balance, Diaper Dash, Tax Return Teether, Crib Kart, Baby Beatbox, Sock Market, Naptime Negotiator and Rattle Rescue), or one of eight shared directional cabinets (or unlock cabinets when eligible).
+3. Enter the arcade, select one of 16 named cabinets, and play any of 16 individually implemented arcade cabinets, eight available initially and eight unlockable through progression; each uses its own rules, illustrated screen and touch/button mapping.
 4. Progress days, gain currency/Favors, influence corruption and collect endings.
 5. Continue playing after a good or bad ending. Optionally access the secret, explicitly confirmed game-save reset after sufficient **bad** endings.
 
@@ -31,7 +31,7 @@ This is a source-based inventory of `main` as audited after the first successful
 
 **Critical before claiming a verified playable build:** boot and frame-by-frame rendering in melonDS, input testing on both screens, 30-minute play session, save/reload, and original-hardware flashcart testing. The GitHub Actions compiler cannot certify those.
 
-**Critical before claiming a complete game:** finish the other eight distinct minigames; authored baby animation and environment interactions; additional activities and progression; sounds/music; stronger personality memory; accessible settings; an achievable economy; and end-to-end game balance.
+**Critical before claiming a complete game:** balance and validate all sixteen mini-games on real DS hardware; authored baby animation and environment interactions; additional activities and progression; sounds/music; stronger personality memory; accessible settings; an achievable economy; and end-to-end game balance.
 
 **Important documentation correction:** The neural classifier is already implemented, but it is a compact hand-tuned integer intent classifier, not a modern language model. The ROM has cross-compiled successfully through GitHub Actions, but its runtime behavior has not been independently confirmed here.
 
@@ -60,8 +60,25 @@ This change replaces the old first-two-cabinet placeholder panels with original 
 - **Crib Kart:** survive six incoming traffic cones by switching among three lanes with either the stylus or D-pad; a collision costs a strike and the third collision ends the race.
 - **Sock Market:** match the stripe on a sample sock to one of three randomly shuffled matching stalls; six pairs win, three mismatches lose. Includes graphic sock art and touchscreen stalls.
 - **Naptime Negotiator:** calm the baby with four well-timed taps in a visibly marked 33%-width lullaby window; repeated taps in a single window cannot be exploited. Global session timer, three-strike rule and button/touch options.
-- **Verification:** host tests now cover all eight distinct cabinet mechanics, touch hitboxes, timeouts and corruption-based difficulty. ROM and emulator checks are required before merge.
+- **Verification:** prior mainline CI passed for the first eight modes. This next feature branch adds independent host logic, screen-rendering and hitbox regression cases for cabinets 8–15; fresh ROM and emulator checks are required before merge.
 - **CI regressions repaired:** Rattle Rescue now has an active UI draw path and resets properly on timeout; emulator Diaper Dash script now performs real continuous gestures rather than obsolete one-tap tests.
 - **Testing:** new host tests cover gesture sequence, premature catches, lane matching, timeouts, high-glitch speed and lane hitboxes. The ROM build and emulator still need independent verification for this new branch; source changes alone are not confirmed runtime screenshots.
 
 The game save structure and on-disk save format remain unchanged. All new transient fields live in `Arcade` and are discarded when a cabinet ends.
+
+## Remaining eight arcade cabinets — bespoke mechanic pass
+
+The following implementations are present in the feature branch and must pass host/DS/emulator CI before merging. Every cabinet keeps its existing name and unlock number; the serialized `Game` save format has not changed.
+
+| Cabinet | Actual activity | Inputs |
+| --- | --- | --- |
+| 8 Corporate Crawl | See the approaching floor crate or HR scanner, choose jump or duck and survive six obstacles | Stylus choice or UP/DOWN |
+| 9 Stroller Drift | Correct continuous steering against a drifting track to complete five stable sections before time expires | Hold left/right on touchscreen or D-pad |
+| 10 Cereal Cipher | Solve an addition puzzle, choose one of three numbered cereal bowls, six rounds | Stylus or LEFT/DOWN/RIGHT |
+| 11 Tantrum Blocks | Drop horizontally moving blocks only when they align with the highlighted lane, six correct placements | Tap or A |
+| 12 Baby's First Audit | Compare receipt and invoice totals, then APPROVE or FLAG six cases | Stylus or LEFT/RIGHT |
+| 13 Glitch Gardening | Hold water on the highlighted flower bed until four plants are grown; wrong D-pad watering incurs strikes | Held stylus or LEFT/DOWN/RIGHT |
+| 14 Courtroom Crayons | Trace a shuffled three-clue evidence path in number order across four cases | Continuous stylus or LEFT/UP/RIGHT accessibility input |
+| 15 CEO of Daycare | Balance budget and morale through six INVEST, PLAY or NAP decisions | Stylus or LEFT/DOWN/RIGHT |
+
+No new runtime heap buffers, image decoders or serialized fields were introduced. Existing bitmap rendering is throttled for animated cabinets; validate frame rates on the target DS and emulator rather than assuming a compile proves performance.
