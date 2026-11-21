@@ -293,7 +293,11 @@ static void home(const Game *s,int can_save,const char *message){
  solid(20,38,3,3,PURPLE);
  solid(27,38,3,3,PURPLE);
  fit(42,35,"BABY SAYS...",PURPLE,15);
- solid(42,43,192,1,PINK);
+ solid(42,43,145,1,PINK);
+ /* Real nursery inspection controls; deliberately outside all existing
+  * four care action hitboxes and the bottom Toybox navigation strip. */
+ capsule(194,34,49,13,SKY,BLUE);
+ fit(203,38,"ROOM",INK,5);
  n=(int)strlen(speech);
  if(n>36){
   split=36;
@@ -351,6 +355,66 @@ static void home(const Game *s,int can_save,const char *message){
  capsule(169,178,80,13,NIGHT,TEAL);
  fit(189,183,"END DAY",WHITE,10);
  (void)can_save;
+}
+/* First-class interactive Room mode. Cards match the actual nursery
+ * landmarks seen on the TOP hardware 3D screen. All four actions are
+ * available through native touch, virtual stylus and D-pad fallback. */
+static void room_screen(const Game *s,int state,const char *message){
+ int selected=state&3;
+ int day=(state&8)!=0,lamp=(state&16)!=0;
+ static const char *const name[4]={"WINDOW","LAMP","TEDDY","CRIB"};
+ static const char *const benefit[4]={
+  "SKY / MOON","SWITCH LIGHT","MOOD +10","ENERGY +25"
+ };
+ int i,x,y;
+ (void)s;
+ solid(0,27,256,149,LILAC);
+ panel(8,31,240,41,WHITE,PURPLE);
+ fit(18,36,"A LITTLE ROOM WITH BIG SECRETS",PURPLE,36);
+ solid(18,46,220,1,PINK);
+ fit(18,50,name[selected],INK,10);
+ fit(85,50,selected==0?(day?"DAYLIGHT":"MOONLIGHT"):
+              selected==1?(lamp?"LAMP: ON":"LAMP: OFF"):
+              selected==2?"TEDDY SAYS HELLO":"NURSERY NAP",TEAL,22);
+ fit(18,61,message?message:"TOUCH A FURNITURE CARD.",MUTED,36);
+ for(i=0;i<4;i++){
+  x=i%2?132:8;
+  y=i/2?122:77;
+  capsule(x,y,116,38,i==selected?MINT:WHITE,
+          i==selected?GREEN:PURPLE);
+  /* Recognizable tiny icons: a window with daylight bars, a conical lamp,
+   * a plush face and a crib's frame. No tiles/assets or drawn ghost hitbox. */
+  if(i==0){
+   outline(x+8,y+6,28,24,BLUE);
+   solid(x+20,y+7,2,22,BLUE);
+   solid(x+9,y+17,25,2,BLUE);
+   solid(x+(day?23:11),y+10,7,7,day?LEMON:SKY);
+  }else if(i==1){
+   solid(x+18,y+9,10,3,lamp?LEMON:GRAY);
+   solid(x+13,y+12,20,7,lamp?GOLD:PURPLE);
+   solid(x+21,y+19,4,12,INK);
+   solid(x+16,y+30,14,2,INK);
+  }else if(i==2){
+   solid(x+9,y+9,10,10,GOLD);solid(x+28,y+9,10,10,GOLD);
+   capsule(x+12,y+12,23,21,GOLD,ROSE);
+   solid(x+17,y+19,3,3,INK);solid(x+28,y+19,3,3,INK);
+   solid(x+22,y+25,4,4,PURPLE);
+  }else{
+   outline(x+9,y+10,28,20,PURPLE);
+   solid(x+15,y+11,2,18,PURPLE);
+   solid(x+22,y+11,2,18,PURPLE);
+   solid(x+29,y+11,2,18,PURPLE);
+   solid(x+8,y+31,4,3,INK);
+   solid(x+32,y+31,4,3,INK);
+  }
+  fit(x+45,y+8,name[i],PURPLE,10);
+  fit(x+45,y+22,benefit[i],INK,13);
+ }
+ foot(PURPLE);
+ capsule(8,178,240,13,NIGHT,TEAL);
+ fit(20,182,"B BACK",WHITE,9);
+ fit(93,182,"D-PAD / TAP",MINT,14);
+ fit(210,182,"A USE",WHITE,6);
 }
 /* Five-character art-directed wordmarks can occupy a genuine 2x font,
  * with the full cabinet title displayed in the section above. */
@@ -1716,12 +1780,13 @@ void ui_draw(const Game *s,const Arcade *a,int view,int selection,
  else if(view==5)screen_accent=PINK;
  else if(view==6)screen_accent=SKY;
  else if(view==8||view==9)screen_accent=ROSE;
+ else if(view==10)screen_accent=MINT;
  else screen_accent=TEAL;
  if(view==2&&a)screen_title="MINIGAME";
  else screen_title=view==0?"CARE":view==1?"ARCADE":
          view==3?"RESET":view==4?"ENDING":view==5?"WELCOME":
          view==6?"ALBUM":view==7?"TOUCH TEST":
-         view==8?"TOYBOX":"INCUBATOR";
+         view==8?"TOYBOX":view==10?"ROOM":"INCUBATOR";
  /* Every screen paints its own content band (y=27..175), and header/foot
   * repaint the other two bands. The previous blanket 256x192 clear was
   * 49,152 redundant 16-bit VRAM writes on every animation refresh. */
@@ -1755,6 +1820,7 @@ void ui_draw(const Game *s,const Arcade *a,int view,int selection,
  case 7:touch_diagnostic();break;
  case 8:roughhouse_screen(selection);break;
  case 9:egg_scene_screen(selection);break;
+ case 10:room_screen(s,selection,message);break;
  }
 }
 /* Three separated footer targets prevent accidental skip during the
@@ -1781,6 +1847,18 @@ int ui_roughhouse_touch(int x,int y){
   * This also makes directional touch impulses intentional and repeatable. */
  if(y>=83&&y<135&&x>=95&&x<160)return 4;
  return 0;
+}
+/* Return 0..3 for the four actual prop cards, 4 for BACK, -1 for
+ * whitespace. All hitboxes are visibly filled in room_screen(). */
+int ui_room_touch(int x,int y){
+ if(x<0||x>=256||y<0||y>=192)return -1;
+ if(y>=176)return 4;
+ if(y>=77&&y<115)return x>=8&&x<124?0:x>=132&&x<248?1:-1;
+ if(y>=122&&y<161)return x>=8&&x<124?2:x>=132&&x<248?3:-1;
+ return -1;
+}
+int ui_room_entry_touch(int x,int y){
+ return x>=194&&x<243&&y>=34&&y<47;
 }
 int ui_nursery_touch(int x,int y){
  if(x<7||x>=249)return -1;
