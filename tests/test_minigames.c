@@ -195,6 +195,155 @@ static void naptime(void){
  g.corruption=65;game_arcade_start(&g,&a,6);
  assert(a.hold_frames==80&&a.timer==420);
 }
+
+static void corporate_crawl(void){
+ Game g;Arcade a;int i;
+ game_init(&g);g.unlocked=0xffffu;game_arcade_start(&g,&a,8);
+ assert(a.active&&a.timer==82);
+ for(i=0;i<MBAI_ROUNDS;i++){
+  int correct=a.target;
+  assert(correct==0||correct==2);
+  game_arcade_input(&g,&a,correct);
+  while(a.active&&a.round==(unsigned)i)game_arcade_tick(&g,&a);
+ }
+ assert(a.finished==1&&g.wins==1);
+ game_arcade_start(&g,&a,8);
+ for(i=0;i<3&&a.active;i++){
+  game_arcade_input(&g,&a,a.target==0?2:0);
+  while(a.active&&a.mistakes==(unsigned)i)game_arcade_tick(&g,&a);
+ }
+ assert(a.finished==2&&a.mistakes==3);
+ g.corruption=65;game_arcade_start(&g,&a,8);
+ assert(a.timer==58);
+}
+static void stroller_drift(void){
+ Game g;Arcade a;int i;
+ game_init(&g);g.unlocked=0xffffu;game_arcade_start(&g,&a,9);
+ assert(a.active&&a.timer==660);
+ for(i=0;i<660&&a.active;i++){
+  int drift=(((a.elapsed+1u)/38u)&1u)?-2:2;
+  int steer=a.balance>0?-1:a.balance<0?1:(drift>0?-1:1);
+  game_arcade_steer(&a,steer);
+  game_arcade_tick(&g,&a);
+ }
+ assert(a.finished==1&&g.wins==1&&a.round==5);
+ game_arcade_start(&g,&a,9);
+ for(i=0;i<660&&a.active;i++){
+  game_arcade_steer(&a,1);
+  game_arcade_tick(&g,&a);
+ }
+ assert(a.finished==2&&a.mistakes==3);
+ g.corruption=65;game_arcade_start(&g,&a,9);
+ assert(a.timer==510);
+}
+static void cereal_cipher(void){
+ Game g;Arcade a;int i;
+ game_init(&g);g.unlocked=0xffffu;game_arcade_start(&g,&a,10);
+ for(i=0;i<MBAI_ROUNDS;i++){
+  int correct=a.stage+a.direction;
+  assert(a.timer==180&&a.target<3);
+  assert(a.notes[a.target]==correct);
+  assert(a.notes[1]==a.notes[0]+1&&a.notes[2]==a.notes[1]+1);
+  game_arcade_input(&g,&a,a.target);
+ }
+ assert(a.finished==1&&g.wins==1);
+ game_arcade_start(&g,&a,10);
+ for(i=0;i<3&&a.active;i++)
+  game_arcade_input(&g,&a,(a.target+1)%3);
+ assert(a.finished==2);
+ g.corruption=65;game_arcade_start(&g,&a,10);
+ assert(a.timer==120);
+}
+static void tantrum_blocks(void){
+ Game g;Arcade a;int i,frames;
+ game_init(&g);g.unlocked=0xffffu;game_arcade_start(&g,&a,11);
+ for(i=0;i<MBAI_ROUNDS;i++){
+  frames=0;
+  while(a.active&&a.direction!=a.target&&frames++<180)
+   game_arcade_tick(&g,&a);
+  assert(a.active&&a.direction==a.target);
+  game_arcade_input(&g,&a,0);
+ }
+ assert(a.finished==1&&g.wins==1);
+ game_arcade_start(&g,&a,11);
+ for(i=0;i<3&&a.active;i++){
+  while(a.active&&a.direction==a.target)game_arcade_tick(&g,&a);
+  game_arcade_input(&g,&a,0);
+ }
+ assert(a.finished==2&&a.mistakes==3);
+ g.corruption=65;game_arcade_start(&g,&a,11);
+ assert(a.hold_frames==11&&a.timer==130);
+}
+static void first_audit(void){
+ Game g;Arcade a;int i;
+ game_init(&g);g.unlocked=0xffffu;game_arcade_start(&g,&a,12);
+ for(i=0;i<MBAI_ROUNDS;i++){
+  assert((int)a.target==(a.stage!=a.direction));
+  assert(a.timer==180);
+  game_arcade_input(&g,&a,a.target);
+ }
+ assert(a.finished==1&&g.wins==1);
+ game_arcade_start(&g,&a,12);
+ for(i=0;i<3&&a.active;i++)
+  game_arcade_input(&g,&a,1-a.target);
+ assert(a.finished==2);
+ g.corruption=65;game_arcade_start(&g,&a,12);
+ assert(a.timer==125);
+}
+static void glitch_gardening(void){
+ Game g;Arcade a;int i,j;
+ game_init(&g);g.unlocked=0xffffu;game_arcade_start(&g,&a,13);
+ assert(a.active&&a.timer==540);
+ game_arcade_input(&g,&a,(a.target+1)%3);
+ assert(a.mistakes==1&&a.progress==0);
+ for(i=0;i<4;i++){
+  int x=46+82*a.target;
+  for(j=0;j<50&&a.active&&a.round==(unsigned)i;j++)
+   game_arcade_garden_touch(&g,&a,1,x,140);
+  assert(a.round==(unsigned)(i+1));
+ }
+ assert(a.finished==1&&g.wins==1);
+ game_arcade_start(&g,&a,13);
+ while(a.active)game_arcade_tick(&g,&a);
+ assert(a.finished==2);
+ g.corruption=65;game_arcade_start(&g,&a,13);
+ assert(a.timer==390);
+}
+static void courtroom_crayons(void){
+ static const int xs[3]={46,128,210},ys[3]={134,92,134};
+ Game g;Arcade a;int i,j;
+ game_init(&g);g.unlocked=0xffffu;game_arcade_start(&g,&a,14);
+ game_arcade_court_touch(&g,&a,1,xs[a.notes[0]],ys[a.notes[0]]);
+ assert(a.stage==1);
+ game_arcade_court_touch(&g,&a,0,0,0);
+ assert(a.stage==0); /* Releasing an incomplete stroke restarts. */
+ for(i=0;i<4;i++){
+  for(j=0;j<3;j++){
+   int node=a.notes[j];
+   game_arcade_court_touch(&g,&a,1,xs[node],ys[node]);
+  }
+  assert(a.round==(unsigned)(i+1));
+ }
+ assert(a.finished==1&&g.wins==1);
+ game_arcade_start(&g,&a,14);
+ for(i=0;i<3&&a.active;i++)
+  game_arcade_input(&g,&a,(a.notes[0]+1)%3);
+ assert(a.finished==2);
+ g.corruption=65;game_arcade_start(&g,&a,14);
+ assert(a.timer==180);
+}
+static void ceo_of_daycare(void){
+ Game g;Arcade a;int i;
+ game_init(&g);g.unlocked=0xffffu;game_arcade_start(&g,&a,15);
+ assert(a.balance==55&&a.progress==45&&a.timer==540);
+ for(i=0;i<6;i++)game_arcade_input(&g,&a,(i&1)?1:0);
+ assert(a.finished==1&&g.wins==1&&a.balance>=35&&a.progress>=35);
+ game_arcade_start(&g,&a,15);
+ for(i=0;i<6&&a.active;i++)game_arcade_input(&g,&a,2);
+ assert(a.finished==2); /* Nap-only business spends all the cash. */
+ g.corruption=65;game_arcade_start(&g,&a,15);
+ assert(a.timer==390);
+}
 static void rattle(void){
  Game g;Arcade a;int i;
  game_init(&g);game_arcade_start(&g,&a,7);
@@ -221,6 +370,8 @@ static void rattle(void){
 int main(void){
  bottle();diaper();diaper_gestures();tax_receipts();
  crib_kart();baby_beatbox();sock_market();naptime();rattle();
- puts("PASS: eight distinct minigames: physics, gestures, dodge, memory, matching, timing");
+ corporate_crawl();stroller_drift();cereal_cipher();tantrum_blocks();
+ first_audit();glitch_gardening();courtroom_crayons();ceo_of_daycare();
+ puts("PASS: all 16 arcade mechanics, touch gestures, collision, memory, strategy, timers");
  return 0;
 }

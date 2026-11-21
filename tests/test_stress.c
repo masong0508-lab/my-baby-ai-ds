@@ -21,11 +21,12 @@ int main(void){
    int ending=game_end_day(&g);
    assert(ending>=END_OK&&ending<=END_SECOND_CHANCE);
   }else if(i%17==0){
-   int n=0,id=(int)((seed>>12)&7u);
+   int n=0,id=(int)((seed>>12)&15u);
+    g.unlocked|=(uint16_t)(1u<<id);
    game_arcade_start(&g,&a,id);
    assert(a.active);
-   while(a.active&&n<700){
-    if(id==0)game_arcade_steer(&a,(n/9)&1?1:-1);
+   while(a.active&&n<720){
+    if(id==0||id==9)game_arcade_steer(&a,(n/9)&1?1:-1);
     else if(n%8==0)game_arcade_input(&g,&a,game_arcade_expected(&a));
     game_arcade_tick(&g,&a);
     n++;

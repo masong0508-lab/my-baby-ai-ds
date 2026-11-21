@@ -156,6 +156,67 @@ static void rattle_next(Game *s,Arcade *a){
  a->hold_frames=a->timer; /* original fall duration for drawing */
  a->elapsed=0;
 }
+static void crawl_next(Game *s,Arcade *a){
+ /* A rolling office scanner needs a duck; a floor crate needs a jump. */
+ a->target=(uint8_t)((next(s)&1u)?0:2);
+ a->stage=1;
+ a->timer=(uint16_t)(game_glitch_tier(s)>=3?58:82);
+ a->hold_frames=a->timer;
+}
+static void stroller_begin(Game *s,Arcade *a){
+ a->timer=(uint16_t)(game_glitch_tier(s)>=3?510:660);
+ a->balance=0;a->elapsed=0;a->hold_frames=0;a->steering=0;
+}
+static void cereal_next(Game *s,Arcade *a){
+ int i,answer;
+ a->stage=(uint8_t)(1u+next(s)%4u);
+ a->direction=(uint8_t)(1u+next(s)%4u);
+ answer=a->stage+a->direction;
+ a->target=(uint8_t)(next(s)%3u);
+ for(i=0;i<3;i++)a->notes[i]=(uint8_t)(answer+i-a->target);
+ a->timer=(uint16_t)(game_glitch_tier(s)>=3?120:180);
+}
+static void blocks_next(Game *s,Arcade *a){
+ a->target=(uint8_t)(next(s)%3u);
+ a->elapsed=0;a->direction=0;
+ a->hold_frames=(uint16_t)(game_glitch_tier(s)>=3?11:16);
+ a->timer=(uint16_t)(game_glitch_tier(s)>=3?130:190);
+}
+static void audit_next(Game *s,Arcade *a){
+ a->stage=(uint8_t)(20u+next(s)%50u);
+ a->direction=(uint8_t)(a->stage+((next(s)&1u)?0u:5u));
+ a->target=(uint8_t)(a->stage==a->direction?0:1);
+ a->timer=(uint16_t)(game_glitch_tier(s)>=3?125:180);
+}
+static void garden_next(Game *s,Arcade *a){
+ a->target=(uint8_t)(next(s)%3u);
+ a->progress=0;
+}
+static void court_next(Game *s,Arcade *a){
+ int i;
+ a->stage=0;a->touch_active=0;
+ for(i=0;i<3;i++)a->notes[i]=(uint8_t)i;
+ for(i=2;i>0;i--){
+  int j=(int)(next(s)%(unsigned)(i+1));
+  uint8_t t=a->notes[i];a->notes[i]=a->notes[j];a->notes[j]=t;
+ }
+ a->timer=(uint16_t)(game_glitch_tier(s)>=3?180:270);
+}
+static void ceo_begin(Game *s,Arcade *a){
+ a->balance=55;a->progress=45;
+ a->timer=(uint16_t)(game_glitch_tier(s)>=3?390:540);
+}
+static void finish(Game *s,Arcade *a,int won);
+static void garden_water(Game *s,Arcade *a,unsigned amount){
+ int count;
+ if(!a->active||a->id!=13)return;
+ count=a->progress+(int)amount;
+ if(count>=100){
+  a->round++;
+  if(a->round>=4)finish(s,a,1);
+  else garden_next(s,a);
+ }else a->progress=(uint8_t)count;
+}
 static void round_next(Game *s,Arcade *a){
  a->direction=(uint8_t)(next(s)&3u);
  a->reverse=(uint8_t)(game_glitch_tier(s)>=2&&a->round%3==2);
@@ -175,6 +236,17 @@ void game_arcade_start(Game *s,Arcade *a,int id){
  else if(id==5)sock_next(s,a);
  else if(id==6)nap_begin(s,a);
  else if(id==7)rattle_next(s,a);
+ else if(id==8)crawl_next(s,a);
+ else if(id==9)stroller_begin(s,a);
+ else if(id==10)cereal_next(s,a);
+ else if(id==11)blocks_next(s,a);
+ else if(id==12)audit_next(s,a);
+ else if(id==13){
+  a->timer=(uint16_t)(game_glitch_tier(s)>=3?390:540);
+  garden_next(s,a);
+ }
+ else if(id==14)court_next(s,a);
+ else if(id==15)ceo_begin(s,a);
  else round_next(s,a);
 }
 int game_arcade_expected(const Arcade *a){
@@ -183,7 +255,11 @@ int game_arcade_expected(const Arcade *a){
  if(a->id==4)return a->notes[a->stage<3?a->stage:2];
  if(a->id==3)return (a->target+1u)%3u; /* a safe lane */
  if(a->id==5){int i;for(i=0;i<3;i++)if(a->notes[i]==a->target)return i;}
- if(a->id==6)return 0;
+ if(a->id==6||a->id==9||a->id==11)return 0;
+ if(a->id==8)return a->target;
+ if(a->id==10||a->id==12||a->id==13)return a->target;
+ if(a->id==14)return a->notes[a->stage<3?a->stage:2];
+ if(a->id==15)return a->balance<a->progress?0:1;
  return a->direction^(a->reverse?2:0);
 }
 static void finish(Game *s,Arcade *a,int won){
@@ -200,12 +276,97 @@ static void finish(Game *s,Arcade *a,int won){
 }
 void game_arcade_steer(Arcade *a,int direction){
  int force;
- if(!a->active||a->id!=0)return;
+ if(!a->active||(a->id!=0&&a->id!=9))return;
  force=direction<0?-4:direction>0?4:0;
  a->steering=(int8_t)(a->reverse?-force:force);
 }
 void game_arcade_input(Game *s,Arcade *a,int dir){
- if(!a->active||a->id==0||dir<0||dir>3)return;
+ if(!a->active||a->id==0||a->id==9||dir<0||dir>3)return;
+ if(a->id==8){
+  if(dir==0||dir==2)a->stage=(uint8_t)dir;
+  return; /* Choose a posture before the office obstacle arrives. */
+ }
+ if(a->id==10){
+  if(dir>2)return;
+  if(dir==a->target){
+   a->round++;
+   if(a->round>=MBAI_ROUNDS)finish(s,a,1);
+   else cereal_next(s,a);
+  }else{
+   a->mistakes++;s->corruption=clamp(s->corruption+3);
+   if(a->mistakes>=3)finish(s,a,0);
+   else cereal_next(s,a);
+  }
+  return;
+ }
+ if(a->id==12){
+  if(dir>1)return;
+  if(dir==a->target){
+   a->round++;
+   if(a->round>=MBAI_ROUNDS)finish(s,a,1);
+   else audit_next(s,a);
+  }else{
+   a->mistakes++;s->corruption=clamp(s->corruption+3);
+   if(a->mistakes>=3)finish(s,a,0);
+   else audit_next(s,a);
+  }
+  return;
+ }
+ if(a->id==13){
+  if(dir>2)return;
+  if(dir==a->target)garden_water(s,a,25);
+  else{
+   a->mistakes++;s->corruption=clamp(s->corruption+3);
+   if(a->mistakes>=3)finish(s,a,0);
+  }
+  return;
+ }
+ if(a->id==14){
+  if(dir>2)return;
+  if(dir==a->notes[a->stage]){
+   a->stage++;
+   if(a->stage>=3){
+    a->round++;
+    if(a->round>=4)finish(s,a,1);
+    else court_next(s,a);
+   }
+  }else{
+   a->mistakes++;s->corruption=clamp(s->corruption+3);
+   if(a->mistakes>=3)finish(s,a,0);
+   else court_next(s,a);
+  }
+  return;
+ }
+ if(a->id==15){
+  int budget=a->balance,morale=a->progress;
+  if(dir>2)return;
+  if(dir==0){budget+=12;morale-=8;}
+  else if(dir==1){budget-=10;morale+=13;}
+  else{budget-=5;morale+=4;}
+  if(budget<20||budget>85||morale<20||morale>85){
+   a->mistakes++;s->corruption=clamp(s->corruption+3);
+   budget=55;morale=45;
+   if(a->mistakes>=3){finish(s,a,0);return;}
+  }
+  a->balance=(int16_t)budget;a->progress=(uint8_t)morale;
+  a->round++;
+  if(a->round>=MBAI_ROUNDS)
+   finish(s,a,budget>=35&&morale>=35&&budget<=80&&morale<=80);
+  return;
+ }
+ if(a->id==11){
+  if(dir!=0)return; /* Drop the active block at its current position. */
+  if(a->direction==a->target){
+   a->round++;
+   if(a->round>=MBAI_ROUNDS)finish(s,a,1);
+   else blocks_next(s,a);
+  }else{
+   a->mistakes++;s->corruption=clamp(s->corruption+3);
+   if(a->mistakes>=3)finish(s,a,0);
+   else blocks_next(s,a);
+  }
+  return;
+ }
  if(a->id==3){
   if(dir<=2)a->stage=(uint8_t)dir;
   return; /* Steering is not itself a hit or a score. */
@@ -288,6 +449,9 @@ void game_arcade_input(Game *s,Arcade *a,int dir){
   else if(a->id==2)teether_next(s,a);
   else if(a->id==5)sock_next(s,a);
   else if(a->id==7)rattle_next(s,a);
+  else if(a->id==10)cereal_next(s,a);
+  else if(a->id==12)audit_next(s,a);
+  else if(a->id==14)court_next(s,a);
   else round_next(s,a);
  }
 }
@@ -318,6 +482,41 @@ int game_arcade_teether_touch(Game *s,Arcade *a,int touching,int x,int y){
  }
  a->touch_last_x=(int16_t)x;
  a->touch_last_y=(int16_t)y;
+ return 0;
+}
+/* Continuous irrigation of the correct bed: only a held stylus adds water.
+ * Releasing cannot accidentally water an unselected garden. */
+int game_arcade_garden_touch(Game *s,Arcade *a,int touching,int x,int y){
+ int lane=-1;
+ if(!a->active||a->id!=13||!touching)return 0;
+ if(y<105||y>=175)return 0;
+ if(x>=13&&x<79)lane=0;
+ else if(x>=95&&x<161)lane=1;
+ else if(x>=177&&x<243)lane=2;
+ if(lane==a->target){garden_water(s,a,2);return 1;}
+ return 0;
+}
+/* Courtroom evidence must be connected along a continuous gesture.
+ * Button accessibility can still select individual numbered clues. */
+int game_arcade_court_touch(Game *s,Arcade *a,int touching,int x,int y){
+ static const int node_x[3]={46,128,210};
+ static const int node_y[3]={134,92,134};
+ int i;
+ if(!a->active||a->id!=14)return 0;
+ if(!touching){
+  int changed=a->stage!=0;
+  if(a->touch_active&&a->stage>0)a->stage=0;
+  a->touch_active=0;
+  return changed;
+ }
+ for(i=0;i<3;i++){
+  int dx=x-node_x[i],dy=y-node_y[i];
+  if(dx*dx+dy*dy<=20*20&&i==a->notes[a->stage]){
+   a->touch_active=1;
+   game_arcade_input(s,a,i);
+   return 1;
+  }
+ }
  return 0;
 }
 static int diaper_advance(Game *s,Arcade *a,int still_touching){
@@ -400,6 +599,60 @@ static void bottle_tick(Game *s,Arcade *a){
 void game_arcade_tick(Game *s,Arcade *a){
  if(!a->active)return;
  if(a->id==0){bottle_tick(s,a);return;}
+ if(a->id==8){
+  if(a->timer)a->timer--;
+  if(!a->timer){
+   if(a->stage==a->target){
+    a->round++;
+    if(a->round>=MBAI_ROUNDS){finish(s,a,1);return;}
+   }else{
+    a->mistakes++;s->corruption=clamp(s->corruption+4);
+    if(a->mistakes>=3){finish(s,a,0);return;}
+   }
+   crawl_next(s,a);
+  }
+  return;
+ }
+ if(a->id==9){
+  int drift;
+  a->elapsed++;
+  drift=((a->elapsed/38u)&1u)?-2:2;
+  a->balance+=(int16_t)(drift+a->steering);
+  a->steering=0;
+  if(a->balance>60||a->balance< -60){
+   a->mistakes++;s->corruption=clamp(s->corruption+3);
+   a->balance=0;a->hold_frames=0;
+   if(a->mistakes>=3){finish(s,a,0);return;}
+  }
+  if(a->balance>=-25&&a->balance<=25){
+   a->hold_frames++;
+   if(a->hold_frames>=70){
+    a->hold_frames=0;a->round++;
+    if(a->round>=5){finish(s,a,1);return;}
+   }
+  }else a->hold_frames=0;
+  if(a->timer)a->timer--;
+  if(!a->timer)finish(s,a,0);
+  return;
+ }
+ if(a->id==13||a->id==15){
+  if(a->timer)a->timer--;
+  if(!a->timer)finish(s,a,0);
+  return;
+ }
+ if(a->id==11){
+  unsigned i;
+  a->elapsed++;
+  i=(unsigned)(a->elapsed/a->hold_frames)%4u;
+  a->direction=(uint8_t)(i==3u?1u:i);
+  if(a->timer)a->timer--;
+  if(!a->timer){
+   a->mistakes++;s->corruption=clamp(s->corruption+3);
+   if(a->mistakes>=3)finish(s,a,0);
+   else blocks_next(s,a);
+  }
+  return;
+ }
  if(a->id==3){
   if(a->timer)a->timer--;
   if(!a->timer){

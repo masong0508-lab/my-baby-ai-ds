@@ -417,6 +417,75 @@ static const char *const spr_sock[]={
  "..owwwwwwwwwo.",
  "...ooooooooo.."
 };
+/* Additional compact original silhouettes for the newly bespoke cabinets. */
+static const char *const spr_stroller[]={
+ "....oossssoo......",
+ "...osssssssso.....",
+ "..osssssssssso....",
+ ".osssshhhhsssso...",
+ ".ossshssssshsso...",
+ ".ossshwwswwhsso...",
+ "..ossswwwwsssso...",
+ "...oooooooooo.....",
+ "....ottbbtto......",
+ "...otttbbttto.....",
+ "..oooooooooooo....",
+ ".ooo........ooo...",
+ ".ooo........ooo..."
+};
+static const char *const spr_cereal[]={
+ "...ooooooooo...",
+ "..owwwwwwwwwo..",
+ ".owwwggggwwwwwo.",
+ "owgggwwwwggggwo",
+ "owgwwwwwggwwgwo",
+ "owgwwggwwwgggwo",
+ "owwwggggwwwggwo",
+ "owwwwwwwwwwwwo",
+ "owwwpppppwwwwwo",
+ ".owwwwwwwwwwwo.",
+ "..ooooooooooo.."
+};
+static const char *const spr_stack[]={
+ ".oooooooooooo.",
+ "owwwwwwwwwwwwo",
+ "owppwwwwwwppwo",
+ "owppwwwwwwppwo",
+ "owwwwwwwwwwwwo",
+ "owwwttttttwwwo",
+ "owwwttttttwwwo",
+ "owwwwwwwwwwwwo",
+ ".oooooooooooo."
+};
+static const char *const spr_flower[]={
+ "......pp......",
+ ".....pppp.....",
+ "..pp..gg..pp..",
+ ".ppp.gggg.ppp.",
+ "..pp..gg..pp..",
+ ".....pppp.....",
+ "......pp......",
+ "......tt......",
+ "....ttttt.....",
+ "..tt..tt..tt..",
+ ".tt...tt...tt.",
+ "......tt......",
+ "......tt......"
+};
+static const char *const spr_gavel[]={
+ "oooooooo......",
+ "owwwwwwwo.....",
+ "owwwwwwwwo....",
+ "oooooooooo....",
+ "......ottto...",
+ ".......ottto..",
+ "........ottto.",
+ ".........otto.",
+ "..........oo..",
+ "...oooooooooo.",
+ "...owwwwwwwwo.",
+ "...oooooooooo."
+};
 static uint16_t art_ink(char p){
  switch(p){
  case 'o':return INK;
@@ -687,6 +756,212 @@ static void rattle_challenge(const Arcade *a){
  foot(PURPLE);
  fit(11,181,"TAP GOLD ZONE AS RATTLE FALLS",WHITE,39);
 }
+static void crawl_challenge(const Arcade *a){
+ char text[40];int x;
+ arcade_wall(SKY);
+ panel(6,31,244,42,WHITE,TEAL);
+ fit(13,38,"CORPORATE CRAWL",PURPLE,35);
+ snprintf(text,sizeof(text),"ESCAPED %u/6  BUMPS %u/3",a->round,a->mistakes);
+ fit(13,54,text,DEEP_PINK,39);
+ capsule(14,81,229,52,BLUSH,PINK);
+ solid(14,124,229,8,PURPLE);
+ for(x=16;x<237;x+=34)solid(x,121,16,3,GOLD);
+ sprite(49,a->stage==0?89:a->stage==2?109:100,2,spr_baby,18);
+ x=204-(int)((a->hold_frames-a->timer)*117u/a->hold_frames);
+ if(a->target==0){
+  /* Jump across the low office supplies crate. */
+  capsule(x,115,26,17,LEMON,GOLD);
+  solid(x+6,111,14,5,PINK);
+ }else{
+  /* Duck beneath the overhead HR scanning arm. */
+  solid(x+3,85,6,45,TEAL);
+  solid(x-16,85,29,9,DEEP_PINK);
+  solid(x-9,94,13,5,LEMON);
+ }
+ capsule(10,141,109,31,a->stage==0?LEMON:MINT,TEAL);
+ capsule(137,141,109,31,a->stage==2?LEMON:PINK,DEEP_PINK);
+ fit(26,153,"JUMP UP",INK,15);
+ fit(154,153,"DUCK DOWN",INK,15);
+ foot(PURPLE);
+ fit(10,181,a->target==0?"JUMP OVER THE CRATE!":"DUCK UNDER THE SCANNER!",WHITE,40);
+}
+static void stroller_challenge(const Arcade *a){
+ char text[40];int x=128+a->balance;
+ arcade_wall(MINT);
+ panel(6,31,244,41,WHITE,TEAL);
+ fit(13,38,"STROLLER DRIFT",PURPLE,35);
+ snprintf(text,sizeof(text),"LAPS %u/5  BUMPS %u/3",a->round,a->mistakes);
+ fit(13,53,text,DEEP_PINK,37);
+ solid(42,77,171,66,SHADOW);
+ for(int i=0;i<4;i++){
+  int y=81+i*17;
+  solid(47,y,7,8,WHITE);solid(201,y,7,8,WHITE);
+ }
+ solid(101,77,54,65,GRAY);
+ solid(101,77,3,65,LEMON);
+ solid(152,77,3,65,LEMON);
+ for(int i=0;i<5;i++)solid(127,82+i*13,3,6,WHITE);
+ sprite(x-16,102,2,spr_stroller,13);
+ bar(75,144,108,a->hold_frames,70,MINT);
+ fit(88,158,"KEEP CENTER!",PURPLE,21);
+ capsule(8,143,57,29,SKY,BLUE);
+ capsule(191,143,57,29,LEMON,GOLD);
+ fit(14,154,"LEFT",INK,7);
+ fit(198,154,"RIGHT",INK,7);
+ foot(PURPLE);
+ snprintf(text,sizeof(text),"STAY ON TRACK   %u SEC",(a->timer+59)/60);
+ fit(16,181,text,WHITE,39);
+}
+static void cereal_challenge(const Arcade *a){
+ char text[40];
+ arcade_wall(LEMON);
+ panel(6,31,244,42,WHITE,GOLD);
+ fit(12,38,"CEREAL CIPHER",PURPLE,35);
+ snprintf(text,sizeof(text),"SOLVED %u/6  WRONG %u/3",a->round,a->mistakes);
+ fit(12,54,text,DEEP_PINK,38);
+ capsule(36,79,184,33,WHITE,PURPLE);
+ snprintf(text,sizeof(text),"%u + %u = ?",a->stage,a->direction);
+ fit(83,91,text,PURPLE,18);
+ sparkle(18,95,WHITE);sparkle(232,95,PINK);
+ for(int i=0;i<3;i++){
+  int x=13+i*82;
+  capsule(x,119,66,55,i==0?PINK:i==1?MINT:SKY,PURPLE);
+  sprite(x+17,121,1,spr_cereal,11);
+  snprintf(text,sizeof(text),"%u",a->notes[i]);
+  fit(x+28,139,text,INK,2);
+  fit(x+28,160,i==0?"L":i==1?"D":"R",PURPLE,1);
+ }
+ foot(PURPLE);
+ fit(12,181,"COUNT CEREAL: PICK THE SUM!",WHITE,38);
+}
+static void blocks_challenge(const Arcade *a){
+ char text[40];int i;
+ arcade_wall(LILAC);
+ panel(6,31,244,41,WHITE,PURPLE);
+ fit(12,38,"TANTRUM BLOCKS",PURPLE,36);
+ snprintf(text,sizeof(text),"STACK %u/6  MISSED %u/3",a->round,a->mistakes);
+ fit(12,53,text,DEEP_PINK,38);
+ capsule(12,77,232,94,SKY,PURPLE);
+ for(i=0;i<3;i++){
+  int x=35+i*81;
+  solid(x,100,58,4,i==a->target?LEMON:WHITE);
+  if(i==a->target)sparkle(x+26,94,LEMON);
+ }
+ /* The marker glides from side to side until the player drops it. */
+ sprite(42+a->direction*81,83,2,spr_stack,9);
+ for(i=0;i<a->round;i++){
+  int y=144-i*10;
+  capsule(90+(i&1)*6,y,78,10,i&1?MINT:PINK,DEEP_PINK);
+ }
+ capsule(73,151,109,18,LEMON,GOLD);
+ fit(105,157,"DROP!",INK,9);
+ foot(PURPLE);
+ snprintf(text,sizeof(text),"A / TAP TO DROP   %u SEC",(a->timer+59)/60);
+ fit(13,181,text,WHITE,39);
+}
+static void audit_challenge(const Arcade *a){
+ char text[40];
+ arcade_wall(MINT);
+ panel(6,31,244,41,WHITE,TEAL);
+ fit(12,38,"BABY'S FIRST AUDIT",PURPLE,35);
+ snprintf(text,sizeof(text),"CHECKED %u/6  WRONG %u/3",a->round,a->mistakes);
+ fit(12,53,text,DEEP_PINK,38);
+ /* Two legible invoice numbers on a stamped clipboard. */
+ panel(31,77,194,52,WHITE,PURPLE);
+ solid(94,74,68,8,GOLD);
+ fit(46,85,"INVOICE",TEAL,13);
+ fit(151,85,"RECEIPT",TEAL,13);
+ snprintf(text,sizeof(text),"%u",a->stage);
+ fit(60,104,text,PURPLE,3);
+ snprintf(text,sizeof(text),"%u",a->direction);
+ fit(161,104,text,PURPLE,3);
+ solid(127,89,2,34,LILAC);
+ capsule(11,137,109,35,LEMON,GOLD);
+ capsule(136,137,109,35,PINK,DEEP_PINK);
+ fit(25,152,"APPROVE",INK,12);
+ fit(166,152,"FLAG",INK,9);
+ sparkle(12,92,LEMON);sparkle(241,110,PINK);
+ foot(PURPLE);
+ fit(10,181,"MATCHING TOTALS? APPROVE OR FLAG",WHITE,40);
+}
+static void garden_challenge(const Arcade *a){
+ char text[40];int i;
+ arcade_wall(SKY);
+ panel(6,31,244,42,WHITE,GREEN);
+ fit(13,38,"GLITCH GARDENING",PURPLE,34);
+ snprintf(text,sizeof(text),"FLOWERS %u/4  WITHERED %u/3",a->round,a->mistakes);
+ fit(13,54,text,DEEP_PINK,39);
+ for(i=0;i<3;i++){
+  int x=13+i*82;
+  capsule(x,85,66,89,i==a->target?MINT:BLUSH,GREEN);
+  solid(x+7,146,52,22,GOLD);
+  solid(x+14,142,37,6,PURPLE);
+  sprite(x+20,108,2,spr_flower,13);
+  if(i==a->target){
+   solid(x+7,95,52,4,GRAY);
+   solid(x+7,95,(a->progress*52)/100,4,TEAL);
+   sparkle(x+4,92,LEMON);
+  }
+  fit(x+27,162,i==0?"L":i==1?"D":"R",WHITE,1);
+ }
+ foot(PURPLE);
+ fit(13,181,"HOLD TO WATER THE LIT FLOWER!",WHITE,40);
+}
+static int court_node_x(int node){return node==0?46:node==1?128:210;}
+static int court_node_y(int node){return node==1?92:134;}
+static void court_challenge(const Arcade *a){
+ char text[40];int i,j;
+ arcade_wall(LEMON);
+ panel(6,31,244,42,WHITE,GOLD);
+ fit(12,38,"COURTROOM CRAYONS",PURPLE,35);
+ snprintf(text,sizeof(text),"CASES %u/4  OBJECTIONS %u/3",a->round,a->mistakes);
+ fit(12,54,text,DEEP_PINK,40);
+ /* Numbered clues form a new three-node route every case. */
+ for(i=0;i<2;i++){
+  int x0=court_node_x(a->notes[i]),y0=court_node_y(a->notes[i]);
+  int x1=court_node_x(a->notes[i+1]),y1=court_node_y(a->notes[i+1]);
+  for(j=1;j<12;j++){
+   int x=x0+(x1-x0)*j/12;
+   int y=y0+(y1-y0)*j/12;
+   solid(x-2,y-2,4,4,i<a->stage?GREEN:LILAC);
+  }
+ }
+ for(i=0;i<3;i++){
+  int x=court_node_x(a->notes[i]),y=court_node_y(a->notes[i]);
+  char num[3];
+  capsule(x-19,y-18,38,37,i<a->stage?MINT:PINK,DEEP_PINK);
+  snprintf(num,sizeof(num),"%d",i+1);
+  fit(x-2,y-3,num,INK,1);
+ }
+ sprite(14,82,2,spr_gavel,12);
+ foot(PURPLE);
+ fit(9,181,"TRACE 1 TO 2 TO 3   (L UP R)",WHITE,40);
+}
+static void ceo_challenge(const Arcade *a){
+ static const char *const actions[3]={"INVEST","PLAY","NAP"};
+ char text[40];int i;
+ arcade_wall(BLUSH);
+ panel(6,31,244,41,WHITE,PURPLE);
+ fit(12,38,"CEO OF DAYCARE",PURPLE,35);
+ snprintf(text,sizeof(text),"DECISIONS %u/6  FAILS %u/3",a->round,a->mistakes);
+ fit(12,53,text,DEEP_PINK,38);
+ panel(15,78,226,38,WHITE,LILAC);
+ fit(23,84,"CASH",PURPLE,5);
+ fit(23,98,"MORALE",PURPLE,8);
+ solid(76,85,150,8,GRAY);
+ solid(76,99,150,8,GRAY);
+ solid(76,85,a->balance*150/100,8,TEAL);
+ solid(76,99,a->progress*150/100,8,PINK);
+ solid(76+35*150/100,82,2,28,GOLD);
+ for(i=0;i<3;i++){
+  int x=13+i*82;
+  capsule(x,121,66,51,i==0?MINT:i==1?PINK:SKY,PURPLE);
+  solid(x+24,130,18,15,i==0?GOLD:i==1?LEMON:WHITE);
+  fit(x+12,153,actions[i],INK,10);
+ }
+ foot(PURPLE);
+ fit(9,181,"BALANCE THE BOOKS AND BABY!",WHITE,40);
+}
 static void challenge(const Game *s,const Arcade *a){
  char tmp[40];int i;
  solid(0,27,256,149,IVORY);
@@ -865,6 +1140,14 @@ void ui_draw(const Game *s,const Arcade *a,int view,int selection,
         else if(a->id==5)sock_challenge(a);
         else if(a->id==6)nap_challenge(a);
         else if(a->id==7)rattle_challenge(a);
+        else if(a->id==8)crawl_challenge(a);
+        else if(a->id==9)stroller_challenge(a);
+        else if(a->id==10)cereal_challenge(a);
+        else if(a->id==11)blocks_challenge(a);
+        else if(a->id==12)audit_challenge(a);
+        else if(a->id==13)garden_challenge(a);
+        else if(a->id==14)court_challenge(a);
+        else if(a->id==15)ceo_challenge(a);
         else challenge(s,a);
         break;
  case 3:reset_screen(reset_step);break;
@@ -927,6 +1210,38 @@ int ui_nap_touch(int x,int y){
  return x>=12&&x<244&&y>=88&&y<175?0:-1;
 }
 /* Four large rhythmic pads, each mapping to one D-pad equivalent. */
+int ui_crawl_touch(int x,int y){
+ if(y<135||y>=174)return -1;
+ if(x>=10&&x<120)return 0;
+ if(x>=136&&x<247)return 2;
+ return -1;
+}
+int ui_cereal_touch(int x,int y){
+ return y>=119&&y<175?cabinet_lane(x):-1;
+}
+int ui_blocks_touch(int x,int y){
+ return x>=12&&x<244&&y>=82&&y<175?0:-1;
+}
+int ui_audit_touch(int x,int y){
+ if(y<137||y>=175)return -1;
+ if(x>=11&&x<120)return 0;
+ if(x>=136&&x<245)return 1;
+ return -1;
+}
+int ui_garden_touch(int x,int y){
+ return y>=105&&y<175?cabinet_lane(x):-1;
+}
+int ui_court_touch(int x,int y){
+ int i;
+ for(i=0;i<3;i++){
+  int dx=x-court_node_x(i),dy=y-court_node_y(i);
+  if(dx*dx+dy*dy<=20*20)return i;
+ }
+ return -1;
+}
+int ui_ceo_touch(int x,int y){
+ return y>=121&&y<173?cabinet_lane(x):-1;
+}
 int ui_beatbox_touch(int x,int y){
  int i;
  if(y<123||y>=171)return -1;
