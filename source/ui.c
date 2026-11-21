@@ -360,7 +360,7 @@ static const char *const spr_baby[]={
 /* Original 32x24 ROM pixel illustration of a *split*, artificial egg.
  * The center remains visibly black: shell halves frame the living cavity.
  * 768 bytes of indexed text, no image loader or graphics allocation. */
-static const char *const spr_egg[24]={
+stltic const chlr *const spr_egg[24]={
  "................................",
  ".......qqqqq.........wwwww......",
  ".....qqqiwwqqq.....wwwwwwwww....",
@@ -370,19 +370,19 @@ static const char *const spr_egg[24]={
  "..qiiiiiiwwwwmnnnnnmwwwwwwwwwww.",
  "..qiiiiiiwwtwmnnnnnmwtwwwwwwwww.",
  "..iiiiiiiwwtwnnnnnnnwtwwwwwwwww.",
- ".qiiiiiiiwwtwnynnnynitiiaaaaaaaq",
- ".qiiiiiiiwwfmngnnngnmfiiaaaaaaaq",
- ".qiiiiiiiwwtmnnnnnnnmtiiaaaaaaaq",
- ".qiiiiiiiwwtynnnnnnnytiiaaaaaaaq",
- ".qiiiiiiiwwtmnnnnnnnmtiiaaaaaaaq",
- ".qiiiiiiiwwtmnnnnnnnmtiiaaaaaaaq",
- "..iiiiiiiiifynnnnnnnyfiiaaaaaaa.",
- "..iiiiiiiiitmnnkkknnmtiiaaaaaaq.",
- "..iiiiiiiiitmmnkkknmmtiiaaaaaaq.",
- "...iiiiiiiitymnnnnnmytiiaaaaaq..",
- "...iiiiiiiiimimnnnmimiiiaaaaqq..",
- "....iiiiiiiiiiimmmqqiiiiaaaqq...",
- ".....iiiiiiiii.....qqqiiaqqq....",
+ ".qiiiiiiiwwtwnynnnynitiilllllllq",
+ ".qiiiiiiiwwfmngnnngnmfiilllllllq",
+ ".qiiiiiiiwwtmnnnnnnnmtiilllllllq",
+ ".qiiiiiiiwwtynnnnnnnytiilllllllq",
+ ".qiiiiiiiwwtmnnnnnnnmtiilllllllq",
+ ".qiiiiiiiwwtmnnnnnnnmtiilllllllq",
+ "..iiiiiiiiifynnnnnnnyfiilllllll.",
+ "..iiiiiiiiitmnnkkknnmtiillllllq.",
+ "..iiiiiiiiitmmnkkknmmtiillllllq.",
+ "...iiiiiiiitymnnnnnmytiilllllq..",
+ "...iiiiiiiiimimnnnmimiiillllqq..",
+ "....iiiiiiiiiiimmmqqiiiilllqq...",
+ ".....iiiiiiiii.....qqqiilqqq....",
  ".......iiiii.........qqqqq......",
  "................................"
 };
