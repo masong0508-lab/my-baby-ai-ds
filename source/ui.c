@@ -376,6 +376,47 @@ static const char *const spr_receipt[]={
  ".owwwwwwwwwwo.",
  "..oooooooooo.."
 };
+/* Tiny cartridge art; rendered directly to sub-screen bitmap VRAM. */
+static const char *const spr_kart[]={
+ "...ooooooo...",
+ "..owwwwwwwwo.",
+ ".owwppppwwwo",
+ "owwppwwppwwwo",
+ "owwwwwwwwwwwo",
+ ".ooobbbbooo..",
+ "..ottbbtto...",
+ "..ottttttto..",
+ "..ooooooo...",
+ ".ooo....ooo.",
+ ".ooo....ooo."
+};
+static const char *const spr_cone[]={
+ "......oo......",
+ ".....oggo.....",
+ ".....oggo.....",
+ "....oggggo....",
+ "....owwwwo....",
+ "...oggggggo...",
+ "...oggggggo...",
+ "..owwwwwwwwo..",
+ "..oggggggggo..",
+ ".oooooooooooo."
+};
+static const char *const spr_sock[]={
+ "....oooo......",
+ "...owwwwo.....",
+ "...owwwwo.....",
+ "...owwwwo.....",
+ "...owwwwo.....",
+ "...owwwwo.....",
+ "...owwwwo.....",
+ "...owwwwwwo....",
+ "...owwwwwwwo..",
+ "..owwwwwwwwwo.",
+ "..owwwwwwwwwo.",
+ "..owwwwwwwwwo.",
+ "...ooooooooo.."
+};
 static uint16_t art_ink(char p){
  switch(p){
  case 'o':return INK;
@@ -471,6 +512,83 @@ static void teether_challenge(const Arcade *a){
  fit(10,77,a->target==3?"REFUND: SAVE IT!":"JUNK BILL: SHRED!",PURPLE,35);
  foot(PURPLE);
  fit(9,181,"DRAG PAPER TO THE MATCHING BIN",WHITE,40);
+}
+static void kart_challenge(const Arcade *a){
+ char text[40];
+ int i,y;
+ arcade_wall(SKY);
+ panel(6,31,244,42,WHITE,TEAL);
+ fit(12,38,"CRIB KART",PURPLE,34);
+ snprintf(text,sizeof(text),"SAFE %u/6  CRASH %u/3",a->round,a->mistakes);
+ fit(12,54,text,DEEP_PINK,38);
+ for(i=0;i<3;i++){
+  int x=13+i*82;
+  capsule(x,78,66,92,i==a->stage?MINT:GRAY,TEAL);
+  solid(x+4,82,58,61,SHADOW);
+  for(int dy=88;dy<142;dy+=18)
+   solid(x+32,dy+(a->timer/4u)%13u,3,7,WHITE);
+  fit(x+26,159,i==0?"L":i==1?"D":"R",PURPLE,1);
+ }
+ y=81+(a->hold_frames?
+      (int)((a->hold_frames-a->timer)*48u/a->hold_frames):0);
+ sprite(13+a->target*82+19,y,2,spr_cone,10);
+ sprite(13+a->stage*82+20,137,2,spr_kart,11);
+ sparkle(7,87,LEMON);sparkle(243,102,PINK);
+ foot(PURPLE);
+ fit(11,181,"CHANGE LANES BEFORE THE CONE!",WHITE,40);
+}
+static void sock_picture(int x,int y,int scale,int kind){
+ static const uint16_t cloth[3]={PINK,TEAL,LEMON};
+ sprite(x,y,scale,spr_sock,13);
+ solid(x+5*scale,y+3*scale,3*scale,2*scale,cloth[kind%3]);
+ solid(x+5*scale,y+7*scale,3*scale,2*scale,cloth[kind%3]);
+}
+static void sock_challenge(const Arcade *a){
+ char text[40];int i;
+ arcade_wall(BLUSH);
+ panel(6,31,244,41,WHITE,PINK);
+ fit(12,38,"SOCK MARKET",PURPLE,35);
+ snprintf(text,sizeof(text),"PAIRS %u/6  MISS %u/3",a->round,a->mistakes);
+ fit(12,53,text,DEEP_PINK,38);
+ capsule(9,76,238,40,MINT,TEAL);
+ sock_picture(53,79,2,a->target);
+ fit(96,86,"MATCH THIS",PURPLE,18);
+ fit(96,97,"STRIPE COLOR",TEAL,21);
+ for(i=0;i<3;i++){
+  int x=13+i*82;
+  capsule(x,121,66,53,WHITE,i==0?PINK:i==1?TEAL:GOLD);
+  sock_picture(x+17,125,2,a->notes[i]);
+  fit(x+27,164,i==0?"L":i==1?"D":"R",PURPLE,1);
+ }
+ foot(PURPLE);
+ fit(12,181,"FIND THE MATCHING SOCK!",WHITE,38);
+}
+static void nap_challenge(const Arcade *a){
+ char text[40];
+ int phase=(int)(a->elapsed%a->hold_frames);
+ int pos=20+phase*214/a->hold_frames;
+ int green_x=20+38*214/100;
+ int green_w=33*214/100;
+ arcade_wall(BLUE);
+ panel(6,31,244,41,WHITE,LILAC);
+ fit(13,37,"NAPTIME NEGOTIATOR",PURPLE,35);
+ snprintf(text,sizeof(text),"CALM %u/4  WAKEUPS %u/3",a->round,a->mistakes);
+ fit(13,53,text,DEEP_PINK,39);
+ /* Warm bedside light, sleep bonnet, pillow and a broad quiet window. */
+ capsule(20,79,36,36,LEMON,GOLD);
+ solid(37,82,21,23,BLUE);
+ sparkle(209,89,WHITE);sparkle(236,111,LEMON);
+ capsule(67,93,124,49,WHITE,TEAL);
+ sprite(109,97,2,spr_baby,18);
+ solid(102,125,51,5,SKY);
+ capsule(15,145,226,22,WHITE,PURPLE);
+ solid(20,151,214,9,GRAY);
+ solid(green_x,151,green_w,9,MINT);
+ solid(pos,146,4,20,DEEP_PINK);
+ fit(29,133,a->taped?"LOVELY!":"SHHH... FIND THE GREEN",WHITE,39);
+ foot(PURPLE);
+ snprintf(text,sizeof(text),"TAP IN GREEN! %u SEC  B BACK",(a->timer+59)/60);
+ fit(12,181,text,WHITE,39);
 }
 static void beatbox_challenge(const Arcade *a){
  static const char *const pads[4]={"BOOM","CLAP","BEEP","POP"};
@@ -742,7 +860,10 @@ void ui_draw(const Game *s,const Arcade *a,int view,int selection,
  case 2:if(a->id==0)bottle_challenge(a);
         else if(a->id==1)diaper_challenge(a);
         else if(a->id==2)teether_challenge(a);
+        else if(a->id==3)kart_challenge(a);
         else if(a->id==4)beatbox_challenge(a);
+        else if(a->id==5)sock_challenge(a);
+        else if(a->id==6)nap_challenge(a);
         else if(a->id==7)rattle_challenge(a);
         else challenge(s,a);
         break;
@@ -789,6 +910,22 @@ int ui_diaper_touch(int x,int y){
  return -1;
 }
 
+/* Three large lanes used by kart and matching-sock cabinets. */
+static int cabinet_lane(int x){
+ if(x>=13&&x<79)return 0;
+ if(x>=95&&x<161)return 1;
+ if(x>=177&&x<243)return 2;
+ return -1;
+}
+int ui_kart_touch(int x,int y){
+ return y>=91&&y<174?cabinet_lane(x):-1;
+}
+int ui_sock_touch(int x,int y){
+ return y>=121&&y<175?cabinet_lane(x):-1;
+}
+int ui_nap_touch(int x,int y){
+ return x>=12&&x<244&&y>=88&&y<175?0:-1;
+}
 /* Four large rhythmic pads, each mapping to one D-pad equivalent. */
 int ui_beatbox_touch(int x,int y){
  int i;

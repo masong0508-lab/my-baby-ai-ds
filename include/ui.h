@@ -12,6 +12,9 @@ int ui_arcade_select(int x,int y);
 int ui_arcade_touch(int x,int y);
 int ui_diaper_touch(int x,int y); /* legacy button accessibility */
 int ui_rattle_touch(int x,int y);
+int ui_kart_touch(int x,int y);
+int ui_sock_touch(int x,int y);
+int ui_nap_touch(int x,int y);
 int ui_beatbox_touch(int x,int y);
 void ui_touch_observe(int down,int x,int y,uint32_t count);
 void ui_touch_diag_update(void);
