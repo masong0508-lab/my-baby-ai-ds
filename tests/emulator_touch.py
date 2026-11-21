@@ -756,6 +756,24 @@ def test_actual_game(path: Path, output: Path) -> dict:
     assert movie_stage(egg_scare) == 3, (
         "The jump-scare image was captured in the wrong cinematic phase"
     )
+    # The old eyebrow glint produced a 28-pixel fluorescent ruler at
+    # the forehead of the REAL 256x192 DeSmuME image. New highlights are
+    # short, broad and spatially separated; protect that improvement.
+    brightest_streak = 0
+    for yy in range(0, 30):
+        continuous = 0
+        for xx in range(75, 177):
+            red, green, blue = egg_scare.getpixel((xx, yy))
+            if green > 150 and green > red + 65 and green > blue + 50:
+                continuous += 1
+                if continuous > brightest_streak:
+                    brightest_streak = continuous
+            else:
+                continuous = 0
+    assert brightest_streak < 24, (
+        f"Alien forehead has a straight fluorescent streak "
+        f"({brightest_streak}px) instead of short brow highlights"
+    )
     # Regress against the old isolated polygon head: retain two PALE
     # porcelain halves beside the alien when the final scare camera cuts.
     left_wing = egg_scare.crop((18, 25, 83, 167))
@@ -913,6 +931,7 @@ def test_actual_game(path: Path, output: Path) -> dict:
         "Egg_dark_cavity_pixels": cavity_dark_pixels,
         "Egg_visible_porcelain_pixels": ivory_shell_pixels,
         "Alien_jump_scare_changed_pixels": scare_difference,
+        "Alien_earliest_reveal_brow_streak_pixels": brightest_streak,
         "Egg_pre_scare_motion_changed_pixels": recoil_changed,
         "Jump_scare_porcelain_left_pixels": scare_shell_left,
         "Jump_scare_porcelain_right_pixels": scare_shell_right,
