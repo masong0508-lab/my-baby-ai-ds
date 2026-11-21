@@ -94,6 +94,37 @@ int main(void){
   assert(world_vertex_count()<=5000);
   assert(world_polygon_count()<=1850);
  }
+ /* A new nursery mobile is physically anchored to the actual crib bar.
+  * One 40-tick reaction with no repeating rocking while CRIB is selected.
+  * The added meshes must leave headroom below DS 1850-polygon budget. */
+ assert(world_crib_mobile_swing(-1,0u)==0);
+ assert(world_crib_mobile_swing(0,8u)==0);
+ assert(world_crib_mobile_swing(3,0u)==0);
+ assert(world_crib_mobile_swing(3,10u)==-12);
+ assert(world_crib_mobile_swing(3,22u)==8);
+ assert(world_crib_mobile_swing(3,40u)==0);
+ assert(world_crib_mobile_swing(3,5000u)==0);
+ {
+  unsigned tick;
+  int prev=world_crib_mobile_swing(3,0u);
+  for(tick=1u;tick<50u;tick++){
+   int angle=world_crib_mobile_swing(3,tick);
+   assert(angle>=-12&&angle<=8);
+   assert(angle-prev<=3&&prev-angle<=3);
+   prev=angle;
+   world_draw_nursery(&s,350u+tick,4,18u,3,-1,16u,
+                      0,0,tick,0);
+   assert(world_vertex_count()<=5000);
+   assert(world_polygon_count()<=1850);
+  }
+  /* The same four hanging pieces exist in regular care and Toybox
+   * at rest; film continuity never depends on a room-only prop. */
+  world_draw(&s,402u,0);
+  assert(world_polygon_count()<=1850);
+  roughhouse_init(&r);
+  world_draw_roughhouse(&s,403u,&r);
+  assert(world_polygon_count()<=1850);
+ }
  /* Natural plush animation: single eased bow, held, then recovery.
   * A selected toy must NOT animate endlessly or detach its face. */
  assert(world_teddy_bow_angle(0u)==0);
