@@ -259,23 +259,27 @@ static void icon_nap(int x,int y){
 static void home(const Game *s,int can_save,const char *message){
  int i,n,start=0,split=0;
  const char *speech=message?message:"";
- char first[37],second[37];
+ char first[27],second[27];
  solid(0,27,W,149,IVORY);
  panel(8,31,240,34,WHITE,TEAL);
  fit(17,35,"BABY SAYS",TEAL,12);
  n=(int)strlen(speech);
- if(n>36){
-  split=36;
-  for(i=36;i>18;i--)if(speech[i]==' '){split=i;break;}
+ if(n>26){
+  split=26;
+  for(i=26;i>14;i--)if(speech[i]==' '){split=i;break;}
  }else split=n;
- for(i=0;i<split&&i<36;i++)first[i]=speech[i];
+ for(i=0;i<split&&i<26;i++)first[i]=speech[i];
  first[i]=0;
  start=split;
  while(speech[start]==' ')start++;
- for(i=0;speech[start+i]&&i<36;i++)second[i]=speech[start+i];
+ for(i=0;speech[start+i]&&i<26;i++)second[i]=speech[start+i];
  second[i]=0;
- fit(17,45,first,INK,36);
- if(second[0])fit(17,55,second,INK,36);
+ fit(17,45,first,INK,26);
+ if(second[0])fit(17,55,second,INK,26);
+ /* Dark-comedy secret: the optional synthetic roughhouse room never
+  * overlaps care cards or displaces native touch coordinates. */
+ capsule(184,36,59,24,LILAC,PURPLE);
+ fit(196,45,"PRANK",WHITE,6);
  panel(8,68,240,36,WHITE,LILAC);
  fit(17,72,"HUNGER",PURPLE,7);meter(61,70,s->hunger,ROSE);
  fit(144,72,"MOOD",PURPLE,5);meter(178,70,s->mood,GREEN);
