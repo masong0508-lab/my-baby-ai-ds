@@ -27,6 +27,7 @@ static TouchGate gesture;
 static VirtualStylus vpen;
 static Roughhouse rag;
 static uint32_t egg_frame;
+static int toy_tool=ROUGHHOUSE_SLAP;
 static const char *message="WELCOME TO DAYCARE 2.0";
 static void persist(void){if(storage_ok)(void)save_write(SAVE_BASE,&baby);}
 static void care(Care action){
@@ -84,7 +85,7 @@ int main(void){
  }
  /* Always show a visible title before touching the filesystem or heavy 3D.
   * Some older emulators hang during their emulated DLDI/FAT setup. */
- ui_draw(&baby,&arc,view,view==6?album_page:view==8?rag.charge:view==9?(int)egg_frame:selected,last_ending,reset_step,storage_ok,message);
+ ui_draw(&baby,&arc,view,view==6?album_page:view==8?(int)rag.charge+(toy_tool==ROUGHHOUSE_KICK?32:0):view==9?(int)egg_frame:selected,last_ending,reset_step,storage_ok,message);
  /* Stay in RAM-only mode until the player explicitly requests save access.
   * New and old .nds game saves remain compatible when FAT is available. */
  while(GAME_LOOP_ACTIVE()){
@@ -126,7 +127,8 @@ int main(void){
    int action=-1;
    if(((down&KEY_X)&&(held&KEY_R))||
       (tap&&ui_prank_entry_touch(touch.px,touch.py))){
-    view=8;message="THE SHELL IS A TEST UNIT.";dirty=1;
+    view=8;toy_tool=ROUGHHOUSE_SLAP;
+    message="SELECT A TOY, THEN TAP THE DOLL.";dirty=1;
    }else{
     if(down&KEY_A)action=FEED;
     else if(down&KEY_B)action=CHAT;
@@ -307,12 +309,14 @@ int main(void){
    int hit=tap?ui_roughhouse_touch(touch.px,touch.py):0;
    if((down&(KEY_B|KEY_START))||hit==3){
     view=0;message="BACK TO THE NURSERY.";dirty=1;
-   }else{
-    int attack=(down&KEY_A)?ROUGHHOUSE_SLAP:
-               (down&KEY_X)?ROUGHHOUSE_KICK:hit;
-    if(roughhouse_strike(&rag,attack)){
+   }else if(hit==ROUGHHOUSE_SLAP||(down&KEY_L)){
+    toy_tool=ROUGHHOUSE_SLAP;dirty=1;
+   }else if(hit==ROUGHHOUSE_KICK||(down&(KEY_R|KEY_X))){
+    toy_tool=ROUGHHOUSE_KICK;dirty=1;
+   }else if((down&KEY_A)||hit==4){
+    if(roughhouse_strike(&rag,toy_tool)){
      pose=0;
-     message=attack==ROUGHHOUSE_KICK?
+     message=toy_tool==ROUGHHOUSE_KICK?
              "BOING! THE SYNTHETIC SHELL BOUNCES.":
              "BONK! THAT WAS AN UNNATURAL SOUND.";
      dirty=1;
@@ -411,7 +415,7 @@ int main(void){
   /* Keep bitmap VRAM writes off the hot path unless UI state changed. */
   if(dirty||previous!=view||
      (view==2&&frame%arcade_redraw_period(&arc)==0u)){
-   ui_draw(&baby,&arc,view,view==6?album_page:view==8?rag.charge:view==9?(int)egg_frame:selected,last_ending,reset_step,storage_ok,message);
+   ui_draw(&baby,&arc,view,view==6?album_page:view==8?(int)rag.charge+(toy_tool==ROUGHHOUSE_KICK?32:0):view==9?(int)egg_frame:selected,last_ending,reset_step,storage_ok,message);
    dirty=0;
   }
   if(view==7)ui_touch_diag_update();
