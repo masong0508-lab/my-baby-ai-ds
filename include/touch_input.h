@@ -11,4 +11,6 @@ typedef struct {
 } TouchGate;
 void touch_gate_init(TouchGate *gate);
 int touch_gate_step(TouchGate *gate,int touching,int x,int y);
+/* Use for continuous drag/steer actions, not just one-shot taps. */
+int touch_gate_coordinates_ready(const TouchGate *gate,int touching,int x,int y);
 #endif
