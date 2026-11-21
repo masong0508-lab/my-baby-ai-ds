@@ -25,6 +25,8 @@ float world_egg_embryo_breath(uint32_t frame);
 /* Deterministic anticipation: dim-to-bright eyes and shallow forward lean. */
 int world_egg_eye_glow(uint32_t frame);
 float world_egg_embryo_approach(uint32_t frame);
+float world_egg_shell_open(uint32_t frame);
+int world_egg_head_tilt(uint32_t frame);
 /* Lower-jaw hinge angle, degree units, bounded to 0..18. */
 int world_egg_jaw_angle(uint32_t frame);
 /* Deterministic, shared shoulder-joint reach for each care action. */
@@ -33,6 +35,7 @@ int world_baby_neck_tilt(int action,uint32_t frame);
 /* Q8 gesture and eye-aperture channels, cheap deterministic samples. */
 int world_baby_care_weight(uint32_t age);
 int world_baby_lid_open(uint32_t frame,int action,uint32_t age);
+int world_baby_speech_open(uint32_t age);
 /* Submitted frame-budget counters (geometry, not measured FPS). */
 unsigned world_vertex_count(void);
 unsigned world_polygon_count(void);
