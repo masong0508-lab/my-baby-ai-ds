@@ -179,6 +179,18 @@ def test_actual_game(path: Path, output: Path) -> dict:
     emu.input.touch_release()
     frames(emu, 22)
     nursery = picture(emu, output, "game_nursery_after_touch_start")
+    # The native lower screen must show the new non-intrusive care coach.
+    # Starting needs are healthy, so the header should say ALL GOOD in
+    # teal (x=126..188) without obscuring BABY SAYS or the ROOM hitbox.
+    goal_strip = nursery.crop((126, 192 + 35, 188, 192 + 43))
+    care_coach_ink = sum(
+        1 for rr, gg, bb in goal_strip.get_flattened_data()
+        if gg > rr + 40 and bb > rr + 40 and gg > 145
+    )
+    assert care_coach_ink > 28, (
+        f"Care guidance is absent or unreadable on native DS lower LCD "
+        f"({care_coach_ink} teal pixels)"
+    )
     # Validate and archive the actual hardware-3D TOP screen, not only the
     # touch UI. The last defect was a malformed baby and long vertical lines.
     top = nursery.crop((0, 0, 256, 192))
@@ -979,6 +991,7 @@ def test_actual_game(path: Path, output: Path) -> dict:
     )
     return {
         "3D_top_screen_distinct_colors": hero_colors,
+        "Care_guidance_header_ink_pixels": care_coach_ink,
         "3D_top_screen_full_height_dark_stripes": len(full_height_stripes),
         "3D_nursery_dresser_streak_length": dresser_streak,
         "3D_nursery_wall_streak_length": wall_streak,
