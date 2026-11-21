@@ -650,32 +650,37 @@ static void baby_model(const Game *s,uint32_t frame,int action,
  ellipse(-.39f,1.018f,.365f,.075f,.069f,.029f,29,14,20);
  /* Sclera and pupils lie just above the curved facial surface, not
   * stacked .10 units out in space. Each shallow eye has a tiny highlight. */
- /* Render eye geometry at FIXED healthy thickness. Compressing the
-  * 3-band GL_QUAD_STRIP ellipsoids by lid_height produced a 40+ pixel
-  * horizontal cyan/black eyelid streak across the face during NAP.
-  * Instead, keep both eyes as intact mesh and slide a broad facial-
-  * colored eyelid panel down OVER each socket. Only two extra quads,
-  * nondegenerate at every frame, with the head's shared pivot. */
- ellipse(-.205f,.579f,.462f,.135f,.113f,.014f,22,15,14);
- ellipse(.205f,.579f,.462f,.135f,.113f,.014f,22,15,14);
- ellipse(-.205f,.575f,.477f,.113f,.099f,.015f,31,30,28);
- ellipse(.205f,.575f,.477f,.113f,.099f,.015f,31,30,28);
- ellipse(-.188f,.565f,.493f,.066f,.072f,.015f,10,19,22);
- ellipse(.218f,.565f,.493f,.066f,.072f,.015f,10,19,22);
- ellipse(-.185f,.560f,.509f,.040f,.054f,.011f,3,7,10);
- ellipse(.221f,.560f,.509f,.040f,.054f,.011f,3,7,10);
- soft_mark(-.208f,.602f,.526f,.031f,.023f,31,31,29);
- soft_mark(.202f,.602f,.526f,.031f,.023f,31,31,29);
- if(lid<256){
-  float shutter=.300f*(1.f-lid_height);
-  float center=.716f-shutter*.5f;
-  /* The inner corners follow the same face orientation; front depth
-   * avoids fighting the iris and does not draw through the dresser. */
-  soft_mark(-.205f,center,.548f,.276f,shutter,30,22,19);
-  soft_mark(.205f,center,.548f,.276f,shutter,30,22,19);
-  if(lid<48){
-   soft_mark(-.205f,.566f,.556f,.184f,.018f,18,11,9);
-   soft_mark(.205f,.566f,.556f,.184f,.018f,18,11,9);
+ /* Never scale 3D eyeballs down to subpixel-thin ellipsoid poles.
+  * Wide-open and partly open eyes use stable, fixed-thickness 3D shapes.
+  * At the end of a NAP blink, draw only short CURVED closed-lid quads,
+  * not large skin rectangles blanking out the face. */
+ if(lid<64){
+  /* Two small joined crease segments per eye form a relaxed low arc.
+   * These are safe single quads, not collapsed GL_QUAD_STRIP bands. */
+  soft_mark(-.251f,.572f,.532f,.092f,.018f,18,11,10);
+  soft_mark(-.160f,.565f,.534f,.092f,.018f,18,11,10);
+  soft_mark(.159f,.565f,.534f,.092f,.018f,18,11,10);
+  soft_mark(.250f,.572f,.532f,.092f,.018f,18,11,10);
+ }else{
+  ellipse(-.205f,.579f,.462f,.135f,.113f,.014f,22,15,14);
+  ellipse(.205f,.579f,.462f,.135f,.113f,.014f,22,15,14);
+  ellipse(-.205f,.575f,.477f,.113f,.099f,.015f,31,30,28);
+  ellipse(.205f,.575f,.477f,.113f,.099f,.015f,31,30,28);
+  ellipse(-.188f,.565f,.493f,.066f,.072f,.015f,10,19,22);
+  ellipse(.218f,.565f,.493f,.066f,.072f,.015f,10,19,22);
+  ellipse(-.185f,.560f,.509f,.040f,.054f,.011f,3,7,10);
+  ellipse(.221f,.560f,.509f,.040f,.054f,.011f,3,7,10);
+  soft_mark(-.208f,.602f,.526f,.031f,.023f,31,31,29);
+  soft_mark(.202f,.602f,.526f,.031f,.023f,31,31,29);
+  if(lid<256){
+   float shutter=.300f*(1.f-lid_height);
+   float center=.716f-shutter*.5f;
+   /* A stable upper-lid surface masks only PARTIAL blinks. At full
+    * closure we replace the full eyes with dedicated crease marks. */
+   if(shutter>.038f){
+    soft_mark(-.205f,center,.548f,.276f,shutter,30,22,19);
+    soft_mark(.205f,center,.548f,.276f,shutter,30,22,19);
+   }
   }
  }
  /* Warm cheeks, gentle brows, button nose and a tiny restrained smile. */
