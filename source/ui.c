@@ -568,11 +568,29 @@ static void sparkle(int x,int y,uint16_t color){
  solid(x+3,y,2,9,color);solid(x,y+3,9,2,color);
  solid(x+2,y+2,4,4,WHITE);
 }
+/* Every cabinet inherits a unified theatrical frame. Previously each
+ * redraw emitted ~140 dot primitives; this lightweight motif costs fewer
+ * bitmap writes and gives every activity the same visual structure. */
 static void arcade_wall(uint16_t background){
  int x,y;
  solid(0,27,256,149,background);
- for(y=31;y<173;y+=16)for(x=(y&16)?8:0;x<256;x+=16)
-  solid(x,y,2,2,WHITE);
+ solid(0,27,256,3,screen_accent);
+ for(x=10;x<251;x+=32)solid(x,29,15,1,WHITE);
+ for(y=35;y<170;y+=22){
+  solid(2,y,3,13,screen_accent);
+  solid(251,y,3,13,screen_accent);
+ }
+ solid(0,174,256,2,screen_accent);
+}
+static void cabinet_chrome(const Arcade *a){
+ int i;
+ int goal=a->id==4?3:a->id==1||a->id==6||a->id==13||
+          a->id==14?4:a->id==9?5:6;
+ solid(6,72,244,3,NIGHT);
+ for(i=0;i<goal;i++)
+  solid(11+i*11,73,8,2,i<a->round?LEMON:screen_accent);
+ for(i=0;i<3;i++)
+  solid(214+i*10,73,6,2,i<a->mistakes?ROSE:SILVER);
 }
 static void bar(int x,int y,int width,int value,int total,uint16_t color){
  int fill=total>0?value*(width-4)/total:0;
@@ -1176,12 +1194,32 @@ int ui_arcade_navigation(int x,int y){
 }
 void ui_draw(const Game *s,const Arcade *a,int view,int selection,
              int ending,int reset_step,int can_save,const char *message){
+ static const uint16_t accents[16]={
+  SKY,PINK,MINT,LEMON,LILAC,AQUA,SKY,LEMON,
+  MINT,TEAL,GOLD,PINK,LEMON,GREEN,SKY,AQUA
+ };
+ char cabinet_title[24];
+ const char *screen_title;
  if(!pixels||!s)return;
- /* Full UI render overwrites prior cursor pixels; don't restore old
-  * background from a different screen into the newly drawn screen. */
+ /* Full redraw intentionally invalidates the old virtual-cursor backing. */
  cursor_visible=0;
+ if(view==2&&a&&a->id<16)screen_accent=accents[a->id];
+ else if(view==0)screen_accent=AQUA;
+ else if(view==1)screen_accent=LEMON;
+ else if(view==3)screen_accent=ROSE;
+ else if(view==4)screen_accent=game_is_good_ending(ending)?MINT:ROSE;
+ else if(view==5)screen_accent=PINK;
+ else if(view==6)screen_accent=SKY;
+ else screen_accent=TEAL;
+ if(view==2&&a){
+  snprintf(cabinet_title,sizeof(cabinet_title),"CABINET %02u/16",
+           (unsigned)a->id+1u);
+  screen_title=cabinet_title;
+ }else screen_title=view==0?"MY BABY A.I.!":view==1?"BABY ARCADE":
+         view==3?"SAVE MEMORY":view==4?"ENDING!":view==5?"WELCOME":
+         view==6?"MEMORY ALBUM":"TOUCH TEST";
  solid(0,0,256,192,IVORY);
- header(view==0?"MY BABY A.I.!":view==1?"BABY ARCADE":view==2?"MINIGAME":view==3?"SAVE MEMORY":view==4?"ENDING!":view==5?"WELCOME":"MEMORY ALBUM",s);
+ header(screen_title,s);
  switch(view){
  case 0:home(s,can_save,message);break;
  case 1:arcade_list(s,selection);break;
@@ -1202,6 +1240,7 @@ void ui_draw(const Game *s,const Arcade *a,int view,int selection,
         else if(a->id==14)court_challenge(a);
         else if(a->id==15)ceo_challenge(a);
         else challenge(s,a);
+        cabinet_chrome(a);
         break;
  case 3:reset_screen(reset_step);break;
  case 4:finale(s,ending);break;
