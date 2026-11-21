@@ -253,57 +253,80 @@ static void icon_nap(int x,int y){
  solid(x+6,y+18,22,3,DEEP_PINK);
  label(x+11,y+1,"Z",PURPLE,1,1);
 }
+/* Nursery dashboard preserves all touch hitboxes while giving the four
+ * actions a single readable visual hierarchy and real progress indicators. */
 static void home(const Game *s,int can_save,const char *message){
- char line[48];
  solid(0,27,W,149,BLUSH);
- solid(0,28,W,2,PINK);
- panel(6,34,244,52,WHITE,LILAC);
- fit(13,41,"HUNGER",PURPLE,7);meter(63,40,s->hunger,DEEP_PINK);
- fit(139,41,"MOOD",PURPLE,4);meter(178,40,s->mood,GREEN);
- fit(13,58,"ENERGY",PURPLE,7);meter(63,57,s->energy,TEAL);
- fit(139,58,"CHAOS",PURPLE,5);meter(178,57,s->chaos,GOLD);
+ solid(0,28,W,3,screen_accent);
+ panel(6,32,244,55,WHITE,PURPLE);
+ fit(13,40,"HUNGER",PURPLE,7);meter(63,39,s->hunger,ROSE);
+ fit(139,40,"MOOD",PURPLE,4);meter(178,39,s->mood,GREEN);
+ fit(13,57,"ENERGY",PURPLE,7);meter(63,56,s->energy,TEAL);
+ fit(139,57,"CHAOS",PURPLE,5);meter(178,56,s->chaos,GOLD);
  fit(13,75,"GLITCH",PURPLE,6);
- solid(66,75,169,5,LILAC);solid(66,75,s->corruption*169/100,5,DEEP_PINK);
- panel(6,90,244,25,IVORY,PINK);
- solid(12,96,5,13,DEEP_PINK);
- label(21,98,message,INK,1,36);
- capsule(7,121,117,23,SKY,BLUE);icon_bottle(9,119);label(43,128,"FEED",INK,1,11);
- capsule(132,121,117,23,LEMON,GOLD);icon_chat(133,119);label(168,128,"CHAT",INK,1,11);
- capsule(7,148,117,23,MINT,GREEN);icon_play(9,146);label(43,155,"PLAY",INK,1,11);
- capsule(132,148,117,23,PINK,DEEP_PINK);icon_nap(133,146);label(168,155,"NAP",INK,1,11);
+ solid(66,75,171,7,GRAY);
+ solid(68,77,(s->corruption*167)/100,3,DEEP_PINK);
+ solid(68,77,(s->corruption*167)/100,1,PINK);
+ for(int i=1;i<5;i++)solid(68+i*33,75,1,7,WHITE);
+ panel(6,89,244,27,IVORY,screen_accent);
+ solid(12,94,4,17,screen_accent);
+ fit(21,98,message,INK,36);
+ capsule(7,121,117,23,SKY,BLUE);
+ solid(14,141,100,1,BLUE);icon_bottle(9,119);label(43,128,"FEED",INK,1,11);
+ capsule(132,121,117,23,LEMON,GOLD);
+ solid(139,141,100,1,GOLD);icon_chat(133,119);label(168,128,"CHAT",INK,1,11);
+ capsule(7,148,117,23,MINT,GREEN);
+ solid(14,168,100,1,GREEN);icon_play(9,146);label(43,155,"PLAY",INK,1,11);
+ capsule(132,148,117,23,PINK,DEEP_PINK);
+ solid(139,168,100,1,DEEP_PINK);icon_nap(133,146);label(168,155,"NAP",INK,1,11);
  foot(PURPLE);
- fit(12,181,"ARCADE",WHITE,14);
- fit(149,181,"END DAY",WHITE,14);
- (void)line;
+ fit(12,181,"START ARCADE",WHITE,19);
+ fit(152,181,"END DAY",WHITE,14);
  (void)can_save;
 }
 static const char *const nick[16]={
  "BOTTLE","DIAPER","TAX","KART","BEATS","SOCKS","NAP","RATTLE",
  "CRAWL","DRIFT","CIPHER","BLOCKS","AUDIT","GARDEN","COURT","CEO"
 };
+/* The 4x4 cabinet bank intentionally keeps its original coordinates:
+ * selecting, purchasing and returning still use the same touch targets. */
 static void arcade_list(const Game *s,int selection){
  int row,col,i,x,y;
  char tmp[40];
- solid(0,27,256,149,BLUSH);
- panel(5,32,246,29,WHITE,LILAC);
- label(12,39,"DIAPER DOLLAR ARCADE",PURPLE,1,27);
- snprintf(tmp,sizeof(tmp),"$%u  FAV %u",s->dollars,s->favors);
- fit(13,51,tmp,DEEP_PINK,26);
+ solid(0,27,256,149,LILAC);
+ solid(0,28,256,3,screen_accent);
+ for(i=0;i<4;i++)solid(0,66+i*25,4,17,screen_accent);
+ panel(5,32,246,29,WHITE,PURPLE);
+ label(12,38,"DIAPER DOLLAR ARCADE",PURPLE,1,27);
+ snprintf(tmp,sizeof(tmp),"$%u   FAVOR %u",s->dollars,s->favors);
+ fit(13,50,tmp,TEAL,28);
  for(row=0;row<4;row++)for(col=0;col<4;col++){
+  uint16_t fill,border;
+  int unlocked;
   i=row*4+col;x=7+col*62;y=65+row*25;
-  capsule(x,y,57,22,i==selection?LEMON:(game_unlocked(s,i)?MINT:GRAY),i==selection?DEEP_PINK:PURPLE);
+  unlocked=game_unlocked(s,i);
+  fill=i==selection?LEMON:(unlocked?IVORY:GRAY);
+  border=i==selection?DEEP_PINK:(unlocked?TEAL:PURPLE);
+  capsule(x,y,57,22,fill,border);
+  if(i==selection){
+   outline(x+1,y+1,55,20,PURPLE);
+   solid(x+2,y+7,3,8,DEEP_PINK);
+  }else solid(x+2,y+7,2,8,unlocked?TEAL:SILVER);
   snprintf(tmp,sizeof(tmp),"%02d",i+1);
-  label(x+4,y+4,tmp,INK,1,2);
-  fit(x+22,y+4,nick[i],INK,5);
-  if(!game_unlocked(s,i))solid(x+44,y+15,7,2,DEEP_PINK);
+  fit(x+7,y+8,tmp,unlocked?PURPLE:MUTED,2);
+  fit(x+23,y+8,nick[i],unlocked?INK:MUTED,5);
+  if(!unlocked){
+   solid(x+43,y+17,9,2,ROSE);
+   solid(x+46,y+13,3,4,ROSE);
+  }
  }
- panel(6,165,244,11,WHITE,PURPLE);
+ panel(6,165,244,11,WHITE,screen_accent);
  snprintf(tmp,sizeof(tmp),"%s",game_names[selection]);
- fit(12,167,tmp,INK,38);
+ fit(12,167,tmp,PURPLE,38);
  foot(PURPLE);
- fit(10,181,"PLAY",WHITE,8);
- fit(98,181,"BUY",WHITE,8);
- fit(191,181,"BACK",WHITE,8);
+ fit(10,181,"A PLAY",WHITE,12);
+ fit(96,181,"X BUY",WHITE,11);
+ fit(184,181,"B BACK",WHITE,12);
 }
 static void arrow(int x,int y,int dir,uint16_t fill){
  int i;
