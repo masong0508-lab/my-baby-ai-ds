@@ -7,6 +7,8 @@ void ui_init(void *vram);
 void ui_draw(const Game *s,const Arcade *a,int view,int selected,
              int ending,int reset_step,int can_save,const char *message);
 int ui_nursery_touch(int x,int y);
+int ui_room_entry_touch(int x,int y);
+int ui_room_touch(int x,int y); /* 0 window, 1 lamp, 2 teddy, 3 crib, 4 back */
 int ui_prank_entry_touch(int x,int y);
 int ui_roughhouse_touch(int x,int y); /* 1 slap, 2 kick, 3 back */
 /* Film: 1 skip, 2 pause/resume, 3 next act. The readout is tappable. */
