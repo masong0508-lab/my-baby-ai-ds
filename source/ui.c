@@ -302,45 +302,42 @@ static const char *const nick[16]={
  "BOTTLE","DIAPER","TAX","KART","BEATS","SOCKS","NAP","RATTLE",
  "CRAWL","DRIFT","CIPHER","BLOCKS","AUDIT","GARDEN","COURT","CEO"
 };
-/* The 4x4 cabinet bank intentionally keeps its original coordinates:
- * selecting, purchasing and returning still use the same touch targets. */
+/* Four generous, readable cabinets per page. The selected index is the
+ * single source of truth: page = selected / 4, so keyboard, touch and
+ * unlock state never drift apart. Page controls sit above the cards. */
 static void arcade_list(const Game *s,int selection){
- int row,col,i,x,y;
+ int slot,id,x,y,opened,page=selection/4;
  char tmp[40];
- solid(0,27,256,149,LILAC);
- solid(0,28,256,3,screen_accent);
- for(i=0;i<4;i++)solid(0,66+i*25,4,17,screen_accent);
- panel(5,32,246,29,WHITE,PURPLE);
- label(12,38,"DIAPER DOLLAR ARCADE",PURPLE,1,27);
- snprintf(tmp,sizeof(tmp),"$%u   FAVOR %u",s->dollars,s->favors);
- fit(13,50,tmp,TEAL,28);
- for(row=0;row<4;row++)for(col=0;col<4;col++){
-  uint16_t fill,border;
-  int unlocked;
-  i=row*4+col;x=7+col*62;y=65+row*25;
-  unlocked=game_unlocked(s,i);
-  fill=i==selection?LEMON:(unlocked?IVORY:GRAY);
-  border=i==selection?DEEP_PINK:(unlocked?TEAL:PURPLE);
-  capsule(x,y,57,22,fill,border);
-  if(i==selection){
-   outline(x+1,y+1,55,20,PURPLE);
-   solid(x+2,y+7,3,8,DEEP_PINK);
-  }else solid(x+2,y+7,2,8,unlocked?TEAL:SILVER);
-  snprintf(tmp,sizeof(tmp),"%02d",i+1);
-  fit(x+7,y+8,tmp,unlocked?PURPLE:MUTED,2);
-  fit(x+23,y+8,nick[i],unlocked?INK:MUTED,5);
-  if(!unlocked){
-   solid(x+43,y+17,9,2,ROSE);
-   solid(x+46,y+13,3,4,ROSE);
-  }
- }
- panel(6,165,244,11,WHITE,screen_accent);
+ solid(0,27,256,149,IVORY);
+ capsule(8,32,55,23,SKY,TEAL);
+ fit(20,40,"< PREV",INK,8);
+ capsule(193,32,55,23,SKY,TEAL);
+ fit(203,40,"NEXT >",INK,8);
+ snprintf(tmp,sizeof(tmp),"PAGE %d / 4",page+1);
+ fit(89,39,tmp,PURPLE,13);
  snprintf(tmp,sizeof(tmp),"%s",game_names[selection]);
- fit(12,167,tmp,PURPLE,38);
+ fit(12,60,tmp,PURPLE,38);
+ for(slot=0;slot<4;slot++){
+  uint16_t fill,edge;
+  char num[8];
+  id=page*4+slot;
+  x=9+(slot%2)*123;
+  y=73+(slot/2)*50;
+  opened=game_unlocked(s,id);
+  fill=id==selection?LEMON:(opened?WHITE:GRAY);
+  edge=id==selection?ROSE:(opened?TEAL:MUTED);
+  panel(x,y,115,44,fill,edge);
+  if(id==selection)solid(x+3,y+3,109,3,ROSE);
+  capsule(x+6,y+8,34,30,id==selection?PINK:opened?MINT:SILVER,edge);
+  snprintf(num,sizeof(num),"%02d",id+1);
+  label(x+11,y+15,num,INK,2,2);
+  fit(x+45,y+10,nick[id],INK,10);
+  fit(x+45,y+25,opened?"READY":"LOCKED",opened?TEAL:ROSE,10);
+ }
  foot(PURPLE);
- fit(10,181,"A PLAY",WHITE,12);
- fit(96,181,"X BUY",WHITE,11);
- fit(184,181,"B BACK",WHITE,12);
+ fit(12,181,"A PLAY",WHITE,10);
+ fit(101,181,"X UNLOCK",WHITE,14);
+ fit(199,181,"B BACK",WHITE,10);
 }
 static void arrow(int x,int y,int dir,uint16_t fill){
  int i;
@@ -1329,11 +1326,24 @@ int ui_home_navigation(int x,int y){
  if(y<176||y>=192)return 0;
  return x<128?1:2;
 }
-int ui_arcade_select(int x,int y){
- if(x<7||x>=253||y<65||y>=165)return -1;
- int col=(x-7)/62,row=(y-65)/25;
- if(col>3||row>3)return -1;
- return row*4+col;
+int ui_arcade_page_touch(int x,int y){
+ if(y<32||y>=55)return 0;
+ if(x>=8&&x<64)return -1;
+ if(x>=193&&x<248)return 1;
+ return 0;
+}
+int ui_arcade_select_page(int x,int y,int selection){
+ int page,col,row;
+ if(selection<0||selection>=16)return -1;
+ if(y<73||y>=167)return -1;
+ if(x>=9&&x<124)col=0;
+ else if(x>=132&&x<247)col=1;
+ else return -1;
+ if(y<117)row=0;
+ else if(y>=123&&y<167)row=1;
+ else return -1;
+ page=selection/4;
+ return page*4+row*2+col;
 }
 int ui_arcade_touch(int x,int y){
  if(y<90||y>=163||x<66||x>=190)return -1;
