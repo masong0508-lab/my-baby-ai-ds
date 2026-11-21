@@ -113,7 +113,18 @@ int game_end_day(Game *s){
    s->corruption=clamp(s->corruption-8);
   }
  }
- s->days++;
+ /* The next day brings ordinary bodily needs even if the player only
+  * presses END DAY. This turns the days counter into an actual life cycle,
+  * rather than an exploit to skip to late endings without ever caring.
+  * Post-ending recovery/rewards happen FIRST; attrition applies to every
+  * newly started day, including one following a bad ending. */
+ s->hunger=clamp((int)s->hunger+8);
+ s->energy=clamp((int)s->energy-6);
+ s->mood=clamp((int)s->mood-2);
+ s->chaos=clamp((int)s->chaos+2);
+ /* A pathological multi-billion-day save must never wrap to day zero:
+  * zero is rejected by the same existing save integrity checker. */
+ if(s->days<UINT32_MAX)s->days++;
  return e;
 }
 int game_secret_egg(Game *s){
