@@ -363,7 +363,7 @@ static const char *const spr_baby[]={
   "...osssssssssssso...",
   "...osssssssssssso...",
   "...osswwsssswwsso...",
-  "os.osswksssskwsso.so",
+  "ossosswksssskwssosso",
   "ossossssssssssssosso",
   "...orrsssrssssrro...",
   "....ossspsspssso....",
