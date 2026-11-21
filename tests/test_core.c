@@ -5,6 +5,42 @@
 #include <stddef.h>
 #include "game.h"
 #include "save.h"
+/* Guidance never changes the save or consumes the RNG. A critical
+ * exhausted baby needs a NAP first even if also hungry. Helping the
+ * worst need removes the hint without a permanently blinking warning. */
+static void test_care_hint(void){
+ Game s,original;
+ game_init(&s);
+ assert(game_care_hint(NULL)==-1);
+ assert(game_care_hint(&s)==-1);
+ original=s;
+ assert(game_care_hint(&s)==-1);
+ assert(memcmp(&s,&original,sizeof(s))==0);
+ s.hunger=80;
+ assert(game_care_hint(&s)==FEED);
+ s.energy=10;
+ assert(game_care_hint(&s)==NAP);
+ s.energy=30;
+ assert(game_care_hint(&s)==FEED);
+ s.hunger=20;
+ assert(game_care_hint(&s)==NAP);
+ s.energy=90;s.chaos=79;
+ assert(game_care_hint(&s)==NAP);
+ s.chaos=15;s.mood=25;
+ assert(game_care_hint(&s)==CHAT);
+ s.mood=75;
+ assert(game_care_hint(&s)==-1);
+ /* The actual FEED/NAP calls lower the corresponding need and the
+  * hint updates immediately, including through the existing save. */
+ s.hunger=76;
+ assert(game_care_hint(&s)==FEED);
+ (void)game_care(&s,FEED);
+ assert(s.hunger==46&&game_care_hint(&s)==-1);
+ s.energy=12;
+ assert(game_care_hint(&s)==NAP);
+ (void)game_care(&s,NAP);
+ assert(s.energy==37&&game_care_hint(&s)==-1);
+}
 static void test_room_quiet_rest(void){
  Game s,original;
  game_init(&s);
@@ -179,6 +215,7 @@ int main(void){
  Game g,h;Arcade a;int i;
  const char *base="/tmp/my_baby_ai_testslot";
  test_room_quiet_rest();
+ test_care_hint();
  test_good_endings();
  test_arcade_economy_recovery();
  test_save_integrity();
