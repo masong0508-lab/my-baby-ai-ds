@@ -86,3 +86,7 @@ The native integration suite also retains its pixel guards for long pale
 streaks, vertical seams, cyan torso visibility and coherent state changes.
 Host geometry tests do not substitute for these rendered comparisons or
 for physical Nintendo DS performance and flashcart acceptance.
+
+## Complete DS title portrait (2026-11-22)
+
+A real DeSmuME 256x192 title screenshot after the loader patch showed a doll head emerging from the display plinth, with no visible arms or shoes and distracting pink background pillars. The renderer now adds joined sleeves, mittens, soft teal romper, cream bib and small feet; the camera is reframed and the plinth lowered. It removes the two tall pink poles. The polygons are original native DS geometry, without textures, allocations or new save state. Strict host title geometry remains <=1024 vertices and <=350 polygons, with a minimum detail submission to prevent recurrence. Real emulator screenshots and both DS toolchains are required before accepting the visual pass.
