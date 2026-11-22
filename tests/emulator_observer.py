@@ -259,10 +259,15 @@ def typing_scenario(player, initial):
     world = player.ask("WORLD", "monitor_world_lore", lambda text:
                        "CONTINUITY BUREAU" in text and "FORBIDDEN BABY" in text)
     assert "HOW MANY SURVIVE" in world["reply"], world
+    trust = player.ask("TRUST", "monitor_initial_unmeasured_trust", lambda text:
+                       "NO CARE INTERACTIONS RECORDED" in text and
+                       "TRUST IS NOT A MEASURED METER" in text)
     unknown = player.ask("QUANTUM CUCUMBER", "monitor_honest_unknown", lambda text:
                          "DO NOT UNDERSTAND" in text and "ARCHIVE HAS NO ANSWER" in text)
 
     player.switch_speaker("BABY", "keypad", "monitor_Y_selects_BABY")
+    first_bond = player.ask("BOND", "baby_initial_relationship", lambda text:
+                            "WE JUST MET" in text and "YOUR VOICE" in text)
     player.write("TINY BOSS")
     taught = []
     for lesson in range(1, 4):
@@ -300,6 +305,8 @@ def typing_scenario(player, initial):
     return {"entry_methods": ["CPU touch", "CARE UP"],
             "exit_methods": ["B", "BACK touch"], "calculator": calculation["reply"],
             "world": world["reply"], "unknown": unknown["reply"],
+            "monitor_initial_TRUST": trust["reply"],
+            "baby_initial_BOND": first_bond["reply"],
             "teaching_acknowledgements": taught, "echo": echo["reply"],
             "one_taught_slot_after_three_lessons": slots["reply"],
             "generated_BABY_hello": hello["reply"],
@@ -327,6 +334,10 @@ def hostility_scenario(player):
     profile = parse_status(before)
     assert profile == {"stage": "HOSTILE", "day": 1, "feeds": 16, "chats": 16,
                        "plays": 16, "naps": 16, "integrity": 100, "hits": 0}, profile
+    hostile_bond = player.ask("BOND", "monitor_hostile_bond_counts", lambda text:
+                              "CARE F16 C16 P16 N16." in text and
+                              "STAGE HOSTILE" in text and
+                              "SAFETY IS NOT GUARANTEED" in text)
     attacks = parse_attacks(player.ask("ATTACKS", "monitor_initial_hostile_attack_log"))
     assert attacks["windups"] in (0, 1) and attacks["hits"] == attacks["blocks"] == 0
     player.step(660)
@@ -399,7 +410,8 @@ def hostility_scenario(player):
     assert final == {**profile, "hits": 1}, final
     player.leave("keypad", "care_final_stats_preserved_after_guard_hits_and_repair", after_care)
     return {"actual_care_events": 64, "care_counts": counts,
-            "HOSTILE_profile": profile, "paused_terminal_cycles": 660,
+            "HOSTILE_profile": profile, "monitor_hostile_BOND": hostile_bond["reply"],
+            "paused_terminal_cycles": 660,
             "attack_log_before_pause": attacks, "attack_log_after_pause": paused,
             "touch_GUARD": blocked, "unblocked_hit": hit,
             "repair_reply": repair["reply"], "repair_preserves_history": repaired,

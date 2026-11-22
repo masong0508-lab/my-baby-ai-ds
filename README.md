@@ -60,7 +60,7 @@ The ARM9 program renders a furnished perspective-3D nursery and a modeled, anima
 
 Tap **CPU** or press **UP** in CARE to open the terminal. **TARGET / Y** switches between WARDEN and BABY. Type on the touchscreen or use the D-pad and A; **SEND / X / START** sends. **123 / SELECT** switches to the number/symbol keyboard, L deletes, R inserts a space, and B returns.
 
-- WARDEN answers **STATUS, NEEDS, MEMORY, WORLD, ATTACKS, HELP**, and bounded calculations such as **12+7** from actual state or its original shelter archive.
+- WARDEN answers **STATUS, NEEDS, MEMORY, WORLD, ATTACKS, BOND / TRUST, HELP**, and bounded calculations such as **12+7** from actual state or its original shelter archive. BOND derives a care-pattern report from observed actions; it does not invent a numeric trust meter.
 - BABY can learn four short phrases: select BABY, type up to 24 characters and tap **TEACH**. Repeat teaching to reinforce a phrase. **SAY** recalls it; a familiar phrase can also appear after actual healthy PLAY.
 - Typed greeting, dream and personality replies use an original **412-token, 28,700-parameter neural word model**, generating one token at a time. Its complete immutable model/vocabulary/masks occupy **57,487 bytes**. The model is pretrained; player learning lives in the separate style and phrase profiles. Topic recognition is deliberately limited, and this is not a general-purpose assistant.
 - Real care, completed activities and Toybox actions advance **FOUND → WATCHING → HOSTILE → REVEALED**. Questions and idle menus do not advance exposure. WARDEN records actual attacks and counters.

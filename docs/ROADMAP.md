@@ -56,6 +56,8 @@ This document separates implemented checkpoints from remaining acceptance work. 
 
 **Shelter AI checkpoint:** a typed terminal, original 412-token neural word generator, factual observation/archive/calculator paths, four persistent taught phrases, durable event counts and an actual last-event record, and telegraphed attacks/counters now provide a first playable Last Nursery loop. The optional observer companion leaves v1 Game unchanged. See [observer implementation](SHELTER_OBSERVER.md) and [word-model scope](NARRATIVE_LANGUAGE_MODEL.md).
 
+**Relationship checkpoint (2026-11-22):** WARDEN/BABY now accept TRUST, BOND, FRIEND and CARE PATTERN, responding to actual persistent care counts and current needs with stage-specific wording. WARDEN explicitly does not invent a trust meter. The reply focus supports MORE; the original v1 progress and observer companion format are unchanged. Host and native observer tests verify zero-care and hostility cases.
+
 **Remaining work:** deepen sustained relationships, useful learned behavior beyond phrases/style, broader subject recognition, more diverse generated dialogue, several-day campaign pacing and a fuller durable event history. The older TALK session's short-term facts reset on load/day changes; the new observer retains counters and its last recorded event separately; learning a conversational style does not invent a transcript or train language understanding. Preserve old progress and independently test any future durable-event schema.
 
 Make feeding/playing/sleeping more than one-button stats: short care interactions, discoverable preferences, delayed consequences, surprise jokes and perks from building trust.

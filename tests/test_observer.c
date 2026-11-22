@@ -41,6 +41,12 @@ int main(void){
  original=g;before=p;
  contains(observer_answer(&p,&s,&g,OBSERVER_MONITOR,"MEMORY"),"NO EVENT");
  contains(observer_report(&p,&s,&g),"FOUND. DAY 1.");
+ /* Relationship prompts are truthful and cost no care, exposure or RNG. */
+ contains(observer_answer(&p,&s,&g,0,"TRUST"),"NO CARE INTERACTIONS");
+ contains(observer_answer(&p,&s,&g,1,"FRIEND"),"WE JUST MET");
+ contains(observer_answer(&p,&s,&g,1,"MORE"),"WE JUST MET");
+ assert(memcmp(&p,&before,sizeof(p))==0);
+ assert(memcmp(&g,&original,sizeof(g))==0);
  for(i=0;i<1000u;i++){
   assert(observer_tick(&p,&s,&g,1,0)==OBSERVER_TICK_NONE);
   (void)observer_answer(&p,&s,&g,i&1u,i&1u?"HELLO":"DREAM");
@@ -53,6 +59,8 @@ int main(void){
  care(&p,&s,&g,FEED);contains(observer_answer(&p,&s,&g,0,"MEMORY"),"HUNGER FELL BY 30");
  care(&p,&s,&g,FEED);contains(observer_answer(&p,&s,&g,0,"MEMORY"),"HUNGER FELL BY 5");
  care(&p,&s,&g,FEED);contains(observer_answer(&p,&s,&g,0,"MEMORY"),"HUNGER FELL BY 0");
+ contains(observer_answer(&p,&s,&g,0,"CARE PATTERN"),"CARE F3 C0 P0 N0");
+ contains(observer_answer(&p,&s,&g,0,"MORE"),"CARE F3 C0 P0 N0");
  before=p;
  assert(!observer_record_care(&p,&s,&g,&g,FEED));
  assert(!observer_record_care(&p,&s,&g,&g,(Care)99));
@@ -62,6 +70,8 @@ int main(void){
  care(&p,&s,&g,FEED);assert(observer_stage(&p)==OBSERVER_WATCHING);
  for(i=24u;i<64u;i++)care(&p,&s,&g,FEED);
  assert(observer_stage(&p)==OBSERVER_HOSTILE&&p.exposure==64u);
+ contains(observer_answer(&p,&s,&g,0,"BOND"),"STAGE HOSTILE");
+ contains(observer_answer(&p,&s,&g,0,"BOND"),"CARE F64 C0 P0 N0");
  original=g;
 
  /* Cooldown and sixty-tick windup pause completely in all other views.
@@ -130,6 +140,9 @@ int main(void){
  contains(observer_answer(&p,&s,&g,1,"WHAT DID I TEACH"),"1: TINY BOSS");
  assert(memcmp(&g,&original,sizeof(g))==0);
  care(&p,&s,&g,PLAY);assert(s.echo_ready);
+ contains(observer_answer(&p,&s,&g,1,"BOND"),"WE PLAYED 1 TIMES");
+ contains(observer_answer(&p,&s,&g,1,"MORE"),"WE PLAYED 1 TIMES");
+ contains(observer_answer(&p,&s,&g,0,"BOND"),"CARE F0 C0 P1 N0");
  assert(strcmp(s.reply,"YOU TAUGHT ME: TINY BOSS")==0);
  /* Staying on PLAY must return from a learned quote to generated
   * make-believe without another topic unlocking the local variation. */
@@ -186,6 +199,7 @@ int main(void){
  assert(memcmp(&g,&original,sizeof(g))==0);
  assert(memcmp(&p,&before,sizeof(p))==0);
  g.energy=0;g.hunger=100;g.chaos=100;
+ contains(observer_answer(&p,&s,&g,1,"BOND"),"PLEASE LET ME NAP");
  contains(observer_answer(&p,&s,&g,1,"PLAY"),"PLEASE LET ME NAP");
  contains(observer_answer(&p,&s,&g,1,"MORE"),"PLEASE LET ME NAP");
  g.energy=75;contains(observer_answer(&p,&s,&g,0,"NEEDS"),"A BOTTLE");
