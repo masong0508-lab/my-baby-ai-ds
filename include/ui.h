@@ -26,6 +26,25 @@ int ui_conversation_entry_touch(int x,int y);
 /* TALK view 11: 0..5 ask a prompt, 6 BACK, 7 ASK selected; -1 inert.
  * ui_draw's selected argument identifies the highlighted prompt 0..5. */
 int ui_conversation_touch(int x,int y);
+/* Typed shelter terminal, independently drawn instead of ui_draw(view=12).
+ * speaker: 0 WARDEN/MONITOR, nonzero BABY; selected key: 0..29.
+ * Key bit 5 selects the numeric page (encoded keys 32..61).
+ * Input is clipped to 32 source bytes, reply to 144 source bytes/four rows.
+ * No state, input, or reply buffer is modified by these drawing helpers. */
+void ui_observer_draw(const Game *s,int can_save,unsigned speaker,
+                       const char *input,const char *reply,unsigned key,
+                       unsigned stage,unsigned integrity);
+/* Two 30-key pages; space is literal, '<' erases, invalid index is NUL. */
+char ui_observer_key(unsigned key);
+/* 0..29 keyboard; 30 BACK, 31 TARGET, 32 TEACH, 33 SEND,
+ * 34 123/ABC page switch; -1 inert. Caller supplies key page bit. */
+int ui_observer_touch(int x,int y);
+/* CARE/TALK-only visible CPU badge, separate from status readouts. */
+int ui_observer_entry_touch(int x,int y);
+/* Footer-only WARDEN notice. Caller applies save warnings afterward. */
+void ui_observer_alert(const char *text);
+void ui_observer_guard_prompt(unsigned integrity);
+void ui_observer_save_warning(void);
 int ui_room_entry_touch(int x,int y);
 int ui_room_touch(int x,int y); /* 0 window, 1 lamp, 2 teddy, 3 crib, 4 back, 5 sound, 6 use */
 int ui_prank_entry_touch(int x,int y);

@@ -303,3 +303,42 @@ jobs:
           path: emulator-conversation-proof/
           retention-days: 30
           if-no-files-found: warn
+
+  desmume-observer:
+    name: Type to WARDEN, teach the baby and counter hostile attacks
+    needs: ds-only-packaging
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Retrieve the production ROM built in this run
+        uses: actions/download-artifact@v4
+        with:
+          name: my-baby-ai-blocksds-legacy-compat
+      - name: Configure Python test harness
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install actual DeSmuME emulator and screenshot backend
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python -m pip install --disable-pip-version-check py-desmume==0.0.9 Pillow
+      - name: Type questions, teach a phrase, earn hostility and counter real windups
+        shell: bash
+        env:
+          SDL_VIDEODRIVER: dummy
+          SDL_AUDIODRIVER: dummy
+        run: |
+          set -euxo pipefail
+          timeout 240 python tests/emulator_observer.py \
+            my-baby-ai-blocksds-ds-only.nds \
+            --output emulator-observer-proof
+      - name: Upload native shelter screens and results even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: desmume-observer-evidence
+          path: emulator-observer-proof/
+          retention-days: 30
+          if-no-files-found: warn

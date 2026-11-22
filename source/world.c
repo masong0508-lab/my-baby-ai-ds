@@ -26,6 +26,13 @@ static int nursery_ambient;
  * reproduce the approved original care/night composition. */
 static int tour_daylight;
 static int tour_lamp_on=1;
+static unsigned observer_visual_stage,observer_visual_integrity=100u;
+static int observer_visual_warning;
+void world_observer_status(unsigned stage,unsigned integrity,int warning){
+ observer_visual_stage=stage>3u?3u:stage;
+ observer_visual_integrity=integrity>100u?100u:integrity;
+ observer_visual_warning=warning!=0;
+}
 static void color(int r,int g,int b,int shift){
  glColor(RGB15(limit(r+shift+nursery_ambient),
                limit(g+shift+nursery_ambient),
@@ -90,23 +97,61 @@ static void side_wall_mark(float x,float y,float z,float sz,float sy,
  frame_vertices+=4;frame_polygons++;
 }
 /* DS-native four-corner lighting. The hardware interpolates vertex
- * colors across these TWO quads: a warm lamp-side wall, a colder moonlit
+ * colors across three quads: warm lamp-side plaster, a colder moonlit
  * upper-right wall and floor. Much richer depth than one beige plane,
  * without lightmaps, alpha buffers, textures or per-pixel CPU drawing. */
 static void nursery_light_planes(void){
+ /* The window side stays cool while the lamp end warms the lower wall.
+  * These are broad architectural gradients, not floating light strips.
+  * All three surfaces are separated from their wall/floor boxes. */
  glBegin(GL_QUADS);
- color(30,24,21,0);glVertex3f(-3.29f,-1.07f,-3.131f);
- color(27,24,26,0);glVertex3f(3.30f,-1.07f,-3.131f);
- color(22,19,27,0);glVertex3f(3.30f,2.53f,-3.131f);
- color(26,19,25,0);glVertex3f(-3.29f,2.53f,-3.131f);
+ color(tour_lamp_on?29:23,tour_lamp_on?24:22,21,0);
+ glVertex3f(-3.29f,-1.07f,-3.131f);
+ color(23,22,25,0);glVertex3f(3.30f,-1.07f,-3.131f);
+ color(tour_daylight?23:20,20,tour_daylight?27:25,0);
+ glVertex3f(3.30f,2.53f,-3.131f);
+ color(tour_daylight?25:24,tour_daylight?25:21,25,0);
+ glVertex3f(-3.29f,2.53f,-3.131f);
  glEnd();
  glBegin(GL_QUADS);
- color(26,21,18,0);glVertex3f(-3.28f,-1.237f,3.28f);
- color(25,23,23,0);glVertex3f(3.28f,-1.237f,3.28f);
- color(24,22,25,0);glVertex3f(3.28f,-1.237f,-3.09f);
- color(29,23,20,0);glVertex3f(-3.28f,-1.237f,-3.09f);
+ color(23,19,17,0);glVertex3f(-3.28f,-1.237f,3.28f);
+ color(22,20,21,0);glVertex3f(3.28f,-1.237f,3.28f);
+ color(20,19,23,0);glVertex3f(3.28f,-1.237f,-3.09f);
+ color(tour_lamp_on?28:22,23,tour_daylight?24:20,0);
+ glVertex3f(-3.28f,-1.237f,-3.09f);
  glEnd();
- frame_vertices+=8;frame_polygons+=2;
+ glBegin(GL_QUADS);
+ color(tour_lamp_on?23:19,24,21,0);
+ glVertex3f(-3.340f,-1.07f,3.28f);
+ color(19,23,22,0);glVertex3f(-3.340f,2.53f,3.28f);
+ color(22,25,25,0);glVertex3f(-3.340f,2.53f,-3.10f);
+ color(tour_lamp_on?27:22,25,22,0);
+ glVertex3f(-3.340f,-1.07f,-3.10f);
+ glEnd();
+ frame_vertices+=12;frame_polygons+=3;
+}
+/* Three broad quads make one clipped-corner contact footprint. No alpha
+ * blending, ellipsoid poles, texture or long narrow geometry. Nested
+ * tones soften the edge while remaining deterministic native DS meshes. */
+static void floor_contact(float x,float y,float z,float rx,float rz,
+                           int r,int g,int b){
+ const float edge=rx*.7071f,depth=rz*.7071f;
+ glBegin(GL_QUADS);
+ color(r,g,b,0);
+ face(x-edge,y,z-rz,x+edge,y,z-rz,
+      x+edge,y,z+rz,x-edge,y,z+rz);
+ face(x-rx,y,z-depth,x-edge,y,z-rz,
+      x-edge,y,z+rz,x-rx,y,z+depth);
+ face(x+edge,y,z-rz,x+rx,y,z-depth,
+      x+rx,y,z+depth,x+edge,y,z+rz);
+ glEnd();
+ frame_vertices+=12;frame_polygons+=3;
+}
+static void baby_contact(float x,float z,float scale){
+ /* Center the contact under both boots, not behind the seated hips.
+  * The nested shapes travel with the toy and contract during a bounce. */
+ floor_contact(x,-1.121f,z,.53f*scale,.31f*scale,21,20,26);
+ floor_contact(x,-1.118f,z,.43f*scale,.23f*scale,18,17,23);
 }
 /* A rail has three visible faces rather than all six box faces. */
 static void crib_rail(float x,float y,float z,float width,float height,
@@ -247,6 +292,56 @@ static void soft_mark(float x,float y,float z,float sx,float sy,
                       int r,int g,int b){
  wall_sticker(x,y,z,sx,sy,r,g,b);
 }
+/* A rounded shallow surface has no hidden back half or collapsed poles.
+ * Eight real triangles replace 24-quad wafer-thin ellipsoids in facial
+ * details. The GPU interpolates the soft center/edge colors. All rings
+ * retain positive area, including the smallest partial blink. */
+static void face_oval(float x,float y,float z,float rx,float ry,
+                      int r,int g,int b,int edge_shift){
+ int i,j;
+ glBegin(GL_TRIANGLES);
+ for(i=0;i<8;i++){
+  j=(i+1)&7;
+  color(r,g,b,0);glVertex3f(x,y,z);
+  color(r,g,b,edge_shift);
+  glVertex3f(x+rx*cx[i],y+ry*cz[i],z-.008f);
+  glVertex3f(x+rx*cx[j],y+ry*cz[j],z-.008f);
+ }
+ glEnd();
+ frame_vertices+=24;frame_polygons+=8;
+}
+/* One shared inset-eye treatment for the nursery and boot portrait.
+ * The opening and iris narrow together, so a blink needs no rectangular
+ * skin shutter covering the cheek. The gentle rim stays inside the face.
+ * Draw the closed-lid crease separately once the opening is below 1/4. */
+static void baby_eye(float x,float y,float z,float scale,int lid){
+ const float aperture=.090f*(float)lid/256.f;
+ const float center=y-(.090f-aperture)*.16f*scale;
+ const float iris=aperture*.88f<.063f?aperture*.88f:.063f;
+ const float pupil=aperture*.77f<.044f?aperture*.77f:.044f;
+ face_oval(x,center,z,.124f*scale,(aperture+.010f)*scale,
+            24,17,15,2);
+ face_oval(x,center,z+.010f,.106f*scale,aperture*scale,
+            31,30,27,-1);
+ face_oval(x+.011f*scale,center-.006f*scale,z+.021f,
+            .057f*scale,iris*scale,11,19,20,-3);
+ face_oval(x+.013f*scale,center-.008f*scale,z+.031f,
+            .030f*scale,pupil*scale,4,7,9,-1);
+ /* A smaller glint disappears during a low blink instead of floating
+  * above the narrowed pupil. It remains attached to the same eye. */
+ if(lid>=112)
+  soft_mark(x-.010f*scale,center+.024f*scale,z+.038f,
+             .023f*scale,.018f*scale,31,31,29);
+}
+/* Low CHAT syllables used a wafer-thin ellipsoid whose pole bands could
+ * rasterize as a long horizontal line across the jaw. The same intended
+ * aperture is now eight positive-area triangles at the old front depth.
+ * The tongue follows the aperture instead of floating below a closed
+ * syllable. Both surfaces stay on the shared head/neck transform. */
+static void baby_mouth(float open){
+ face_oval(0,.252f,.468f,.094f,.085f*open,12,4,9,-1);
+ soft_mark(0,.252f-.040f*open,.476f,.095f,.025f*open,30,15,19);
+}
 unsigned world_vertex_count(void){return frame_vertices;}
 unsigned world_polygon_count(void){return frame_polygons;}
 /* Four physically anchored hanging charms. One shared parent transform
@@ -302,20 +397,33 @@ static void room(int mobile_tilt){
  nursery_light_planes();
  block(0,-1.15,-3.12,6.9,.16,.12,24,22,19);
  block(-3.32,-1.15,0,.12,.16,6.9,24,22,19);
- /* Handmade framed nursery moon painting on the LEFT interior wall.
-  * It breaks up the otherwise empty 6,000px sage wall in window/lamp
-  * camera angles. Five BROAD quads—no hairline strips, z-fighting, image
-  * assets or large arrays. Distinct x depths avoid coplanar artifacts. */
- side_wall_mark(-3.290f,1.54f,.81f,1.18f,.85f,18,15,20);
- side_wall_mark(-3.268f,1.54f,.81f,1.01f,.69f,11,18,26);
- side_wall_mark(-3.247f,1.61f,.69f,.30f,.30f,30,26,14);
- side_wall_mark(-3.226f,1.68f,.61f,.21f,.22f,11,18,26);
- side_wall_mark(-3.246f,1.39f,1.13f,.15f,.16f,28,29,18);
+ /* WARDEN's salvaged wall terminal occupies the former framed painting.
+  * Broad opaque surfaces remain legible at native resolution. Its steady
+  * alert lamp and bracer bar read actual observer state; no fake telemetry
+  * animation, flickering scanlines or extra screen buffer is involved. */
+ side_wall_mark(-3.290f,1.34f,-.25f,1.18f,.85f,8,10,14);
+ side_wall_mark(-3.268f,1.39f,-.25f,1.01f,.57f,3,10,12);
+ side_wall_mark(-3.247f,1.43f,-.25f,.54f,.23f,11,26,21);
+ side_wall_mark(-3.226f,1.43f,-.25f,.18f,.17f,3,9,11);
+ side_wall_mark(-3.246f,1.03f,-.25f,.72f,.07f,11,14,17);
+ if(observer_visual_integrity){
+  float extent=.72f*(float)observer_visual_integrity/100.f;
+  side_wall_mark(-3.224f,1.03f,-.61f+extent*.5f,extent,.07f,13,27,21);
+ }
+ side_wall_mark(-3.224f,1.04f,.23f,.11f,.10f,
+                 observer_visual_warning?31:observer_visual_stage>=2u?28:12,
+                 observer_visual_warning?10:observer_visual_stage>=2u?20:26,
+                 observer_visual_warning?10:8);
  /* The old .035/.045 tall wainscot strips projected into unstable
   * one-pixel rulers over the dresser at 256x192. Clean broad painted
   * plaster replaces them: no more floating horizontal lines. */
  /* Continuous nursery floor: removed 14 subpixel strips. Those long
   * narrow decals produced vertical seams across the DS floor image. */
+ /* Real prop footprints anchor the cream furniture and orange plush.
+  * Their broad low-contrast shapes stay beneath the fixed props. */
+ floor_contact(-2.55f,-1.228f,-.48f,.72f,.58f,17,16,17);
+ floor_contact(2.28f,-1.228f,-1.49f,.85f,.93f,17,17,20);
+ floor_contact(-1.28f,-1.220f,.55f,.39f,.34f,18,17,19);
  /* One darkened ground plane under the play mat gives contact shadow
   * without expensive translucent blending or extra VRAM. */
  flat_floor(.04f,-1.222f,.78f,3.00f,2.58f,20,17,14);
@@ -473,6 +581,8 @@ int world_baby_neck_tilt(int action,uint32_t age){
  int phase=(int)(age%80u);
  int sway=phase<40?phase:80-phase;
  if(action==WORLD_BABY_CHEER)return 4;
+ if(action==WORLD_BABY_WINDUP)return -6;
+ if(action==WORLD_BABY_LUNGE)return 3;
  /* One small acknowledging head tilt, then return toward the player.
   * The common 56-tick envelope brings the attached head back to rest. */
  if(action==WORLD_BABY_REGROUP)
@@ -485,6 +595,8 @@ int world_baby_neck_tilt(int action,uint32_t age){
 int world_baby_arm_reach(int action){
  if(action==WORLD_BABY_CHEER)return 76;
  if(action==WORLD_BABY_REGROUP)return 20;
+ if(action==WORLD_BABY_WINDUP)return 29;
+ if(action==WORLD_BABY_LUNGE)return 54;
  return action==3?57:action==2?45:action==1?28:
         action==4?-8:action==5?-6:7;
 }
@@ -537,7 +649,7 @@ int world_baby_breath(uint32_t frame){
 }
 /* Missing sleep needs to be seen in the BABY, not merely an ENERGY meter.
  * Even at zero energy the pupils remain inside their normal eye sockets,
- * using an existing stable eyelid shutter instead of a thin 3D ellipse.
+ * using rounded positive-area surfaces instead of thin 3D ellipsoids.
  * Fully rested (>54) characters retain their original bright-eyed pose. */
 int world_baby_drowsy_lid(int energy){
  if(energy<=0)return 96;
@@ -596,7 +708,8 @@ static WorldBabyPose baby_pose_sample(const Game *s,uint32_t frame,
  WorldBabyPose p;
  unsigned phase=age%36u,hop=phase<18u?phase:36u-phase;
  int weight=rag?256:(action?world_baby_care_weight(age):0);
- int result=action==WORLD_BABY_CHEER||action==WORLD_BABY_REGROUP;
+ int result=action==WORLD_BABY_CHEER||action==WORLD_BABY_REGROUP||
+            action==WORLD_BABY_WINDUP||action==WORLD_BABY_LUNGE;
  int sleepy=!rag&&s->energy<25?-4*(25-(int)s->energy)/25:0;
  int reach=7+(world_baby_arm_reach(action)-7)*weight/256+sleepy;
  /* .00145 * 160 = 29/125. Preserve the original whole-degree wave
@@ -610,12 +723,16 @@ static WorldBabyPose baby_pose_sample(const Game *s,uint32_t frame,
           256:world_baby_lid_open(frame,action,age);
  p.reach_left=(int16_t)(reach+wave+recoil);
  p.reach_right=(int16_t)(reach-wave-recoil);
- p.forward_left=(int16_t)((action==WORLD_BABY_CHEER?9:
+ p.forward_left=(int16_t)((action==WORLD_BABY_WINDUP?18:
+                           action==WORLD_BABY_LUNGE?32:
+                           action==WORLD_BABY_CHEER?9:
                            action==WORLD_BABY_REGROUP?12:
                            action==1?13:action==2?8:
                            action==3?10:0)*weight/256);
  p.forward_right=(int16_t)(p.forward_left+(action==2?6*weight/256:0));
- p.lean=(int16_t)((action==WORLD_BABY_CHEER?3:
+ p.lean=(int16_t)((action==WORLD_BABY_WINDUP?-3:
+                   action==WORLD_BABY_LUNGE?4:
+                   action==WORLD_BABY_CHEER?3:
                    action==WORLD_BABY_REGROUP?-2:
                    action==1?3:action==2?-3:action==3?5:
                    action==4?-3:0)*weight/256);
@@ -628,6 +745,10 @@ static WorldBabyPose baby_pose_sample(const Game *s,uint32_t frame,
    * further. Natural blinking still has priority over this small cap. */
   int soft_lid=256-48*weight/256;
   if(lid>soft_lid)lid=soft_lid;
+ }
+ if(action==WORLD_BABY_WINDUP||action==WORLD_BABY_LUNGE){
+  int narrowed=256-80*weight/256;
+  if(lid>narrowed)lid=narrowed;
  }
  if(rag&&rag->moving)neck-=rag->vr/3;
  if(neck>16)neck=16;
@@ -719,7 +840,7 @@ static void baby_arm(int direction,int angle,int forward){
  glTranslatef(side*.45f,-.21f,-.025f);
  glRotateZi(model_angle(direction*angle));
  glRotateXi(model_angle(-forward));
- ellipse(0,0,0,.205f,.22f,.195f,19,26,27);
+ ellipse(0,0,0,.205f,.22f,.195f,17,25,26);
  tilted_ellipse(side*.10f,-.16f,.17f,
                 .14f,.18f,.14f,direction*26,31,23,19);
  baby_hand(side*.18f,-.25f,.305f);
@@ -739,6 +860,8 @@ static void baby_model(const Game *s,uint32_t frame,int action,
  /* Rig motion is staged in one short action. Lower-body bounce, shoulder
   * rotation, hand reach, neck reaction and eyelid shape share this curve. */
  const int weight=rag?256:(action?world_baby_care_weight(action_age):0);
+ const int hostile=(action==WORLD_BABY_WINDUP||action==WORLD_BABY_LUNGE)
+                    &&weight>40;
  const float breath=rag?0.f:(float)world_baby_breath(frame)/256.f;
  const float bob=((float)(beat<60u?beat:120u-beat)-30.f)*.00022f+
                  (float)rig.bounce*.0022f/256.f;
@@ -747,29 +870,37 @@ static void baby_model(const Game *s,uint32_t frame,int action,
   * connected to the parent model rather than becoming floating parts. */
  const float settle=rag?(float)rag->impact*.0025f:0.f;
  const int lid=rig.lid;
- const float lid_height=(float)lid/256.f;
  /* Hungry and exhausted infants should look unsettled even when
   * an old positive mood score hasn't yet caught up with their needs.
   * NAP/FEED restores the same face without adding new visual states. */
- const int happy=s->mood>35&&s->hunger<80&&s->energy>15;
+ const int happy=!hostile&&s->mood>35&&s->hunger<80&&s->energy>15;
  const int glitch=game_glitch_tier(s)>=2&&!s->safe_visuals&&
                   (frame%151u)<12u;
  glPushMatrix();
  glTranslatef(-.12f,bob-settle,.23f);
  glRotateZi(model_angle(rig.lean)); /* torso and limbs ease together */
+ /* Telegraph and lunge pivot the EXISTING connected body at its feet.
+  * Keep the camera still, the floor contact fixed and all facial parts
+  * parented; no extra mesh, screen shake or full-frame flash is needed. */
+ if(action==WORLD_BABY_WINDUP||action==WORLD_BABY_LUNGE){
+  int pitch=(action==WORLD_BABY_WINDUP?-4:9)*weight/256;
+  glTranslatef(0,-1.08f,.36f);
+  glRotateXi(model_angle(pitch));
+  glTranslatef(0,1.08f,-.36f);
+ }
  /* Footed one-piece romper, short legs and soft shoes: no adult denim. */
- ellipse(0,-.75f,-.07f,.46f,.31f,.34f,19,26,27);
- ellipse(-.32f,-.93f,.14f,.245f,.22f,.27f,18,25,27);
- ellipse(.32f,-.93f,.14f,.245f,.22f,.27f,18,25,27);
- ellipse(-.365f,-1.08f,.36f,.235f,.13f,.24f,30,28,23);
- ellipse(.365f,-1.08f,.36f,.235f,.13f,.24f,30,28,23);
- soft_mark(-.365f,-1.07f,.599f,.10f,.017f,21,27,24);
- soft_mark(.365f,-1.07f,.599f,.10f,.017f,21,27,24);
+ ellipse(0,-.75f,-.07f,.46f,.31f,.34f,17,25,26);
+ ellipse(-.32f,-.93f,.14f,.245f,.22f,.27f,16,24,26);
+ ellipse(.32f,-.93f,.14f,.245f,.22f,.27f,16,24,26);
+ ellipse(-.365f,-1.08f,.36f,.235f,.13f,.24f,29,27,22);
+ ellipse(.365f,-1.08f,.36f,.235f,.13f,.24f,29,27,22);
+ soft_mark(-.365f,-1.105f,.599f,.25f,.035f,23,24,21);
+ soft_mark(.365f,-1.105f,.599f,.25f,.035f,23,24,21);
  /* Layered shadow + warm collar replaces the single white floating coin. */
  /* Preserve shoulder, collar and face attachment: only the upper torso
   * expands by a few percent for a legible but restrained breath. */
  soft_head(0,-.32f,-.08f,.49f*(1.f+.024f*breath),
-           .46f*(1.f+.016f*breath),.36f,19,27,27);
+           .46f*(1.f+.016f*breath),.36f,17,25,26);
  ellipse(0,.084f,-.015f,.27f,.11f,.196f,17,22,21);
  /* A nearly paper-flat, overbright collar ellipsoid was emitting a
   * 75-pixel row of RGB15(31,28,23) through the dresser/cheek. That exact
@@ -777,7 +908,7 @@ static void baby_model(const Game *s,uint32_t frame,int action,
   * Replace it with a small, volumetric curved neckline, still attached
   * to the romper, but safely away from the rasterizer's thin-pole case. */
  ellipse(0,.117f,.012f,.176f,.112f,.139f,29,25,21);
- ellipse(0,-.39f,.284f,.235f,.225f,.035f,29,30,26);
+ face_oval(0,-.39f,.316f,.235f,.225f,30,29,24,-2);
  /* Four inexpensive stitched glints on the romper's central pocket. */
  soft_mark(0,-.30f,.330f,.10f,.044f,glitch?24:27,glitch?17:23,10);
  soft_mark(-.075f,-.34f,.331f,.055f,.026f,30,25,14);
@@ -810,12 +941,9 @@ static void baby_model(const Game *s,uint32_t frame,int action,
  hair_fringe(.16f,.959f,.438f,.28f,.095f,-.04f);
  hair_fringe(-.015f,1.008f,.436f,.16f,.077f,-.025f);
  ellipse(-.39f,1.018f,.365f,.075f,.069f,.029f,29,14,20);
- /* Sclera and pupils lie just above the curved facial surface, not
-  * stacked .10 units out in space. Each shallow eye has a tiny highlight. */
- /* Never scale 3D eyeballs down to subpixel-thin ellipsoid poles.
-  * Wide-open and partly open eyes use stable, fixed-thickness 3D shapes.
-  * At the end of a NAP blink, draw only short CURVED closed-lid quads,
-  * not large skin rectangles blanking out the face. */
+ /* Front-facing rounded surfaces follow the skin, with a softly shaded
+  * rim instead of four stacked full ellipsoids. Closed eyes retain the
+  * same gentle crease and the full face stays on the neck transform. */
  if(lid<64){
   /* Two small joined crease segments per eye form a relaxed low arc.
    * These are safe single quads, not collapsed GL_QUAD_STRIP bands. */
@@ -824,32 +952,23 @@ static void baby_model(const Game *s,uint32_t frame,int action,
   soft_mark(.159f,.565f,.534f,.092f,.018f,18,11,10);
   soft_mark(.250f,.572f,.532f,.092f,.018f,18,11,10);
  }else{
-  ellipse(-.205f,.579f,.462f,.135f,.113f,.014f,22,15,14);
-  ellipse(.205f,.579f,.462f,.135f,.113f,.014f,22,15,14);
-  ellipse(-.205f,.575f,.477f,.113f,.099f,.015f,31,30,28);
-  ellipse(.205f,.575f,.477f,.113f,.099f,.015f,31,30,28);
-  ellipse(-.188f,.565f,.493f,.066f,.072f,.015f,10,19,22);
-  ellipse(.218f,.565f,.493f,.066f,.072f,.015f,10,19,22);
-  ellipse(-.185f,.560f,.509f,.040f,.054f,.011f,3,7,10);
-  ellipse(.221f,.560f,.509f,.040f,.054f,.011f,3,7,10);
-  soft_mark(-.208f,.602f,.526f,.031f,.023f,31,31,29);
-  soft_mark(.202f,.602f,.526f,.031f,.023f,31,31,29);
-  if(lid<256){
-   float shutter=.300f*(1.f-lid_height);
-   float center=.716f-shutter*.5f;
-   /* A stable upper-lid surface masks only PARTIAL blinks. At full
-    * closure we replace the full eyes with dedicated crease marks. */
-   if(shutter>.038f){
-    soft_mark(-.205f,center,.548f,.276f,shutter,30,22,19);
-    soft_mark(.205f,center,.548f,.276f,shutter,30,22,19);
-   }
-  }
+  baby_eye(-.205f,.575f,.480f,1.f,lid);
+  baby_eye(.205f,.575f,.480f,1.f,lid);
  }
  /* Warm cheeks, gentle brows, button nose and a tiny restrained smile. */
- ellipse(-.355f,.365f,.397f,.102f,.058f,.016f,31,18,19);
- ellipse(.355f,.365f,.397f,.102f,.058f,.016f,31,18,19);
- soft_mark(-.205f,.734f,.459f,.105f,.014f,17,11,9);
- soft_mark(.205f,.734f,.459f,.105f,.014f,17,11,9);
+ face_oval(-.355f,.365f,.411f,.095f,.050f,31,19,19,2);
+ face_oval(.355f,.365f,.411f,.095f,.050f,31,19,19,2);
+ if(hostile){
+  glPushMatrix();glTranslatef(-.205f,.734f,.459f);
+  glRotateZi(model_angle(-16));soft_mark(0,0,0,.105f,.018f,17,11,9);
+  glPopMatrix(1);
+  glPushMatrix();glTranslatef(.205f,.734f,.459f);
+  glRotateZi(model_angle(16));soft_mark(0,0,0,.105f,.018f,17,11,9);
+  glPopMatrix(1);
+ }else{
+  soft_mark(-.205f,.734f,.459f,.105f,.014f,17,11,9);
+  soft_mark(.205f,.734f,.459f,.105f,.014f,17,11,9);
+ }
  ellipse(0,.375f,.467f,.047f,.034f,.019f,31,23,20);
  if(rag&&rag->impact){
   /* Fresh toy-shell collision: a short shocked open mouth is actually
@@ -857,9 +976,8 @@ static void baby_model(const Game *s,uint32_t frame,int action,
    * to its ordinary expression. Reuse the CHAT mouth geometry, no
    * new material, sprites, or animation allocations. */
   float gasp=.42f+(float)rag->impact/9.f*.48f;
-  ellipse(0,.252f,.451f,.094f,.085f*gasp,.020f,12,4,9);
-  soft_mark(0,.212f,.476f,.095f,.025f*gasp,30,15,19);
- }else if((action==2||(happy&&action==3)||
+  baby_mouth(gasp);
+ }else if((action==2||action==WORLD_BABY_LUNGE||(happy&&action==3)||
            action==WORLD_BABY_CHEER)&&weight>40){
   /* CHAT syllables must remain visible when the baby is unhappy, too:
    * the nursery PSG voice still babbles at low mood. A smaller grim
@@ -869,8 +987,7 @@ static void baby_model(const Game *s,uint32_t frame,int action,
   float speech=action==2?(float)world_baby_speech_open(action_age)/256.f:1.f;
   float open=action==WORLD_BABY_CHEER?.72f:action==2?
               .12f+(happy?.88f:.59f)*speech:1.f;
-  ellipse(0,.252f,.451f,.094f,.085f*open,.020f,12,4,9);
-  soft_mark(0,.212f,.476f,.095f,.025f*open,30,15,19);
+  baby_mouth(open);
  }else if(happy||(action==WORLD_BABY_REGROUP&&weight>40)){
   /* A loss receives encouragement through the existing closed smile. */
   soft_mark(-.065f,.278f,.444f,.052f,.017f,18,9,11);
@@ -966,7 +1083,7 @@ void world_draw_nursery(const Game *s,uint32_t frame,int activity,
  nursery_ambient=0;
  tour_daylight=0;
  tour_lamp_on=1;
- flat_floor(-.10f,-1.124f,.31f,.84f,.255f,18,16,23);
+ baby_contact(-.12f,.52f,1.f);
  baby_model(s,frame,activity,0,action_age,
             world_baby_attention_from(attention_start,focus,camera_age),motion);
  if(focus==2&&prop_age<40u){
@@ -1007,14 +1124,13 @@ void world_draw_roughhouse(const Game *s,uint32_t frame,const Roughhouse *r){
  frame_vertices=0;frame_polygons=0;
  room(0);
  if(r){
-  /* The shadow moves WITH the synthetic doll and tightens as it falls.
-   * One floor quad adds no texture VRAM or per-frame image operations. */
+  /* The contact moves WITH the synthetic doll and tightens as it falls.
+   * Two clipped-corner tones add no texture VRAM or image operations. */
   shadow=1.f-(float)r->y/850.f;
   if(shadow<.60f)shadow=.60f;
-  flat_floor(-.10f+(float)r->x/256.f,-1.124f,
-             .31f+(float)r->z/256.f,
-             .84f*shadow,.255f*shadow,18,16,23);
- }else flat_floor(-.10f,-1.124f,.31f,.84f,.255f,18,16,23);
+  baby_contact(-.12f+(float)r->x/256.f,
+                .52f+(float)r->z/256.f,shadow);
+ }else baby_contact(-.12f,.52f,1.f);
  glPushMatrix();
  if(r){
   tilt=r->roll<0?-r->roll:r->roll;
@@ -1624,14 +1740,10 @@ void world_draw_title(uint32_t frame){
  hair_fringe(-.25f,.54f,.30f,.30f,.09f,.025f);
  hair_fringe(.17f,.54f,.29f,.28f,.09f,-.03f);
  hair_fringe(-.015f,.59f,.305f,.16f,.074f,-.027f);
- ellipse(-.225f,.057f,.335f,.106f,.10f,.020f,30,29,27);
- ellipse(.225f,.057f,.335f,.106f,.10f,.020f,30,29,27);
- ellipse(-.215f,.049f,.354f,.054f,.062f,.015f,5,7,11);
- ellipse(.239f,.049f,.354f,.054f,.062f,.015f,5,7,11);
- soft_mark(-.23f,.086f,.372f,.024f,.019f,31,31,30);
- soft_mark(.216f,.086f,.372f,.024f,.019f,31,31,30);
- soft_mark(-.43f,-.205f,.275f,.138f,.07f,31,18,19);
- soft_mark(.43f,-.205f,.275f,.138f,.07f,31,18,19);
+ baby_eye(-.225f,.057f,.333f,1.08f,256);
+ baby_eye(.225f,.057f,.333f,1.08f,256);
+ face_oval(-.43f,-.205f,.282f,.080f,.043f,31,19,19,2);
+ face_oval(.43f,-.205f,.282f,.080f,.043f,31,19,19,2);
  soft_mark(0,-.27f,.337f,.14f,.023f,18,9,11);
  soft_mark(0,-.254f,.343f,.09f,.013f,31,20,19);
  glPopMatrix(1);

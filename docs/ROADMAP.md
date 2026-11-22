@@ -2,7 +2,7 @@
 
 **Platform:** original Nintendo DS / DS Lite, with DSi supported only through the standard DS-compatible build. **Presentation:** intentionally awkward, colorful 2000s baby-game aesthetics enhanced by original environments, better character acting, a fluid touchscreen UI and playful ordinary corruptions, plus the optional Toybox/alien-egg horror cinematic.
 
-This document separates implemented checkpoints from remaining acceptance work. The current priority is the neural conversation and responsiveness milestone following [PR #66](https://github.com/masong0508-lab/my-baby-ai-ds/pull/66): actual questions, topical follow-ups, truthful recent care, adaptive wording and saved preferences. All sixteen cabinets, nursery props, care/result acting, PSG feedback, submitted-geometry diagnostics and touch-accessible saves remain in place. These do not establish a complete title or physical-DS release readiness.
+This document separates implemented checkpoints from remaining acceptance work. The current priority is the neural conversation and responsiveness milestone following [PR #67](https://github.com/masong0508-lab/my-baby-ai-ds/pull/67): typed WARDEN/BABY conversation, bounded local word generation, truthful observation, learned phrases and the Last Nursery threat/counter loop. See [the story direction](THE_LAST_NURSERY.md). All sixteen cabinets, nursery props, care/result acting, PSG feedback, submitted-geometry diagnostics and touch-accessible saves remain in place. These do not establish a complete title or physical-DS release readiness.
 
 ## Priority levels
 
@@ -54,7 +54,9 @@ This document separates implemented checkpoints from remaining acceptance work. 
 
 **Neural conversation checkpoint:** a six-prompt TALK view adds questions, topical continuations and explicit feedback. A small learned output adapter uses the existing neural hidden activations plus conversation context to choose warm/playful/corporate wording. Actual care outcomes and recorded events constrain the eligible responses; urgent needs cannot be trained away. Learned preferences persist in a 40-byte, checksummed companion profile bound to the exact saved Game, without changing v1 progress bytes. FEED/PLAY/NAP replies distinguish useful, redundant and tiring care. See [NEURAL_CONVERSATION.md](NEURAL_CONVERSATION.md), [LEARNING_SAVE_COMPATIBILITY.md](LEARNING_SAVE_COMPATIBILITY.md), and [NATIVE_CONVERSATION_TESTS.md](NATIVE_CONVERSATION_TESTS.md).
 
-**Remaining work:** deepen sustained relationships, meaningful preferences beyond wording, more subject-specific questions, development over several days, and durable event recollection. Short-term factual memories currently reset on load/day changes; learning a conversational style does not invent a transcript or train language understanding. Preserve old progress and independently test any future durable-event schema.
+**Shelter AI checkpoint:** a typed terminal, original 412-token neural word generator, factual observation/archive/calculator paths, four persistent taught phrases, durable event counts and an actual last-event record, and telegraphed attacks/counters now provide a first playable Last Nursery loop. The optional observer companion leaves v1 Game unchanged. See [observer implementation](SHELTER_OBSERVER.md) and [word-model scope](NARRATIVE_LANGUAGE_MODEL.md).
+
+**Remaining work:** deepen sustained relationships, useful learned behavior beyond phrases/style, broader subject recognition, more diverse generated dialogue, several-day campaign pacing and a fuller durable event history. The older TALK session's short-term facts reset on load/day changes; the new observer retains counters and its last recorded event separately; learning a conversational style does not invent a transcript or train language understanding. Preserve old progress and independently test any future durable-event schema.
 
 Make feeding/playing/sleeping more than one-button stats: short care interactions, discoverable preferences, delayed consequences, surprise jokes and perks from building trust.
 
@@ -98,7 +100,7 @@ Add controller/key remapping where practical, stylus calibration guidance, batte
 ## Suggested work order for the next patches
 
 1. Keep both ROM builds, host/sanitizer suites and the exact-head native DeSmuME walkthrough green; fix any regression before merging.
-2. Focus on the neural response system: coherent questions/follow-ups, learned preferences, useful care reactions and broader original response topics, with truthful memory and saved-progress compatibility (M3).
+2. Focus on the Last Nursery response and observation systems: coherent questions/follow-ups, learned preferences, useful care reactions and broader original response topics, with truthful memory and saved-progress compatibility (M3).
 3. Measure sustained frame pacing and RAM on original DS/DS Lite; verify 30-minute sessions, lid resume and FAT save/reboot/recovery. Extend the current submitted-geometry diagnostics only where useful (M0/M6).
 4. Continue native-resolution nursery/egg visual review and coherent character animation when required by an interaction, preserving rendering budgets and existing prop controls (M1/M5).
 5. Improve cabinet balance and richer original audio after the response-system milestone; verify touch/button play and unlock recovery on hardware (M2/M4/M5).

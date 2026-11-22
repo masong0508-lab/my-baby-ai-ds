@@ -189,7 +189,8 @@ class Player:
                      favors=self.favors)
 
     def drag(self, end_x, end_y, name=None, start=(128, 123)):
-        before = self.screen()
+        before = self.wait("complete Teether screen before drag", teether_frame_ready,
+                           limit=60, stride=1) if name else self.screen()
         self.emu.input.touch_set_pos(*start)
         self.step(8)
         self.emu.input.touch_set_pos((start[0] + end_x) // 2,
@@ -199,8 +200,13 @@ class Player:
         # Bitmap redraws can outlast one input poll. Keep the endpoint held
         # until the next native UI refresh can show the dragged receipt.
         self.step(24)
-        held = self.screen()
         if name:
+            held_at = self.cycles
+            # A fixed hold can end during a VRAM repaint. Wait for valid
+            # title, status, counters and trays, without requesting any
+            # particular score; early scoring must fail the next assert.
+            held = self.wait("complete Teether screen while stylus remains held",
+                             teether_frame_ready, limit=60, stride=1)
             assert progress(held, 6) == progress(before, 6), (
                 "Receipt was scored before the stylus released")
             delta = ImageChops.difference(before, held).crop(
@@ -208,7 +214,10 @@ class Player:
                  end_x + 14, 192 + end_y + 13))
             moved = sum(pixel != (0, 0, 0) for pixel in delta.getdata())
             assert moved > 50, f"Dragged receipt did not visibly move: {moved}"
-            self.capture(name, held, changed_receipt_pixels=moved)
+            self.capture(name, held, changed_receipt_pixels=moved,
+                         held_frame_wait_cycles=self.cycles - held_at,
+                         progress_before=list(progress(before, 6)),
+                         progress_while_held=list(progress(held, 6)))
         self.emu.input.touch_release()
         self.step(8)
 
@@ -394,6 +403,18 @@ def teether_destination(image):
     assert color_at(image, 14, 151) == "sky"
     assert color_at(image, 164, 151) == "pink"
     return 202, cue
+
+
+def teether_frame_ready(image):
+    """Recognize complete cabinet paint, independent of the expected score."""
+    rounds, _ = progress(image, 6)
+    if text_at(image, 13, 35, 11, 2) != "TAX TEETHER":
+        return False
+    if not re.fullmatch(rf"SORTED {rounds}/6   [1-4] SEC",
+                        text_at(image, 13, 53, 38, ink="deep_pink")):
+        return False
+    teether_destination(image)  # Complete cue and both tray colors.
+    return True
 
 
 def test_teether(player):

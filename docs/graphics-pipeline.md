@@ -80,3 +80,23 @@ test headroom. No imported textures, heap allocation, additional
 framebuffers or changes to the saved-game schema. Real emulator captures
 and the touchscreen START/FEED regression tests are required prior to
 merge. Cosmetic references should never be passed off as tested ROM screenshots.
+
+## Last Nursery graphics and monitored threat acting (2026-11-21)
+
+Rounded shallow triangles replace the stacked eye ellipsoids and rectangular
+partial-blink shutters. Face, cheeks, bib and clothing use coherent broad
+shading, with simple contact footprints for furniture, teddy and boots.
+WARDEN's physical wall terminal replaces the former left-wall painting; its
+steady indicator and bracer bar use actual observer state. The same connected
+body rig performs a readable wind-up and finite forward lunge, without extra
+character geometry, screen shake or flashes.
+
+Speaking and impact mouths use the same positive-area facial surface treatment,
+preventing thin ellipsoid bands from becoming a long dark line across the jaw.
+
+The integrated normal-scene host maximum is **4,402 vertices / 1,631 polygons**
+(previously 4,702 / 1,808). The normal nursery gate is now **4,500 / 1,700**;
+the broader Toybox/egg gate stays 5,000 / 1,850, and title stays 1,024 / 350.
+The model has no additional textures, VRAM allocations or framebuffer.
+These counters establish submitted geometry, not measured FPS or total RAM.
+Native screenshot review remains mandatory for the actual candidate.

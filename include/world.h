@@ -5,7 +5,8 @@
 #include "roughhouse.h"
 /* Completed-arcade acting. IDs 1..4 retain care, 5/6 retain Toybox use.
  * These are renderer poses, never Care commands or saved game state. */
-enum { WORLD_BABY_CHEER=7,WORLD_BABY_REGROUP=8 };
+enum { WORLD_BABY_CHEER=7,WORLD_BABY_REGROUP=8,
+       WORLD_BABY_WINDUP=9,WORLD_BABY_LUNGE=10 };
 /* Transient articulated care/result rig. Angles are degrees; lid is 0..256;
  * bounce is Q8 hop height (one hop unit is .0022 world units).
  * Furniture attention and the continuous idle breath/bob stay independent. */
@@ -27,6 +28,9 @@ WorldBabyPose world_baby_pose(const Game *state,uint32_t frame,int action,
 void world_baby_motion_start(WorldBabyMotion *motion,WorldBabyPose from,
                              const Game *state,uint32_t frame,int action);
 void world_init(void);
+/* Render-only status for WARDEN's physical wall terminal. No Game writes,
+ * textures or per-frame pixel buffers; all values are clamped. */
+void world_observer_status(unsigned stage,unsigned integrity,int warning);
 void world_draw(const Game *state,uint32_t frame,int pose);
 /* Live gameplay: age since care/result, for finite easing and recovery. */
 void world_draw_care(const Game *state,uint32_t frame,int pose,uint32_t age);
