@@ -21,6 +21,12 @@ python3 tests/test_rom_identity.py
 /tmp/my_baby_ai_conversation_test
 "${MBAI_HOST_CC:-cc}" -std=c11 -Wall -Wextra -Werror -pedantic -O2 ${MBAI_HOST_FLAGS:-} -Iinclude source/game.c source/dialogue.c source/conversation.c source/save.c source/conversation_save.c tests/test_conversation_save.c -o /tmp/my_baby_ai_conversation_save_test
 /tmp/my_baby_ai_conversation_save_test
+"${MBAI_HOST_CC:-cc}" -std=c11 -Wall -Wextra -Werror -pedantic -O2 ${MBAI_HOST_FLAGS:-} -Iinclude source/narrative_lm.c tests/test_narrative_lm.c -o /tmp/my_baby_ai_narrative_lm_test
+/tmp/my_baby_ai_narrative_lm_test
+"${MBAI_HOST_CC:-cc}" -std=c11 -Wall -Wextra -Werror -pedantic -O2 ${MBAI_HOST_FLAGS:-} -Iinclude source/game.c source/dialogue.c source/narrative_lm.c source/observer.c tests/test_observer.c -o /tmp/my_baby_ai_observer_test
+/tmp/my_baby_ai_observer_test
+"${MBAI_HOST_CC:-cc}" -std=c11 -Wall -Wextra -Werror -pedantic -O2 ${MBAI_HOST_FLAGS:-} -Iinclude source/game.c source/dialogue.c source/save.c source/narrative_lm.c source/observer.c source/observer_save.c tests/test_observer_save.c -o /tmp/my_baby_ai_observer_save_test
+/tmp/my_baby_ai_observer_save_test
 "${MBAI_HOST_CC:-cc}" -std=c11 -Wall -Wextra -Werror -pedantic -O2 ${MBAI_HOST_FLAGS:-} -Itests/stubs -Iinclude \
  source/world.c source/roughhouse.c source/game.c source/dialogue.c tests/test_world.c -o /tmp/my_baby_ai_world_budget
 /tmp/my_baby_ai_world_budget

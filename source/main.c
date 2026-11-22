@@ -10,6 +10,8 @@
 #include "dialogue.h"
 #include "conversation.h"
 #include "conversation_save.h"
+#include "observer.h"
+#include "observer_save.h"
 #include "save.h"
 #include "world.h"
 #include "ui.h"
@@ -30,6 +32,7 @@ static Arcade arc;
 static ArcadeFeedback arcade_feedback;
 static uint8_t save_write_failed;
 static uint8_t learning_write_failed;
+static uint8_t observer_write_failed;
 static int storage_ok,view=5,selected,album_page,reset_step,last_ending,pose;
 static int talk_selected;
 static uint32_t pose_age;
@@ -38,6 +41,11 @@ static uint32_t pose_age;
 static DialogueMemory memories;
 static ConversationProfile learning;
 static ConversationSession conversation;
+static ObserverProfile shelter;
+static ObserverSession observer;
+static char terminal_input[33];
+static unsigned terminal_speaker,terminal_key;
+static int terminal_sent;
 static WorldBabyMotion care_motion;
 /* Transient room-tour state: save schema stays exactly the same. */
 static int room_focus=-1,room_previous=-1,room_daylight,room_lamp=1;
@@ -63,7 +71,7 @@ static Roughhouse rag;
 static uint32_t egg_frame;
 static int egg_paused;
 static int toy_tool=ROUGHHOUSE_SLAP;
-static const char *message="WELCOME TO DAYCARE 2.0";
+static const char *message="THE LAST NURSERY. WARDEN IS ONLINE.";
 static void reset_care_motion(void){
  pose=0;pose_age=0;
  care_motion=(WorldBabyMotion){0};
@@ -72,8 +80,12 @@ static void reset_care_session(void){
  dialogue_memory_reset(&memories,baby.days);
  conversation_profile_reset(&learning);
  conversation_session_reset(&conversation,baby.days,baby.rng);
+ observer_profile_reset(&shelter,&baby);
+ observer_session_reset(&observer,&baby);
+ terminal_input[0]='\0';terminal_key=0;terminal_speaker=OBSERVER_MONITOR;
+ terminal_sent=0;
  arcade_feedback_reset(&arcade_feedback);
- save_write_failed=0;learning_write_failed=0;talk_selected=0;
+ save_write_failed=0;learning_write_failed=0;observer_write_failed=0;talk_selected=0;
  reset_care_motion();
 }
 /* Failed writes must NEVER be silent: the game remains fully playable
@@ -89,12 +101,11 @@ static int persist(void){
   save_write_failed=0;
   /* Learning is optional and bound to this exact, successfully saved
    * v1 Game. A companion failure must never invalidate care progress. */
-  if(!conversation_save_write(SAVE_BASE,&baby,&learning)){
-   learning_write_failed=1;
-   message="LEARNING NOT SAVED. KEPT IN RAM!";
-   return 0;
-  }
-  learning_write_failed=0;
+  learning_write_failed=(uint8_t)!conversation_save_write(SAVE_BASE,&baby,&learning);
+  observer_write_failed=(uint8_t)!observer_save_write(SAVE_BASE,&baby,&shelter);
+  if(learning_write_failed)message="LEARNING NOT SAVED. KEPT IN RAM!";
+  else if(observer_write_failed)message="SHELTER MEMORY NOT SAVED. IN RAM!";
+  if(learning_write_failed||observer_write_failed)return 0;
  }
  return 1;
 }
@@ -121,11 +132,13 @@ static int care(Care action,uint32_t frame){
  message=game_care(&baby,action);
  message=dialogue_contextual_reply(&memories,&baby,action,message);
  conversation_record_care(&conversation,&before,&baby,action);
+ (void)observer_record_care(&shelter,&observer,&before,&baby,action);
  if(action!=CHAT){
   const ConversationReply *reply=conversation_care_response(&learning,
                                       &conversation,&baby,action);
   if(reply)message=reply->text;
  }
+ if(observer.echo_ready)message=observer.reply;
  pose=(int)action+1;
  pose_age=0; /* restart this care gesture: do not loop it forever */
  world_baby_motion_start(&care_motion,from,&baby,frame,pose);
@@ -162,8 +175,59 @@ static void open_conversation(uint32_t frame){
  view=11;talk_selected=CONVERSATION_HOW;
  ask_baby(CONVERSATION_HOW,frame);
 }
+/* The terminal has bounded local text entry. Neither a question nor a
+ * generated word is a care command, a filesystem command or an attack. */
+static void open_observer(void){
+ view=12;terminal_speaker=OBSERVER_MONITOR;terminal_key=0;
+ terminal_input[0]='\0';terminal_sent=0;
+ (void)observer_report(&shelter,&observer,&baby);
+}
+static void terminal_type(char key){
+ size_t length;
+ if(!key)return;
+ if(terminal_sent){terminal_input[0]='\0';terminal_sent=0;}
+ length=strlen(terminal_input);
+ if(key=='<'){
+  if(length)terminal_input[length-1u]='\0';
+ }else if(length<sizeof(terminal_input)-1u){
+  terminal_input[length]=key;terminal_input[length+1u]='\0';
+ }
+}
+static void terminal_send(uint32_t frame){
+ ObserverProfile before=shelter;
+ (void)observer_answer(&shelter,&observer,&baby,terminal_speaker,terminal_input);
+ terminal_sent=1;
+ if(terminal_speaker==OBSERVER_BABY){
+  WorldBabyPose from=world_baby_pose(&baby,frame,pose,pose_age,
+                                    pose?&care_motion:0);
+  pose=CHAT+1;pose_age=0;
+  world_baby_motion_start(&care_motion,from,&baby,frame,pose);
+  sfx_play(SFX_CHAT);
+ }
+ if(memcmp(&before,&shelter,sizeof(shelter))!=0)(void)persist();
+}
+static void terminal_teach(void){
+ ObserverProfile before=shelter;
+ char lesson[40];
+ if(terminal_speaker!=OBSERVER_BABY){
+  strcpy(observer.reply,"SELECT BABY WITH TARGET OR Y.\nTYPE A PHRASE, THEN TAP TEACH.");
+  return;
+ }
+ memcpy(lesson,"TEACH ",6u);
+ memcpy(lesson+6u,terminal_input,strlen(terminal_input)+1u);
+ (void)observer_answer(&shelter,&observer,&baby,terminal_speaker,lesson);
+ terminal_sent=1;
+ if(memcmp(&before,&shelter,sizeof(shelter))!=0)(void)persist();
+}
+static void observer_pose(int action,uint32_t frame){
+ WorldBabyPose from=world_baby_pose(&baby,frame,pose,pose_age,
+                                   pose?&care_motion:0);
+ pose=action;pose_age=0;
+ world_baby_motion_start(&care_motion,from,&baby,frame,pose);
+}
 static void end_day(void){
  int e=game_end_day(&baby);
+ (void)observer_record_event(&shelter,&observer,&baby,OBSERVER_EVENT_DAY,0u);
  if(memories.day!=baby.days)dialogue_memory_reset(&memories,baby.days);
  if(conversation.day!=baby.days)
   conversation_session_reset(&conversation,baby.days,baby.rng);
@@ -205,6 +269,8 @@ static void leave_game(void){
   conversation_record_event(&conversation,arc.finished==1?
       CONVERSATION_EVENT_ARCADE_WIN:CONVERSATION_EVENT_ARCADE_LOSS,
       arc.id,baby.days);
+  (void)observer_record_event(&shelter,&observer,&baby,arc.finished==1?
+      OBSERVER_EVENT_ARCADE_WIN:OBSERVER_EVENT_ARCADE_LOSS,arc.id);
   message=arc.finished==1?"DIAPER DOLLARS EARNED!":"THE GLITCHES WON.";
   persist();
  }else{
@@ -260,7 +326,7 @@ int main(void){
  /* Stay in RAM-only mode until the player explicitly requests save access.
   * New and old .nds game saves remain compatible when FAT is available. */
  while(GAME_LOOP_ACTIVE()){
-  int down,held,tap,previous=view,virtual_move=0;
+  int down,held,tap,previous=view,virtual_move=0,guard_requested=0;
   int raw_touch;
   touchPosition touch={0};
   swiWaitForVBlank();
@@ -304,7 +370,13 @@ int main(void){
   }
   if(view==0){
    int action=-1;
-   if((tap&&ui_conversation_entry_touch(touch.px,touch.py))||
+   if((!vpen.enabled&&(down&KEY_RIGHT))||
+      (observer.windup&&tap&&ui_observer_entry_touch(touch.px,touch.py))){
+    guard_requested=1;dirty=1;
+   }else if((tap&&ui_observer_entry_touch(touch.px,touch.py))||
+            (!vpen.enabled&&(down&KEY_UP))){
+    open_observer();dirty=1;
+   }else if((tap&&ui_conversation_entry_touch(touch.px,touch.py))||
       (!vpen.enabled&&(down&KEY_LEFT))){
     open_conversation(frame);dirty=1;
    }else if((tap&&ui_room_entry_touch(touch.px,touch.py))||
@@ -343,7 +415,9 @@ int main(void){
    }
   }else if(view==11){
    int picked=tap?ui_conversation_touch(touch.px,touch.py):-1;
-   if((down&(KEY_B|KEY_START))||picked==6){
+   if(tap&&ui_observer_entry_touch(touch.px,touch.py)){
+    open_observer();dirty=1;
+   }else if((down&(KEY_B|KEY_START))||picked==6){
     view=0;message="WE CAN TALK AGAIN WHEN YOU LIKE.";dirty=1;
    }else if(picked>=0&&picked<6){
     talk_selected=picked;
@@ -356,6 +430,35 @@ int main(void){
     talk_selected=((talk_selected/2+2)%3)*2+(talk_selected&1);dirty=1;
    }else if(down&KEY_DOWN){
     talk_selected=((talk_selected/2+1)%3)*2+(talk_selected&1);dirty=1;
+   }
+  }else if(view==12){
+   int picked=tap?ui_observer_touch(touch.px,touch.py):-1;
+   unsigned page=terminal_key&32u,index=terminal_key&31u;
+   if((down&KEY_B)||picked==30){
+    view=0;message="WARDEN IS KEEPING WATCH.";dirty=1;
+   }else if((down&KEY_Y)||picked==31){
+    terminal_speaker^=1u;
+    strcpy(observer.reply,terminal_speaker==OBSERVER_BABY?
+      "I AM LISTENING.\nYOU CAN TEACH ME A SHORT PHRASE.":
+      "WARDEN ONLINE. ASK STATUS, WORLD,\nMEMORY, HELP OR A CALCULATION.");
+    dirty=1;
+   }else if(picked==32){
+    terminal_teach();dirty=1;
+   }else if((down&(KEY_X|KEY_START))||picked==33){
+    terminal_send(frame);dirty=1;
+   }else if((down&KEY_SELECT)||picked==34){
+    terminal_key^=32u;dirty=1;
+   }else if(picked>=0&&picked<30){
+    terminal_key=page|(unsigned)picked;
+    terminal_type(ui_observer_key(terminal_key));dirty=1;
+   }else if(down&KEY_A){
+    terminal_type(ui_observer_key(terminal_key));dirty=1;
+   }else if(down&KEY_L){terminal_type('<');dirty=1;
+   }else if(down&KEY_R){terminal_type(' ');dirty=1;
+   }else if(down&KEY_LEFT){terminal_key=page|((index/10u)*10u+(index+9u)%10u);dirty=1;
+   }else if(down&KEY_RIGHT){terminal_key=page|((index/10u)*10u+(index+1u)%10u);dirty=1;
+   }else if(down&KEY_UP){terminal_key=page|((index+20u)%30u);dirty=1;
+   }else if(down&KEY_DOWN){terminal_key=page|((index+10u)%30u);dirty=1;
    }
   }else if(view==1){
    if(down&KEY_UP){selected=(selected&~3)|((selected+2)&3);dirty=1;}
@@ -530,7 +633,10 @@ int main(void){
    }
   }else if(view==8){
    int hit=tap?ui_roughhouse_touch(touch.px,touch.py):0;
-   if((down&(KEY_B|KEY_START))||hit==3){
+   if((!vpen.enabled&&(down&KEY_RIGHT))||
+      (observer.windup&&tap&&ui_observer_entry_touch(touch.px,touch.py))){
+    guard_requested=1;dirty=1;
+   }else if((down&(KEY_B|KEY_START))||hit==3){
     sfx_stop();
     view=0;message="BACK TO THE NURSERY.";dirty=1;
    }else if(down&KEY_Y){
@@ -547,6 +653,8 @@ int main(void){
     int sx=hit==4?touch.px:128;
     int sy=hit==4?touch.py:110;
     if(roughhouse_strike_at(&rag,toy_tool,sx,sy)){
+     (void)observer_record_event(&shelter,&observer,&baby,
+        toy_tool==ROUGHHOUSE_KICK?OBSERVER_EVENT_KICK:OBSERVER_EVENT_SLAP,0u);
      sfx_play(toy_tool==ROUGHHOUSE_KICK?SFX_KICK:SFX_SLAP);
      reset_care_motion();
      message=toy_tool==ROUGHHOUSE_KICK?
@@ -556,10 +664,11 @@ int main(void){
      if(roughhouse_cracked(&rag)){
       sfx_play(SFX_CRACK);
       (void)game_secret_egg(&baby);
+      (void)observer_record_event(&shelter,&observer,&baby,OBSERVER_EVENT_REVEAL,0u);
       persist();
       view=9;egg_frame=0;egg_paused=0;last_ending=END_EGG;
       message="INCUBATION FILE 09 OPENED.";dirty=1;
-     }
+     }else (void)persist();
     }
    }
   }else if(view==9){
@@ -601,7 +710,8 @@ int main(void){
    if(down&KEY_B){view=0;reset_step=0;message="RESET CANCELED.";dirty=1;}
    else if(!reset_step){if(down&KEY_A){reset_step=1;dirty=1;}}
    else if((down&KEY_X)&&(held&(KEY_L|KEY_R))==(KEY_L|KEY_R)){
-    if(storage_ok&&(!conversation_save_erase(SAVE_BASE)||
+    if(storage_ok&&(!observer_save_erase(SAVE_BASE)||
+                    !conversation_save_erase(SAVE_BASE)||
                     !save_erase(SAVE_BASE))){message="SAVE ERASE FAILED. NO RESET.";}
     else{
      game_init(&baby);reset_care_session();roughhouse_init(&rag);
@@ -628,8 +738,9 @@ int main(void){
     if(storage_ok){
      if(save_load(SAVE_BASE,&baby)){
       reset_care_session();
-      message=conversation_save_load(SAVE_BASE,&baby,&learning)?
-       "BABY AND LEARNING RESTORED!":"BABY LOADED; LEARNING STARTS FRESH.";
+      (void)conversation_save_load(SAVE_BASE,&baby,&learning);
+      message=observer_save_load(SAVE_BASE,&baby,&shelter)?
+       "BABY AND SHELTER MEMORY RESTORED!":"BABY LOADED. WARDEN STARTS WATCHING.";
      }
      else message="SAVING ENABLED!";
     }else message="NO SAVE DEVICE - RAM ONLY.";
@@ -640,7 +751,7 @@ int main(void){
      videoSetMode(MODE_0_3D);world_init();three_d_ready=1;
     }
     view=0;
-    message=storage_ok?"WELCOME BACK, SHAREHOLDER.":"RAM MODE: X ON TITLE ENABLES SAVES.";
+    message=storage_ok?"WARDEN: YOUR SHELTER IS STILL HIDDEN.":"RAM MODE: X ON TITLE ENABLES SAVES.";
     dirty=1;
    }
   }else if(view==6){
@@ -729,6 +840,8 @@ int main(void){
        dialogue_memory_event(&memories,DIALOGUE_EVENT_QUIET_REST,baby.days);
        conversation_record_event(&conversation,CONVERSATION_EVENT_QUIET_REST,
                                    0,baby.days);
+       (void)observer_record_event(&shelter,&observer,&baby,
+                                    OBSERVER_EVENT_QUIET_REST,0u);
        /* Quiet rest changes energy again in the same tick; retain the
         * original captured rig against this final sleepy-arm baseline. */
        world_baby_motion_start(&care_motion,care_motion.start,&baby,frame,pose);
@@ -751,13 +864,39 @@ int main(void){
    if(view==8&&rag.rebound_count!=old_rebounds)
     sfx_play(SFX_BOUNCE);
   }
+  {
+   unsigned old_notice=observer.notice_ticks;
+   int active=(view==0||view==8)&&!rag.moving;
+   ObserverTick event=observer_tick(&shelter,&observer,&baby,active,guard_requested);
+   if(event==OBSERVER_TICK_WINDUP){
+    observer_pose(WORLD_BABY_WINDUP,frame);
+    message=observer_notice(&shelter,&observer);sfx_play(SFX_PULSE);
+   }else if(event==OBSERVER_TICK_HIT){
+    observer_pose(WORLD_BABY_LUNGE,frame);
+    message=observer_notice(&shelter,&observer);sfx_play(SFX_KICK);
+   }else if(event==OBSERVER_TICK_BLOCK){
+    observer_pose(WORLD_BABY_REGROUP,frame);
+    message=observer_notice(&shelter,&observer);sfx_play(SFX_BOUNCE);
+   }
+   if(event!=OBSERVER_TICK_NONE){(void)persist();dirty=1;}
+   if(old_notice&&!observer.notice_ticks)dirty=1;
+   /* Ordinary care remains available during a warning, but must not
+    * visually hide the pending attack. Menus and typing pause its clock. */
+   if(active&&observer.windup&&pose!=WORLD_BABY_WINDUP)
+    observer_pose(WORLD_BABY_WINDUP,frame);
+  }
   sfx_tick();
+  world_observer_status(observer_stage(&shelter),shelter.integrity,
+                        observer.windup!=0u);
   if(three_d_ready){
    if(view==5||view==7)world_draw_title(frame);
    else if(view==9)world_draw_secret(&baby,egg_frame,&rag);
+   else if(view==8&&!rag.moving&&
+           (pose==WORLD_BABY_WINDUP||pose==WORLD_BABY_LUNGE))
+    world_draw_care_from(&baby,frame,pose,pose_age,&care_motion);
    else if(view==8||(view==0&&rag.moving))
     world_draw_roughhouse(&baby,frame,&rag);
-   else if(view==0||view==10||view==11)
+   else if(view==0||view==10||view==11||view==12)
     world_draw_nursery(&baby,frame,pose,pose_age,
                        room_focus,room_previous,room_camera_age,
                        room_daylight,room_lamp,room_prop_age,
@@ -770,7 +909,10 @@ int main(void){
      (view==2&&frame%arcade_redraw_period(&arc)==0u)){
    /* The actual per-frame draw must receive the Room prop selection and
     * lamp/day flags. Startup UI paint is NOT the Room redraw path. */
-   ui_draw(&baby,&arc,view,view==6?album_page:
+   if(view==12)ui_observer_draw(&baby,storage_ok,terminal_speaker,
+           terminal_input,observer.reply,terminal_key,observer_stage(&shelter),
+           shelter.integrity);
+   else ui_draw(&baby,&arc,view,view==6?album_page:
            view==8?((int)rag.charge|(toy_tool==ROUGHHOUSE_KICK?32:0)|((int)rag.hits<<6)|
                      (sfx_is_enabled()?(1<<16):0)):
            view==9?((int)egg_frame|(egg_paused?EGG_FILM_PAUSED_FLAG:0)):
@@ -780,11 +922,16 @@ int main(void){
            selected,last_ending,reset_step,storage_ok,message);
    {
     int event=arcade_feedback_current(&arcade_feedback);
+    if(view==0||view==8){
+     if(observer.windup)ui_observer_guard_prompt(shelter.integrity);
+     else if(observer.notice_ticks)ui_observer_alert(observer_notice(&shelter,&observer));
+    }
     /* Keep pending failures visible across navigation and feedback.
      * Progress failure takes priority over its optional learning file;
      * only a successful save or an explicit new/load clears the flags. */
     if(save_write_failed)ui_save_warning();
     else if(learning_write_failed)ui_learning_save_warning();
+    else if(observer_write_failed)ui_observer_save_warning();
     else if(view==2||(view==1&&(event==ARCADE_FEEDBACK_WIN||
                            event==ARCADE_FEEDBACK_LOSS)))
      ui_arcade_feedback(event);
@@ -801,7 +948,9 @@ int main(void){
   /* Allow a full anticipation/gesture/recovery, then return to normal
    * idle. No extra timers, background threads or save-state entries. */
   if(pose){
-   if(pose_age<56u)pose_age++;
+   if(pose==WORLD_BABY_WINDUP&&observer.windup){
+    if(pose_age<24u)pose_age++;
+   }else if(pose_age<56u)pose_age++;
    else reset_care_motion();
   }
   if(room_camera_age<16u)room_camera_age++;

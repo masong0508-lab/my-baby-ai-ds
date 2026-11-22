@@ -33,7 +33,12 @@ static void verify_text(int x,int y,const char *text,int columns,
   ['!'-32]={4,4,4,4,4,0,4}, ['?'-32]={14,17,1,2,4,0,4},
   ['.'-32]={0,0,0,0,0,6,6}, [','-32]={0,0,0,0,6,4,8},
   [':'-32]={0,4,4,0,4,4,0}, ['-'-32]={0,0,0,31,0,0,0},
-  ['\''-32]={4,4,8,0,0,0,0}
+  ['\''-32]={4,4,8,0,0,0,0}, ['/'-32]={1,1,2,4,8,16,16},
+  ['+'-32]={0,4,4,31,4,4,0}, ['%'-32]={25,26,2,4,8,11,19},
+  ['$'-32]={4,15,20,14,5,30,4},
+  ['<'-32]={2,4,8,16,8,4,2}, ['='-32]={0,0,31,0,31,0,0},
+  ['*'-32]={0,21,14,31,14,21,0}, ['('-32]={2,4,8,8,8,4,2},
+  [')'-32]={8,4,2,2,2,4,8}
  };
  int i,px,py;
  size_t length=strlen(text);
@@ -353,6 +358,36 @@ static void conversation_wrapping(void){
  verify_text(17,56,"REMEMBER YOUR KIND WORDS TODAY.",36,ink,1);
  verify_coverage();
 }
+/* The large care-card outline must agree with the current recommendation,
+ * including critical exhaustion taking priority over simultaneous hunger.
+ * Read its actual pixels and the adjacent 2x labels, not just a UI hash. */
+static void care_recommendation_cards(void){
+ static const int state[][4]={
+  {35,75,75,-1}, {90,75,75,FEED}, {90,10,75,NAP},
+  {35,75,20,CHAT}, {35,75,75,-1}
+ };
+ static const uint16_t edge[]={TEST_RGB(9,17,27),TEST_RGB(30,21,9),
+                               TEST_RGB(12,25,15),TEST_RGB(30,13,22)};
+ const uint16_t ink=TEST_RGB(8,7,12);
+ Game g;Arcade a={0};game_init(&g);
+ for(unsigned i=0;i<sizeof(state)/sizeof(state[0]);i++){
+  Game before;
+  g.hunger=(uint8_t)state[i][0];g.energy=(uint8_t)state[i][1];
+  g.mood=(uint8_t)state[i][2];before=g;
+  ui_draw(&g,&a,0,0,0,0,1,"A CARE REQUEST.");
+  verify_coverage();
+  for(int card=0;card<4;card++){
+   int x=card%2?132:8,y=card<2?108:143;
+   for(int py=4;py<26;py++)
+    assert((screen[(y+py)*256+x+1]==edge[card])==(card==state[i][3]));
+  }
+  verify_text(50,111,"FEED",4,ink,2);
+  verify_text(173,111,"CHAT",4,ink,2);
+  verify_text(50,146,"PLAY",4,ink,2);
+  verify_text(172,146,"NAP",3,ink,2);
+  assert(memcmp(&before,&g,sizeof(g))==0);
+ }
+}
 static void learning_save_warning_footer(void){
  static uint16_t before[256*192]; /* host-only reference; never in DS code */
  static const int views[]={0,10,11};
@@ -373,6 +408,132 @@ static void learning_save_warning_footer(void){
   assert(memcmp(before,screen,sizeof(before))==0);
  }
 }
+static void observer_touch_and_keys(void){
+ static const char alpha[]="QWERTYUIOPASDFGHJKL?ZXCVBNM .<";
+ static const char numeric[]="1234567890+-*/()=?%.ZXCVBNM .<";
+ assert(sizeof(alpha)==31u&&sizeof(numeric)==31u);
+ for(unsigned i=0;i<30u;i++){
+  assert(ui_observer_key(i)==alpha[i]);
+  assert(ui_observer_key(32u+i)==numeric[i]);
+ }
+ assert(ui_observer_key(30u)=='\0'&&ui_observer_key(31u)=='\0');
+ assert(ui_observer_key(62u)=='\0'&&ui_observer_key(UINT_MAX)=='\0');
+ for(int y=-2;y<194;y++)for(int x=-2;x<258;x++){
+  int expected=-1;
+  if(x>=0&&x<256&&y>=176&&y<192)expected=30+x/64;
+  else if(x>=216&&x<248&&y>=100&&y<115)expected=34;
+  else for(int key=0;key<30;key++){
+   int kx=8+(key%10)*24,ky=118+(key/10)*16;
+   if(x>=kx&&x<kx+22&&y>=ky&&y<ky+14)expected=key;
+  }
+  assert(ui_observer_touch(x,y)==expected);
+  assert(ui_observer_entry_touch(x,y)==(x>=80&&x<124&&y>=5&&y<21));
+ }
+ assert(ui_observer_touch(INT_MIN,INT_MAX)==-1);
+ assert(ui_observer_touch(INT_MAX,INT_MIN)==-1);
+ assert(!ui_observer_entry_touch(INT_MAX,INT_MIN));
+}
+static void observer_layout(void){
+ const uint16_t ink=TEST_RGB(8,7,12),white=TEST_RGB(31,31,31);
+ const uint16_t phosphor=TEST_RGB(24,31,26),green=TEST_RGB(12,25,15);
+ Game g,before;Arcade a={0};
+ uint32_t monitor;
+ char input[32],reply[144]; /* Deliberately no terminators: exact read limits. */
+ const char *line="ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+ game_init(&g);before=g;
+ memcpy(input,line,sizeof(input));
+ for(unsigned i=0;i<sizeof(reply);i++)reply[i]=line[i%36u];
+ ui_observer_draw(&g,1,0,input,reply,0u,0u,100u);
+ verify_coverage();
+ verify_text(12,7,"MONITOR",7,white,2);
+ verify_text(17,34,"WARDEN",6,phosphor,1);
+ verify_text(167,34,"BRACER 100%",11,phosphor,1);
+ verify_text(190,92,"FOUND",9,phosphor,1);
+ verify_text(17,104,"ABCDEFGHIJKLMNOPQRSTUVWXYZ012345",32,ink,1);
+ for(int row=0;row<4;row++)verify_text(17,45+11*row,line,36,phosphor,1);
+ verify_text(137,34,"...",3,TEST_RGB(31,28,13),1);
+ monitor=fingerprint();
+ for(unsigned page=0;page<2u;page++)for(unsigned selected=0;selected<30u;selected++){
+  unsigned key=selected+page*32u;
+  ui_observer_draw(&g,1,1,"WHY?","ONE\nTWO\nTHREE\nFOUR",key,2u,9u);
+  verify_coverage();
+  assert(fingerprint()!=monitor);
+  verify_text(12,7,"BABY",4,white,2);
+  verify_text(17,34,"NURSERY VOICE",13,phosphor,1);
+  verify_text(167,34,"BRACER 9%",11,phosphor,1);
+  verify_text(190,92,"HOSTILE",9,phosphor,1);
+  verify_text(17,104,"WHY?",32,ink,1);
+  verify_text(17,45,"ONE",36,phosphor,1);
+  verify_text(17,56,"TWO",36,phosphor,1);
+  verify_text(17,67,"THREE",36,phosphor,1);
+  verify_text(17,78,"FOUR",36,phosphor,1);
+  verify_text(137,34,"",3,TEST_RGB(31,28,13),1);
+  verify_text(223,104,page?"ABC":"123",3,ink,1);
+  for(unsigned k=0;k<30u;k++){
+   int x=8+(int)(k%10u)*24,y=118+(int)(k/10u)*16;
+   char label[2]={ui_observer_key(k+page*32u),'\0'};
+   if(label[0]==' ')verify_text(x+5,y+3,"SP",2,ink,1);
+   else verify_text(x+8,y+3,label,1,ink,1);
+   assert((screen[(y+11)*256+x+2]==green)==(k==selected));
+  }
+  assert(memcmp(&g,&before,sizeof(g))==0);
+ }
+ /* Empty/invalid display inputs remain bounded and readable. */
+ ui_observer_draw(&g,0,0,0,0,UINT_MAX,UINT_MAX,UINT_MAX);
+ verify_text(17,104,"",32,ink,1);
+ for(int row=0;row<4;row++)verify_text(17,45+11*row,"",36,phosphor,1);
+ verify_text(190,92,"REVEALED",9,phosphor,1);
+ verify_text(167,34,"BRACER 100%",11,phosphor,1);
+ verify_coverage();
+ /* Longer caller buffers stop at the same visible input/reply limits. */
+ {
+  char longer_input[80],longer_reply[200];
+  memset(longer_input,'A',sizeof(longer_input)-1u);longer_input[79]='\0';
+  memset(longer_reply,'B',sizeof(longer_reply)-1u);longer_reply[199]='\0';
+  ui_observer_draw(&g,1,0,longer_input,longer_reply,29u,1u,50u);
+  verify_text(17,104,"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",32,ink,1);
+  for(int row=0;row<4;row++)
+   verify_text(17,45+11*row,"BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB",36,phosphor,1);
+  verify_text(137,34,"...",3,TEST_RGB(31,28,13),1);
+  verify_text(190,92,"WATCHING",9,phosphor,1);
+  verify_coverage();
+ }
+ /* The entry badge does not displace titles or stored status fields. */
+ for(int view=0;view<=11;view+=11){
+  ui_draw(&g,&a,view,0,0,0,1,"TEST");
+  verify_text(12,7,view?"TALK":"CARE",4,white,2);
+  verify_text(93,10,"CPU",3,ink,1);
+  verify_text(138,11,"SD",3,TEST_RGB(22,30,23),1);
+  verify_text(173,10,"D1",4,ink,1);
+  verify_text(214,10,"$8",5,ink,1);
+ }
+}
+static void observer_overlays(void){
+ static uint16_t before[256*192];
+ Game g;Arcade a={0};game_init(&g);
+ for(int view=0;view<=8;view+=8){
+  ui_draw(&g,&a,view,0,0,0,1,"TEST");
+  memcpy(before,screen,sizeof(before));
+  ui_observer_alert("WARDEN: CAREFUL WITH THE BABY.");
+  assert(memcmp(before,screen,256u*178u*sizeof(screen[0]))==0);
+  verify_text(10,181,"WARDEN: CAREFUL WITH THE BABY.",39,TEST_RGB(16,29,29),1);
+  ui_observer_alert("CARETAKER HIT!\nCHECK WARDEN FOR INTEGRITY.");
+  verify_text(10,181,"CARETAKER HIT!",39,TEST_RGB(16,29,29),1);
+  ui_observer_guard_prompt(40u);
+  verify_text(12,7,view?"TOYBOX":"CARE",view?6:4,TEST_RGB(31,31,31),2);
+  verify_text(88,9,"GUARD",5,TEST_RGB(8,7,12),1);
+  verify_text(10,181,"WINDUP! TAP GUARD / RIGHT",39,TEST_RGB(16,29,29),1);
+  assert(memcmp(before+256u*21u,screen+256u*21u,
+                256u*157u*sizeof(screen[0]))==0);
+  ui_observer_save_warning();
+  verify_text(10,181,"SHELTER MEMORY NOT SAVED. IN RAM!",39,TEST_RGB(31,19,25),1);
+  ui_save_warning();
+  verify_save_warning_caption();
+  verify_coverage();
+  ui_draw(&g,&a,view,0,0,0,1,"TEST");
+  assert(memcmp(before,screen,sizeof(before))==0);
+ }
+}
 int main(void){
  Game g;Arcade a={0};unsigned i,changed=0;
  game_init(&g);ui_init(screen);
@@ -380,7 +541,11 @@ int main(void){
  conversation_touch_bounds();
  conversation_layout();
  conversation_wrapping();
+ care_recommendation_cards();
  learning_save_warning_footer();
+ observer_touch_and_keys();
+ observer_layout();
+ observer_overlays();
  ui_draw(&g,&a,0,0,0,0,1,"TELL HR I'M TEETHING.");
  for(i=0;i<256u*192u;i++)if(screen[i])changed++;
  assert(changed>30000);

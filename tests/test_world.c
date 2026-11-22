@@ -8,7 +8,7 @@
  * A rigid model transform preserves triangle area. This catches repeated
  * hand-cap poles without pretending the host shim emulates DS pixels. */
 static int primitive_mode;
-static unsigned primitive_vertices,submitted_triangles;
+static unsigned primitive_vertices,submitted_hand_caps;
 static float triangle_points[3][3];
 static int capture_geometry;
 static uint32_t geometry_hash;
@@ -33,7 +33,25 @@ void test_gl_vertex(float x,float y,float z){
    float bz=z-triangle_points[0][2];
    float cx=ay*bz-az*by,cy=az*bx-ax*bz,cz=ax*by-ay*bx;
    assert(cx*cx+cy*cy+cz*cz>1.e-12f);
-   submitted_triangles++;
+   /* Facial patches also use nondegenerate triangles now. Identify the
+    * existing hand-cap poles explicitly instead of assuming every
+    * triangle in the whole character must belong to a hand. The host
+    * shim intentionally observes coordinates before rigid transforms. */
+   {
+    unsigned p;
+    for(p=0;p<3u;p++){
+     float px=triangle_points[p][0],py=triangle_points[p][1];
+     float pz=triangle_points[p][2];
+     if(((px>-.180001f&&px<-.179999f)||
+         (px>.179999f&&px<.180001f))&&
+        ((py>-.375001f&&py<-.374999f)||
+         (py>-.125001f&&py<-.124999f))&&
+        pz>.304999f&&pz<.305001f){
+      submitted_hand_caps++;
+      break;
+     }
+    }
+   }
   }
  }
  primitive_vertices++;
@@ -92,6 +110,20 @@ static uint32_t baby_geometry(const Game *s,int action,unsigned age){
 int main(void){
  Game s;Roughhouse r;int i;unsigned worst_v=0,worst_p=0;
  game_init(&s);world_init();
+ /* WARDEN's physical screen clamps damaged/unknown status without
+  * changing the baby or exceeding the normal scene budget. */
+ {
+  Game original=s;
+  unsigned stage;
+  for(stage=0;stage<6u;stage++){
+   world_observer_status(stage,stage?120u:0u,(int)(stage&1u));
+   world_draw(&s,128u,0);
+   assert(world_vertex_count()<=4500);
+   assert(world_polygon_count()<=1700);
+   assert(memcmp(&s,&original,sizeof(s))==0);
+  }
+  world_observer_status(0u,100u,0);
+ }
  world_draw_title(0);
  assert(world_vertex_count()<=1024);
  assert(world_polygon_count()<=350);
@@ -108,10 +140,11 @@ int main(void){
   world_draw(&s,(uint32_t)i,i%5);
   if(world_vertex_count()>worst_v)worst_v=world_vertex_count();
   if(world_polygon_count()>worst_p)worst_p=world_polygon_count();
-  /* Keep room for expressive meshes after the continuous-hair art pass.
-   * The NDS theoretical limits are 6144 vertices and 2048 polygons. */
-  assert(world_vertex_count()<=5000);
-  assert(world_polygon_count()<=1850);
+  /* Facial surfaces replace wasteful thin full ellipsoids. Preserve
+   * the recovered nursery headroom, below the broader 5000/1850 gate
+   * used by the optional egg film and moving toy scenes. */
+  assert(world_vertex_count()<=4500);
+  assert(world_polygon_count()<=1700);
  }
  /* The five native nursery camera poses must share one coherent room.
   * 16-tick smoothstep travel is continuous, stays within the DS volume,
@@ -180,9 +213,9 @@ int main(void){
   assert(world_vertex_count()<=5000);
   assert(world_polygon_count()<=1850);
  }
- /* NAP eyelids now mask two *fixed-thickness* eyes using broad, safe
-  * single quads; no progressively collapsed GL_QUAD_STRIP poles that
-  * become giant horizontal pixel rulers at half-closure. */
+ /* NAP openings use positive-area rounded triangles and then closed
+  * creases; no rectangular shutter or collapsed GL_QUAD_STRIP pole
+  * that becomes a horizontal pixel ruler at half-closure. */
  {
   unsigned age;
   s.mood=95;
@@ -328,6 +361,45 @@ int main(void){
  assert(world_baby_neck_tilt(2,0u)==world_baby_neck_tilt(2,80u));
  assert(world_baby_arm_reach(3)>world_baby_arm_reach(2));
  assert(world_baby_arm_reach(2)>world_baby_arm_reach(1));
+ /* Hostile acting has its own connected, finite pose. A displayed windup
+  * can be held at its settled age by the application, then be captured
+  * exactly when a lunge, guard or ordinary care interrupts it. */
+ {
+  Game sample=s,original;
+  WorldBabyMotion motion;
+  WorldBabyPose idle,windup,lunge;
+  unsigned age;
+  int action;
+  sample.energy=80;sample.mood=85;sample.hunger=20;sample.chaos=10;
+  original=sample;
+  idle=world_baby_pose(&sample,128u,0,0u,0);
+  windup=world_baby_pose(&sample,128u,WORLD_BABY_WINDUP,24u,0);
+  lunge=world_baby_pose(&sample,128u,WORLD_BABY_LUNGE,24u,0);
+  assert(windup.forward_left>idle.forward_left);
+  assert(lunge.forward_left>windup.forward_left);
+  assert(windup.lid<idle.lid&&lunge.lid<idle.lid);
+  assert(windup.neck!=lunge.neck);
+  for(action=WORLD_BABY_WINDUP;action<=WORLD_BABY_LUNGE;action++){
+   for(age=0u;age<=56u;age++){
+    WorldBabyPose p=world_baby_pose(&sample,128u,action,age,0);
+    assert(p.reach_left>=0&&p.reach_left<=54);
+    assert(p.reach_right>=0&&p.reach_right<=54);
+    assert(p.forward_left>=0&&p.forward_left<=32);
+    assert(p.forward_right>=0&&p.forward_right<=32);
+    assert(p.lid>=0&&p.lid<=256);
+    world_draw_care(&sample,128u,action,age);
+    assert(world_vertex_count()<=4500);
+    assert(world_polygon_count()<=1700);
+   }
+   assert_baby_pose_equal(world_baby_pose(&sample,128u,action,56u,0),idle);
+   assert_baby_pose_equal(world_baby_pose(&sample,128u,action,UINT32_MAX,0),idle);
+  }
+  world_baby_motion_start(&motion,windup,&sample,128u,WORLD_BABY_LUNGE);
+  assert_baby_pose_equal(world_baby_pose(&sample,128u,WORLD_BABY_LUNGE,0u,&motion),windup);
+  world_baby_motion_start(&motion,lunge,&sample,128u,WORLD_BABY_REGROUP);
+  assert_baby_pose_equal(world_baby_pose(&sample,128u,WORLD_BABY_REGROUP,0u,&motion),lunge);
+  assert(memcmp(&sample,&original,sizeof(sample))==0);
+ }
  /* Completed rounds have their own positive, finite acting. CHEER's
   * raised hands and single lift differ from PLAY; REGROUP offers low
   * hands and one small head tilt without a fall, shake or prolonged sulk. */
@@ -370,9 +442,9 @@ int main(void){
      if(age>=19u&&age<=34u)assert(p.neck>=previous.neck);
     }
     if(age>=56u)assert_baby_pose_equal(p,idle);
-    submitted_triangles=0;
+    submitted_hand_caps=0;
     world_draw_care(&baby,128u,action,age);
-    assert(submitted_triangles==32u);
+    assert(submitted_hand_caps==32u);
     assert(world_vertex_count()<=4702u&&world_polygon_count()<=1808u);
     previous=p;
    }
@@ -435,9 +507,9 @@ int main(void){
         assert_baby_pose_equal(p,world_baby_pose(&baby,frame+age,
                                                 actions[to],age,0));
        if(need==0u&&old_age==18u){
-        submitted_triangles=0;
+        submitted_hand_caps=0;
         world_draw_care_from(&baby,frame+age,actions[to],age,&motion);
-        assert(submitted_triangles==32u);
+        assert(submitted_hand_caps==32u);
         assert(world_vertex_count()<=4702u&&world_polygon_count()<=1808u);
        }
        previous=p;
@@ -587,9 +659,9 @@ int main(void){
         assert_baby_pose_equal(sampled,world_baby_pose(&after,frame+age,
                                                        new_action,age,0));
        if(need==0u&&old_age==18u){
-        submitted_triangles=0;
+        submitted_hand_caps=0;
         world_draw_care_from(&after,frame+age,new_action,age,&motion);
-        assert(submitted_triangles==32u);
+        assert(submitted_hand_caps==32u);
         assert(world_vertex_count()<=4702u&&world_polygon_count()<=1808u);
        }
        previous=sampled;
@@ -676,9 +748,9 @@ int main(void){
   unsigned age;
   for(action=0;action<=4;action++){
    for(age=0u;age<=56u;age++){
-    submitted_triangles=0;
+    submitted_hand_caps=0;
     world_draw_care(&s,128u,action,age);
-    assert(submitted_triangles==32u); /* 2 hands x 2 caps x 8 faces */
+    assert(submitted_hand_caps==32u); /* 2 hands x 2 caps x 8 faces */
     assert(world_vertex_count()<=5000&&world_polygon_count()<=1850);
    }
   }
@@ -738,7 +810,10 @@ int main(void){
   s.energy=5;s.hunger=92;s.chaos=96;
   world_draw_care(&s,128u,0,56u);
   exhausted=world_polygon_count();
-  assert(exhausted>=rested&&exhausted<=1850);
+  /* Drowsy eyes reshape the same safe surfaces. They can omit two
+   * catchlights, but no longer add rectangular skin shutters. */
+  assert(exhausted<=rested&&rested-exhausted<=2u);
+  assert(exhausted<=1850);
   assert(world_vertex_count()<=5000);
   /* A care gesture must still look coherent when sleep is low. */
   world_draw_care(&s,145u,2,20u);

@@ -1,6 +1,6 @@
 # My Baby A.I.! (Nintendo DS homebrew)
 
-An ugly-cute DS-era baby simulator parody with an overeducated baby, 16 arcade games (8 initially unlocked), increasingly invasive comedy glitches, and unlockable **good and bad endings**, all with a continue-playing option.
+**The Last Nursery:** after the Continuity Bureau outlaws infancy, you shelter an unregistered baby found outside a shuttered clinic. A salvaged computer named **WARDEN** watches the nursery. The baby learns your phrases, becomes increasingly uncanny, and eventually attacks your caretaker bracer. Care, conversation, defensive slapstick, 16 arcade games and the hidden alien-shell reveal share one continuing save.
 
 ## First playable prototype
 
@@ -8,11 +8,27 @@ The ARM9 program renders a furnished perspective-3D nursery and a modeled, anima
 
 **Cartridge identity:** the game ROMs are packaged with the twelve-byte title `MY BABY A.I.` and game code `MBAI`; diagnostic boot and touch-probe ROMs keep their own identifiers. The header checksum is validated without changing ARM9/ARM7 executables. The game remains native DS software and has no DSi-exclusive memory requirement.
 
+### WARDEN, typed conversation, and the hidden shelter
+
+Tap **CPU** or press **UP** in CARE to open the terminal. **TARGET / Y** switches between WARDEN and BABY. Type on the touchscreen or use the D-pad and A; **SEND / X / START** sends. **123 / SELECT** switches to the number/symbol keyboard, L deletes, R inserts a space, and B returns.
+
+- WARDEN answers **STATUS, NEEDS, MEMORY, WORLD, ATTACKS, HELP**, and bounded calculations such as **12+7** from actual state or its original shelter archive.
+- BABY can learn four short phrases: select BABY, type up to 24 characters and tap **TEACH**. Repeat teaching to reinforce a phrase. **SAY** recalls it; a familiar phrase can also appear after actual healthy PLAY.
+- Typed greeting, dream and personality replies use an original **412-token, 28,700-parameter neural word model**, generating one token at a time. Its complete immutable model/vocabulary/masks occupy **57,487 bytes**. The model is pretrained; player learning lives in the separate style and phrase profiles. Topic recognition is deliberately limited, and this is not a general-purpose assistant.
+- Real care, completed activities and Toybox actions advance **FOUND → WATCHING → HOSTILE → REVEALED**. Questions and idle menus do not advance exposure. WARDEN records actual attacks and counters.
+- Hostile attacks have a visible wind-up. Press **RIGHT** or tap **GUARD**; a successful Toybox slap/kick also counters a wind-up. A landed hit reduces a separate bracer integrity value. Type **REPAIR** to WARDEN to restore it. Reading, typing, arcades, films and a tumbling shell pause the attack clock.
+
+The optional **152-byte observation profile** saves taught phrases, observed history and bracer state in a checksummed companion tied to the exact v1 Game. Missing or damaged companions do not prevent normal progress loading. Saving remains explicit; RAM-only play does not persist after reboot.
+
+The actual nursery renderer now has shallower rounded eyes, softer cheeks/bib, stronger clothing and room shading, grounded furniture/boots, a physical WARDEN wall terminal, and connected wind-up/lunge acting. CARE/TALK cards have clearer hierarchy and selection. Sampled normal-scene submission maxima are **4,432 vertices / 1,647 polygons**, down from 4,702 / 1,808. These are geometry counts, not FPS measurements.
+
+See [story and progression](docs/THE_LAST_NURSERY.md), [observer rules and persistence](docs/SHELTER_OBSERVER.md), [word-model architecture and limits](docs/NARRATIVE_LANGUAGE_MODEL.md), [reference analysis](docs/SNES_REFERENCE_ANALYSIS.md), and [native observer tests](docs/NATIVE_OBSERVER_TESTS.md).
+
 ### Talk, follow up, and teach a conversational style
 
 Touch **TOUCH TO TALK** in the nursery speech panel, or press **LEFT**, to open TALK. Six choices ask how the baby feels, what it needs, what it remembers, a follow-up, positive feedback, or a new subject. Touch a question directly, or select it with the D-pad and press A; B returns to care. Asking questions does not secretly spend energy, raise corruption, advance days, or consume arcade randomness.
 
-The baby keeps track of its current subject and actual recent care, including whether a bottle or nap helped, repeated care, quiet crib rest and completed arcade results. **180 new authored responses cover 30 topics in three styles.** Urgent needs override unrelated topics. **I LIKE THAT** and **NEW SUBJECT** update a small integer neural style adapter: warm, playful, or corporate wording can become more likely from your feedback. The underlying needs classifier and all response text are authored; this is on-device preference learning, not free-text language generation.
+The baby keeps track of its current subject and actual recent care, including whether a bottle or nap helped, repeated care, quiet crib rest and completed arcade results. **180 new authored responses cover 30 topics in three styles.** Urgent needs override unrelated topics. **I LIKE THAT** and **NEW SUBJECT** update a small integer neural style adapter: warm, playful, or corporate wording can become more likely from your feedback. The TALK panel uses authored response text and on-device style learning. The separate typed terminal adds the bounded neural word generator described above; neither system can invent factual observations or train urgent needs away.
 
 Learned preferences fit a **40-byte profile**. When saving is enabled, checksummed companions bind that profile to the exact saved baby while leaving the existing version-1 progress files unchanged. Missing or damaged learning files start neutral preferences and do not block restoring progress. Short-lived event memories still reset on load or a new day. See [neural conversation](docs/NEURAL_CONVERSATION.md), [learning save compatibility](docs/LEARNING_SAVE_COMPATIBILITY.md), and [native conversation tests](docs/NATIVE_CONVERSATION_TESTS.md).
 
@@ -29,6 +45,7 @@ Successful steps, mistakes, wins and losses now have distinct short PSG cues and
 ### Controls
 
 * A feed, B chat, X play, Y nap; the four large touchscreen buttons provide the same actions.
+* UP or **CPU** opens the typed WARDEN/BABY terminal; RIGHT or **GUARD** counters an actual attack wind-up.
 * LEFT or the speech-panel **TOUCH TO TALK** opens conversation; D-pad selects a prompt, A asks, and B returns. Touching any prompt asks it immediately.
 * START or tap ARCADE to enter arcade. Use D-pad or touch cabinets to select; A/tap PLAY starts, X/tap BUY unlocks, B/tap BACK exits.
 * In an arcade challenge press the prompted direction. At higher corruption tiers, REVERSE means the opposite.
@@ -71,7 +88,7 @@ These files describe the current codebase and distinguish confirmed implementati
 - **[Glitch endings](docs/glitches.md)** — ending conditions, continuing play and optional reset safety.
 - **[Graphics pipeline](docs/graphics-pipeline.md)** — hardware 3D and touchscreen rendering approach.
 
-**Current development priority:** deepen the baby's contextual conversation, useful preferences and meaningful responses. Preserve exact-head build/native checks while extending that system. Original-DS profiling, measured RAM headroom and save testing across power cycles remain release requirements; automated DeSmuME screenshots do not replace those device checks.
+**Current development priority:** deepen the Last Nursery premise, WARDEN's useful observations, the baby's evolving conversation and meaningful interactions. Preserve exact-head build/native checks while extending that system. Original-DS profiling, measured RAM headroom and save testing across power cycles remain release requirements; automated DeSmuME screenshots do not replace those device checks.
 
 ### Arcade gameplay: sixteen distinct cabinets
 
