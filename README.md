@@ -4,9 +4,15 @@ An ugly-cute DS-era baby simulator parody with an overeducated baby, 16 arcade g
 
 ## First playable prototype
 
-The ARM9 program renders a furnished perspective-3D nursery and a modeled, animated, intentionally ugly-cute baby, with crib rails, dresser drawers, window, play mat, toys and teddy bear. The lower screen now uses a colored bitmap touchscreen interface, not the old text console. Buttons, arcade cabinets, care meters, prompts and ending cards are drawn directly into the DS sub-engine VRAM. There are **16 distinct arcade minigames** with individual win conditions and touch/button controls, including the full eight-cabinet unlock progression. The baby uses an offline integer-only neural intent classifier with **48 original mood-responsive responses**, not a modern generative language model. Nursery care and prop interactions include short single-channel PSG melodies and a Room Tour mute control.
+The ARM9 program renders a furnished perspective-3D nursery and a modeled, animated, intentionally ugly-cute baby, with crib rails, dresser drawers, window, play mat, toys and teddy bear. The lower screen uses a colored bitmap touchscreen interface. Buttons, arcade cabinets, care meters, prompts and ending cards are drawn directly into DS sub-engine VRAM. There are **16 distinct arcade minigames** with individual win conditions and touch/button controls, including the full eight-cabinet unlock progression. The baby uses an offline integer-only intent classifier with **48 mood-responsive lines plus 12 recent-event replies**. Nursery care and prop interactions include short single-channel PSG melodies and a Room Tour mute control.
 
 **Cartridge identity:** the game ROMs are packaged with the twelve-byte title `MY BABY A.I.` and game code `MBAI`; diagnostic boot and touch-probe ROMs keep their own identifiers. The header checksum is validated without changing ARM9/ARM7 executables. The game remains native DS software and has no DSi-exclusive memory requirement.
+
+### Care flow and recent memories
+
+Rapid care taps carry the baby's current arm, head, eyelid and bounce pose into the next gesture over 12 game ticks. This includes tiredness changes and the extra recovery from a quiet crib nap. Each gesture still settles back to idle after its original 56-tick cycle.
+
+When the baby is comfortable, CHAT can mention a recent bottle, playtime, nap, quiet crib rest or completed arcade win/loss. Four distinct events fit in a 20-byte session memory; needs take priority, repeated replies are avoided, and events expire with further interactions or a new day. Loading or resetting a baby starts a fresh memory. The existing save format remains unchanged. See [care-motion details](docs/CARE_MOTION_CONTINUITY.md) and [recent-interaction memory](docs/RECENT_INTERACTION_MEMORY.md).
 
 ### Controls
 * A feed, B chat, X play, Y nap; the four large touchscreen buttons provide the same actions.
@@ -30,7 +36,7 @@ Discover **Tiny Diploma Ceremony**, **Rattle Arcade Champion**, **Bugs Become Fe
 
 The top screen now runs a multi-object, shaded, original low-poly scene via the DS hardware 3D engine. The lower screen uses 256×192 native pixel art and interactive status displays with a 16-bit BG bitmap in **128 KiB of dedicated VRAM** (not an extra 128 KiB main-RAM framebuffer), plus a small embedded bitmap font. The UI refreshes on changes, with lower-frequency countdown updates. See `docs/graphics-pipeline.md`.
 
-**Verification status (November 2026):** Standard devkitARM and independent BlocksDS ROMs have passed CI. A real DeSmuME emulator workflow has injected native stylus presses, navigated all core views, played a full arcade minigame and captured the alien-egg cinematic in its original 256×192 screens. **Physical original DS/DraStic operation, sustained FPS/RAM telemetry, long soak tests and real flashcart save persistence remain unverified.** All sixteen minigames have distinct source-level mechanics, but they still need extended play balance and physical-device validation. See [development status](docs/DEVELOPMENT_STATUS.md) and [release QA](docs/QA_RELEASE.md).
+**Verification status (November 2026):** Standard devkitARM and independent BlocksDS ROMs have passed CI. Native DeSmuME tests cover stylus input, core views, care/Room Tour, the alien-egg film, a complete Diaper Dash session, and a separate walkthrough of Sock Market, Beatbox, Tax Return Teether and an earned Cereal Cipher unlock. The arcade walkthrough includes selected losses, wrong-answer and timeout retries, visible receipt dragging, and exact reward/purchase totals. **Physical original DS/DraStic operation, sustained FPS/RAM telemetry, long soak tests and real flashcart save persistence remain unverified.** All sixteen minigames have host mechanic coverage; native completion covers five cabinets and Bottle Balance entry. See [native arcade tests](docs/NATIVE_ARCADE_TESTS.md), [development status](docs/DEVELOPMENT_STATUS.md) and [release QA](docs/QA_RELEASE.md).
 
 ### Title screen, album, settings
 

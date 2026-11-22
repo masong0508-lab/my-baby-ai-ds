@@ -3,10 +3,31 @@
 #include <stdint.h>
 #include "game.h"
 #include "roughhouse.h"
+/* Transient articulated care rig. Angles are degrees; lid is 0..256;
+ * bounce is Q8 hop height (one hop unit is .0022 world units).
+ * Furniture attention and the continuous idle breath/bob stay independent. */
+typedef struct {
+ int16_t reach_left,reach_right,forward_left,forward_right;
+ int16_t lean,neck,yaw,lid,bounce;
+} WorldBabyPose;
+/* Two 18-byte samples, never serialized. The new zero-age baseline lets
+ * changes in sleepy arms, eyelids and need fidget ease with the gesture. */
+typedef struct {
+ WorldBabyPose start,baseline;
+} WorldBabyMotion;
+/* Capture before game_care changes needs; begin after it changes them.
+ * Action IDs are idle=0, FEED=1, CHAT=2, PLAY=3, NAP=4. A null motion
+ * samples the original one-shot curve; interruptions settle by age 12. */
+WorldBabyPose world_baby_pose(const Game *state,uint32_t frame,int action,
+                              uint32_t age,const WorldBabyMotion *motion);
+void world_baby_motion_start(WorldBabyMotion *motion,WorldBabyPose from,
+                             const Game *state,uint32_t frame,int action);
 void world_init(void);
 void world_draw(const Game *state,uint32_t frame,int pose);
 /* Live gameplay: age since last care tap, for finite easing and recovery. */
 void world_draw_care(const Game *state,uint32_t frame,int pose,uint32_t age);
+void world_draw_care_from(const Game *state,uint32_t frame,int pose,
+                          uint32_t age,const WorldBabyMotion *motion);
 void world_draw_title(uint32_t frame);
 void world_draw_roughhouse(const Game *s,uint32_t frame,const Roughhouse *r);
 void world_draw_secret(const Game *s,uint32_t frame,const Roughhouse *r);
@@ -26,7 +47,7 @@ void world_draw_nursery(const Game *state,uint32_t frame,int pose,
                         uint32_t action_age,int focus,int previous,
                         uint32_t camera_age,int daylight,int lamp,
                         uint32_t prop_age,const EggCamera *camera_start,
-                        int attention_start);
+                        int attention_start,const WorldBabyMotion *motion);
 /* 0 normal light, -5 darkest; computed without modifying the nursery mesh. */
 int world_egg_nursery_ambient(uint32_t frame);
 /* Coherent, bounded 3D animation; pure frame samplers for film replay. */

@@ -2,7 +2,7 @@
 
 **Platform:** original Nintendo DS / DS Lite, with DSi supported only through the standard DS-compatible build. **Presentation:** intentionally awkward, colorful 2000s baby-game aesthetics enhanced by original environments, better character acting, a fluid touchscreen UI and playful ordinary corruptions, plus the optional Toybox/alien-egg horror cinematic.
 
-This document separates implemented checkpoints from remaining acceptance work. Updated against `main` at `47021429eb958bd56b62872866f22d3bae2008ae` after [PR #63](https://github.com/masong0508-lab/my-baby-ai-ds/pull/63): all sixteen cabinets, 48 dialogue lines, interactive nursery props, PSG cues, submitted-geometry diagnostics and touch-accessible saves exist. These do not establish a complete title or physical-DS release readiness.
+This document separates implemented checkpoints from remaining acceptance work. Updated for the care-flow and recent-memory milestone following [PR #64](https://github.com/masong0508-lab/my-baby-ai-ds/pull/64): all sixteen cabinets, 60 authored dialogue lines, interactive nursery props, PSG cues, submitted-geometry diagnostics and touch-accessible saves exist. These do not establish a complete title or physical-DS release readiness.
 
 ## Priority levels
 
@@ -21,7 +21,7 @@ This document separates implemented checkpoints from remaining acceptance work. 
 
 ## M1: strengthen the real nursery and baby (P1)
 
-**Implemented checkpoint:** the procedural baby has connected care gestures, gaze/blink and need-dependent fatigue/restlessness; Room Tour offers window, lamp, teddy and crib touch interactions, quiet-night rest, an animated mobile and smoothly interpolated prop camera views. Native screenshots and geometry tests cover these paths. See [BABY_BEHAVIOR_MILESTONE.md](BABY_BEHAVIOR_MILESTONE.md) and [ROOM_TOUR.md](ROOM_TOUR.md).
+**Implemented checkpoint:** the procedural baby has connected care gestures, gaze/blink and need-dependent fatigue/restlessness. Interrupted care now carries the actual in-flight rig into the next gesture over 12 ticks, including energy-dependent arms and eyelids. Room Tour offers window, lamp, teddy and crib touch interactions, quiet-night rest, an animated mobile and smoothly interpolated prop camera views. Native screenshots and geometry tests cover these paths. See [CARE_MOTION_CONTINUITY.md](CARE_MOTION_CONTINUITY.md), [BABY_BEHAVIOR_MILESTONE.md](BABY_BEHAVIOR_MILESTONE.md) and [ROOM_TOUR.md](ROOM_TOUR.md).
 
 **Remaining work:** refine anatomy, pose transitions and scene composition from native-resolution captures; extend authored acting and useful prop interactions where it improves play. An authored mesh/texture pipeline, hairstyle options, more rooms and a measured baseline-hardware performance target remain unfinished.
 
@@ -31,7 +31,7 @@ This document separates implemented checkpoints from remaining acceptance work. 
 
 ## M2: make the first eight arcades genuinely different (P1)
 
-**Implementation checkpoint:** all eight starter cabinets have individual mechanics, artwork and input paths on `main`, with host gameplay/hitbox coverage. The native DeSmuME walkthrough checks cabinet navigation, Bottle Balance entry and a complete Diaper Dash session; the other cabinets still need individual native playthroughs. Original-hardware testing and extended human balance/playability testing remain outstanding.
+**Implementation checkpoint:** all eight starter cabinets have individual mechanics, artwork and input paths, with host gameplay/hitbox coverage. Native DeSmuME checks cabinet navigation, Bottle Balance entry, complete Diaper Dash, Sock Market, Beatbox and Tax Return Teether sessions, plus selected loss/retry paths. The Teether held receipt now stays visible over its destination tray. Individual native completions for Bottle, Kart, Naptime and Rattle remain outstanding, along with original-hardware and extended human balance/playability testing. See [NATIVE_ARCADE_TESTS.md](NATIVE_ARCADE_TESTS.md).
 
 **Remaining work:** improve instruction clarity, interaction feedback and fairness under normal and high-corruption timing. Verify each win/loss path, rewards and touch/button alternatives in hands-on sessions; expand mechanics only after the existing loop is readable and responsive.
 
@@ -50,9 +50,9 @@ This document separates implemented checkpoints from remaining acceptance work. 
 
 ## M3: baby's personality and meaningful care (P1–P2)
 
-**Implemented checkpoint:** the fixed-weight 6-input/8-hidden/6-output integer classifier selects from **48 authored lines** in six eight-line pools. Bounded need-based score adjustments make all six intents reachable, checked by a 120-case CHAT census and care-action regressions. Daily need changes, contextual care guidance and quiet-night recovery are implemented. See [DIALOGUE_REACTIVITY_MILESTONE.md](DIALOGUE_REACTIVITY_MILESTONE.md) and [DAY_CYCLE_MILESTONE.md](DAY_CYCLE_MILESTONE.md).
+**Implemented checkpoint:** the fixed-weight 6-input/8-hidden/6-output integer classifier selects from **48 authored lines** in six eight-line pools, with **12 additional contextual replies** for six kinds of recent care/arcade events. A 20-byte session memory keeps four distinct events, recalls each once on healthy CHAT, prevents immediate repeated lines and expires old events. Urgent needs take precedence. Care and arcade RNG progression and the version-1 save remain unchanged. Host tests cover recall, priority, aging and RNG preservation; native DeSmuME reads the actual rendered bottle-memory reply after FEED then CHAT. See [RECENT_INTERACTION_MEMORY.md](RECENT_INTERACTION_MEMORY.md), [DIALOGUE_REACTIVITY_MILESTONE.md](DIALOGUE_REACTIVITY_MILESTONE.md) and [DAY_CYCLE_MILESTONE.md](DAY_CYCLE_MILESTONE.md).
 
-**Remaining work:** add a small recent-event memory, relationship/mood flags, topic tags and event-dependent authored responses. Expand beyond the existing 48 lines with context and repetition control. The current system has no durable conversation memory and is not a contemporary text-generation model.
+**Remaining work:** develop sustained relationship/mood flags, discoverable preferences, more topics and richer authored responses. Current event memory lasts only for this play session/day; durable memories would require an explicit save migration. The system remains a bounded authored-response selector.
 
 Make feeding/playing/sleeping more than one-button stats: short care interactions, discoverable preferences, delayed consequences, surprise jokes and perks from building trust.
 
@@ -60,7 +60,7 @@ Make feeding/playing/sleeping more than one-button stats: short care interaction
 
 ## M4: complete all sixteen arcades and unlock loop (P2)
 
-**Implementation checkpoint:** cabinets 9–16 also have distinct playable state machines, illustrated screens and host coverage. Native DeSmuME checks their locked-cabinet menu and requirements; individual native gameplay sessions remain outstanding. Implementation exists for the sixteen advertised cabinet identities; depth, balance and physical-DS acceptance are unfinished.
+**Implementation checkpoint:** cabinets 9–16 also have distinct playable state machines, illustrated screens and host coverage. Native DeSmuME checks their locked-cabinet menu and requirements, then earns six wins, purchases Cereal Cipher, waits through two question timeouts and completes six visible sums. The other seven paid cabinets still need individual native gameplay sessions. Implementation exists for all sixteen identities; depth, balance and physical-DS acceptance are unfinished.
 
 | Unlockable cabinet | Current implemented interaction |
 | --- | --- |
@@ -99,7 +99,7 @@ Add controller/key remapping where practical, stylus calibration guidance, batte
 2. Measure sustained frame pacing and RAM on original DS/DS Lite; verify 30-minute sessions, lid resume and FAT save/reboot/recovery. Extend the current submitted-geometry diagnostics only where useful (M0/M6).
 3. Continue native-resolution nursery/egg visual review and coherent character animation, preserving rendering budgets and existing prop controls (M1/M5).
 4. Improve all sixteen cabinets' feedback, instructions and full-run balance; verify touch/button play and unlock recovery on hardware (M2/M4).
-5. Add bounded recent-event personality memory, contextual dialogue and richer original audio without changing saved progress accidentally (M3/M5).
+5. Extend the bounded recent-event personality system with meaningful preferences and richer original audio, preserving saved progress (M3/M5).
 6. Add longer-term activities, ending presentations and cosmetics after the core loops are reliable.
 7. Finish release documentation, compatibility checks, attribution and tagged ROM provenance; publish with explicit hardware-validation scope (M6).
 

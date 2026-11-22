@@ -5,6 +5,7 @@
 #include <fat.h>
 #include <stdint.h>
 #include "game.h"
+#include "dialogue.h"
 #include "save.h"
 #include "world.h"
 #include "ui.h"
@@ -24,6 +25,9 @@ static Game baby;
 static Arcade arc;
 static int storage_ok,view=5,selected,album_page,reset_step,last_ending,pose;
 static uint32_t pose_age;
+/* Session-only reaction state: no new save fields or rendering buffers. */
+static DialogueMemory memories;
+static WorldBabyMotion care_motion;
 /* Transient room-tour state: save schema stays exactly the same. */
 static int room_focus=-1,room_previous=-1,room_daylight,room_lamp=1;
 static int room_attention_anchor;
@@ -49,6 +53,14 @@ static uint32_t egg_frame;
 static int egg_paused;
 static int toy_tool=ROUGHHOUSE_SLAP;
 static const char *message="WELCOME TO DAYCARE 2.0";
+static void reset_care_motion(void){
+ pose=0;pose_age=0;
+ care_motion=(WorldBabyMotion){0};
+}
+static void reset_care_session(void){
+ dialogue_memory_reset(&memories,baby.days);
+ reset_care_motion();
+}
 /* Failed writes must NEVER be silent: the game remains fully playable
  * in RAM, but a real UI warning tells the player their latest care/day
  * is not yet on disk. Each later action retries the same two-slot save. */
@@ -74,10 +86,16 @@ static void save_live_baby(void){
           "SAVE WRITE FAILED. PROGRESS IN RAM!";
  else message="NO SAVE DEVICE - RAM ONLY.";
 }
-static int care(Care action){
+static int care(Care action,uint32_t frame){
+ /* Capture the current articulated pose BEFORE care changes tiredness
+  * and need-driven fidget. A repeated tap can interrupt another blend. */
+ WorldBabyPose from=world_baby_pose(&baby,frame,pose,pose_age,
+                                   pose?&care_motion:0);
  message=game_care(&baby,action);
+ message=dialogue_contextual_reply(&memories,&baby,action,message);
  pose=(int)action+1;
  pose_age=0; /* restart this care gesture: do not loop it forever */
+ world_baby_motion_start(&care_motion,from,&baby,frame,pose);
  /* Short original PSG phrases now match the on-screen head/jaw/arm
   * reactions. The single-channel audio engine handles mute and priority,
   * so neither the egg scare nor old Toybox cues can be affected. */
@@ -92,6 +110,7 @@ static int care(Care action){
 }
 static void end_day(void){
  int e=game_end_day(&baby);
+ if(memories.day!=baby.days)dialogue_memory_reset(&memories,baby.days);
  last_ending=e;
  message=e==END_OK?"NEXT DAY: +8 HUNGER, -6 ENERGY.":
                          game_ending_name(e);
@@ -123,6 +142,9 @@ static unsigned arcade_redraw_period(const Arcade *a){
 }
 static void leave_game(void){
  if(arc.finished){
+  dialogue_memory_event(&memories,arc.finished==1?
+                         DIALOGUE_EVENT_ARCADE_WIN:DIALOGUE_EVENT_ARCADE_LOSS,
+                         baby.days);
   message=arc.finished==1?"DIAPER DOLLARS EARNED!":"THE GLITCHES WON.";
   persist();
  }else message="BACK TO THE ARCADE.";
@@ -132,6 +154,7 @@ int main(void){
  uint32_t frame=0;
  int dirty=1;
  game_init(&baby);
+ reset_care_session();
  roughhouse_init(&rag);
  touch_gate_init(&gesture);
  virtual_stylus_init(&vpen);
@@ -213,7 +236,7 @@ int main(void){
     else if(down&KEY_X)action=PLAY;
     else if(down&KEY_Y)action=NAP;
     else if(tap)action=ui_nursery_touch(touch.px,touch.py);
-    if(action>=0){care((Care)action);dirty=1;}
+    if(action>=0){care((Care)action,frame);dirty=1;}
     else if(down&KEY_START){view=1;message="WELCOME TO THE ARCADE.";dirty=1;}
     else if(down&KEY_SELECT){end_day();dirty=1;}
     else if(tap){
@@ -411,7 +434,7 @@ int main(void){
     int sy=hit==4?touch.py:110;
     if(roughhouse_strike_at(&rag,toy_tool,sx,sy)){
      sfx_play(toy_tool==ROUGHHOUSE_KICK?SFX_KICK:SFX_SLAP);
-     pose=0;
+     reset_care_motion();
      message=toy_tool==ROUGHHOUSE_KICK?
              "BOING! THE SYNTHETIC SHELL BOUNCES.":
              "BONK! THAT WAS AN UNNATURAL SOUND.";
@@ -465,7 +488,10 @@ int main(void){
    else if(!reset_step){if(down&KEY_A){reset_step=1;dirty=1;}}
    else if((down&KEY_X)&&(held&(KEY_L|KEY_R))==(KEY_L|KEY_R)){
     if(storage_ok&&!save_erase(SAVE_BASE)){message="SAVE ERASE FAILED. NO RESET.";}
-    else{game_init(&baby);roughhouse_init(&rag);message="COLD BOOT. WHO AM I?";}
+    else{
+     game_init(&baby);reset_care_session();roughhouse_init(&rag);
+     message="COLD BOOT. WHO AM I?";
+    }
     view=0;reset_step=0;dirty=1;
    }
   }else if(view==4){
@@ -485,7 +511,9 @@ int main(void){
     ui_draw(&baby,&arc,view,selected,last_ending,reset_step,0,message);
     storage_ok=fatInitDefault();
     if(storage_ok){
-     if(save_load(SAVE_BASE,&baby))message="SAVED BABY RESTORED!";
+     if(save_load(SAVE_BASE,&baby)){
+      reset_care_session();message="SAVED BABY RESTORED!";
+     }
      else message="SAVING ENABLED!";
     }else message="NO SAVE DEVICE - RAM ONLY.";
     dirty=1;
@@ -574,13 +602,17 @@ int main(void){
       message=room_lamp?"LAMP ON. BUDGET APPROVED.":"LIGHTS OUT. OVERTIME DENIED.";
      }else if(picked==2){
       /* Never overwrite a failed-write warning with a joke. */
-      if(care(PLAY))message="TEDDY RECEIVED A PROMOTION.";
+      if(care(PLAY,frame))message="TEDDY RECEIVED A PROMOTION.";
      }else{
-      int saved=care(NAP);
+      int saved=care(NAP,frame);
       /* The attached mobile chimes while it performs its one-shot
        * 40-tick swing. It supersedes the ordinary NAP phrase only here. */
       sfx_play(SFX_MOBILE);
       if(game_room_quiet_rest(&baby,room_daylight,room_lamp)){
+       dialogue_memory_event(&memories,DIALOGUE_EVENT_QUIET_REST,baby.days);
+       /* Quiet rest changes energy again in the same tick; retain the
+        * original captured rig against this final sleepy-arm baseline. */
+       world_baby_motion_start(&care_motion,care_motion.start,&baby,frame,pose);
        message="QUIET: +8 ENERGY -4 CHAOS -2 GLITCH";
        (void)persist(); /* save BOTH care and conditional quiet benefit */
       }else if(saved)message="CRIB NAP: BOARD APPROVED.";
@@ -610,8 +642,9 @@ int main(void){
     world_draw_nursery(&baby,frame,pose,pose_age,
                        room_focus,room_previous,room_camera_age,
                        room_daylight,room_lamp,room_prop_age,
-                       &room_camera_anchor,room_attention_anchor);
-   else world_draw_care(&baby,frame,pose,pose_age);
+                       &room_camera_anchor,room_attention_anchor,
+                       pose?&care_motion:0);
+   else world_draw_care_from(&baby,frame,pose,pose_age,pose?&care_motion:0);
   }
   /* Keep bitmap VRAM writes off the hot path unless UI state changed. */
   if(dirty||previous!=view||
@@ -638,7 +671,7 @@ int main(void){
    * idle. No extra timers, background threads or save-state entries. */
   if(pose){
    if(pose_age<56u)pose_age++;
-   else {pose=0;pose_age=0;}
+   else reset_care_motion();
   }
   if(room_camera_age<16u)room_camera_age++;
   if(room_prop_age<40u)room_prop_age++;

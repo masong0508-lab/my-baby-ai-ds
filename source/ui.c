@@ -980,9 +980,6 @@ static void teether_challenge(const Arcade *a){
  sprite(107,83,2,spr_baby,18);
  capsule(94,121,68,24,SKY,BLUE);
  sprite(114,111,2,spr_receipt,13);
- if(a->touch_active&&a->touch_start_x>=99&&a->touch_start_x<160&&
-    a->touch_start_y>=91&&a->touch_start_y<150)
-  sprite(a->touch_last_x-14,a->touch_last_y-13,2,spr_receipt,13);
  capsule(10,128,86,43,a->target==3?LEMON:SKY,GOLD);
  capsule(160,128,86,43,a->target==1?PINK:SKY,DEEP_PINK);
  for(int i=0;i<4;i++){
@@ -993,6 +990,11 @@ static void teether_challenge(const Arcade *a){
  label(173,145,"SHRED",INK,2,5);
  sparkle(11,96,LEMON);sparkle(236,100,PINK);
  fit(10,77,a->target==3?"REFUND: SAVE IT!":"JUNK BILL: SHRED!",PURPLE,35);
+ /* The held receipt belongs above the destination trays. Drawing it
+  * before the bins made it disappear just before the player released. */
+ if(a->touch_active&&a->touch_start_x>=99&&a->touch_start_x<160&&
+    a->touch_start_y>=91&&a->touch_start_y<150)
+  sprite(a->touch_last_x-14,a->touch_last_y-13,2,spr_receipt,13);
  foot(PURPLE);
  fit(9,181,"DRAG PAPER TO THE MATCHING BIN",WHITE,40);
 }
