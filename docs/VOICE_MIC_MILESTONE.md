@@ -26,8 +26,11 @@ shelter repair, attack, save erase or conversation command.
 - The ARM9 invalidates just the completed cache-aligned half using
   DC_InvalidateRange before reading PCM16 written by ARM7. No heap,
   framebuffer, raw WAV files or extra PCM history buffer is created.
-- On each completed half, the fixed-point frontend measures absolute
-  level, zero-crossings, short differences and longer-lag differences.
+- On each completed half, the fixed-point frontend first removes the
+  microphone's per-block DC baseline (real or emulated ADC idle offset)
+  before measuring voice level, zero-crossings, short differences and
+  longer-lag differences. A quiet nonzero PCM offset must not register
+  as speech or fill the input meter; signed 32-bit accumulation is bounded.
   Recording calibrates the noise floor for four chunks, waits for speech,
   then keeps at most 32 feature frames. Up to 80 chunks can elapse
   before a no-speech rejection. The UI has an additional finite

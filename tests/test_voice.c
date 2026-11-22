@@ -21,6 +21,24 @@ static void record(VoiceCapture *c,int period,int amplitude,int mod){
  for(i=0;i<4;i++)chunk(c,1,0,i);
  assert(c->state==VOICE_READY);
 }
+/* Test a large fixed microphone ADC baseline, not merely zero PCM.
+ * The recognizer must still hear the voice's deviations from that bias. */
+static void record_biased(VoiceCapture *c,int period,int amplitude,int mod,int bias){
+ unsigned n,i;int16_t pcm[VOICE_FRAME_SAMPLES];
+ voice_capture_reset(c);
+ for(n=0;n<26u;n++){
+  unsigned frame=n<4u?n:n<22u?n-4u:n-22u;
+  for(i=0;i<VOICE_FRAME_SAMPLES;i++){
+   int index=(int)(i+frame*17u)/period;
+   int sample=n<4u||n>=22u?bias:
+      wave[index&15]*(amplitude+(int)((frame+(unsigned)mod)%4u)*2)/100+bias;
+   assert(sample>=INT16_MIN&&sample<=INT16_MAX);
+   pcm[i]=(int16_t)sample;
+  }
+  voice_capture_pcm16(c,pcm,VOICE_FRAME_SAMPLES);
+ }
+ assert(c->state==VOICE_READY);
+}
 int main(void){
  VoiceProfile p;VoiceCapture c;unsigned score;int match;
  voice_profile_reset(&p);assert(voice_profile_valid(&p));
@@ -33,6 +51,9 @@ int main(void){
  assert(match==0&&score<55u);
  record(&c,4,75,2);match=voice_recognize(&p,&c,&score);
  assert(match==1&&score<55u);
+ record_biased(&c,2,75,1,6000);
+ match=voice_recognize(&p,&c,&score);
+ assert(match==0&&score<55u);
  for(int n=0;n<22;n++){
   char label[25];snprintf(label,sizeof(label),"PHRASE %d",n);
   record(&c,n+5,65,n);assert(voice_train(&p,label,&c)==1);
@@ -48,6 +69,17 @@ int main(void){
  voice_capture_reset(&c);
  for(unsigned n=0;n<VOICE_MAX_WAIT;n++)chunk(&c,1,0,n);
  assert(c.state==VOICE_NO_SPEECH);
+ /* A steady +/-20,000 ADC bias with no voice is not speech. It must not
+  * fill the meter, generate a learned pattern or trigger a false word. */
+ for(int bias=-20000;bias<=20000;bias+=40000){
+  int16_t pcm[VOICE_FRAME_SAMPLES];
+  for(unsigned k=0;k<VOICE_FRAME_SAMPLES;k++)pcm[k]=(int16_t)bias;
+  voice_capture_reset(&c);
+  for(unsigned n=0;n<VOICE_MAX_WAIT;n++)
+   voice_capture_pcm16(&c,pcm,VOICE_FRAME_SAMPLES);
+  assert(c.state==VOICE_NO_SPEECH&&c.frames==0u&&c.level==0u);
+  assert(voice_recognize(&p,&c,&score)<0);
+ }
  puts("PASS: offline mic frontend, 24 taught phrases, two-example matching, noise rejection and bounds");
  return 0;
 }

@@ -38,11 +38,18 @@ int voice_profile_valid(const VoiceProfile *p){
 void voice_capture_reset(VoiceCapture *c){if(c)memset(c,0,sizeof(*c));}
 void voice_capture_pcm16(VoiceCapture *c,const int16_t *pcm,unsigned samples){
  unsigned i,sum=0,change=0,zcr=0,slow=0,energy,hit;
+ int32_t dc=0;
  int prev=0,lag[8]={0};
  uint8_t row[VOICE_FEATURES];
  if(!c||!pcm||c->state>=VOICE_READY||samples!=VOICE_FRAME_SAMPLES)return;
+ /* Mic hardware and emulators can return a fixed nonzero ADC baseline
+  * even in silence. Measuring abs(raw) would falsely classify this as
+  * speech and light the entire input meter. Remove the block mean first.
+  * 256 * 32768 fits safely in signed 32-bit accumulation. */
+ for(i=0;i<samples;i++)dc+=(int32_t)pcm[i];
+ dc/=(int32_t)samples;
  for(i=0;i<samples;i++){
-  int x=pcm[i]/256;
+  int x=((int32_t)pcm[i]-dc)/256;
   sum+=abs_i(x);
   if(i){
    change+=abs_i(x-prev);
