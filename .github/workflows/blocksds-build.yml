@@ -109,11 +109,21 @@ jobs:
           python3 tools/nds_legacy_header.py blocksds-touch-probe.nds blocksds-touch-probe-ds-only.nds
           python3 tools/nds_legacy_header.py blocksds-touch-probe-minimal-arm7.nds blocksds-touch-probe-minimal-arm7-ds-only.nds
           python3 tools/nds_legacy_header.py my-baby-ai-blocksds-minimal-arm7.nds my-baby-ai-blocksds-minimal-arm7-ds-only.nds
+          python3 tools/nds_plain_homebrew.py my-baby-ai-blocksds-ds-only.nds my-baby-ai-blocksds-plain.nds
+          python3 tools/nds_plain_homebrew.py my-baby-ai-blocksds-minimal-arm7-ds-only.nds my-baby-ai-blocksds-minimal-arm7-plain.nds
           python3 - <<'PY'
           from pathlib import Path
           from sys import path
           path.insert(0, "tools")
           from nds_legacy_header import crc16
+          from nds_plain_homebrew import create_plain, u32
+          for name in ('my-baby-ai-blocksds', 'my-baby-ai-blocksds-minimal-arm7'):
+              original = Path(name + '-ds-only.nds').read_bytes()
+              plain = Path(name + '-plain.nds').read_bytes()
+              assert plain == create_plain(original), name
+              assert u32(plain, 0x20) == 0x1000 and plain[0x12] == 0
+              assert plain[u32(original, 0x30):] == original[u32(original, 0x30):]
+              print(name, 'homebrew offset verified; no encrypted secure area; ARM7/FAT unchanged')
           for filename in ("my-baby-ai-blocksds","blocksds-dual-screen-test","blocksds-touch-probe","blocksds-touch-probe-minimal-arm7","my-baby-ai-blocksds-minimal-arm7"):
               a=Path(filename+".nds").read_bytes()
               b=Path(filename+"-ds-only.nds").read_bytes()
@@ -140,6 +150,8 @@ jobs:
             blocksds-touch-probe-minimal-arm7-ds-only.nds
             my-baby-ai-blocksds-minimal-arm7.nds
             my-baby-ai-blocksds-minimal-arm7-ds-only.nds
+            my-baby-ai-blocksds-plain.nds
+            my-baby-ai-blocksds-minimal-arm7-plain.nds
           if-no-files-found: error
           retention-days: 30
 
@@ -178,12 +190,19 @@ jobs:
             blocksds-touch-probe-ds-only.nds \
             my-baby-ai-blocksds-ds-only.nds \
             --output emulator-proof --stage game
+          # Real CPU/stylus/3D boot test of the anti-encryption layout
+          timeout 160 python tests/emulator_touch.py \
+            blocksds-touch-probe-ds-only.nds \
+            my-baby-ai-blocksds-plain.nds \
+            --output emulator-plain-proof --stage game
       - name: Upload captured emulator screens and result even on failure
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: desmume-native-touch-evidence
-          path: emulator-proof/
+          path: |
+            emulator-proof/
+            emulator-plain-proof/
           retention-days: 30
           if-no-files-found: warn
 

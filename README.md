@@ -2,6 +2,27 @@
 
 **The Last Nursery:** after the Continuity Bureau outlaws infancy, you shelter an unregistered baby found outside a shuttered clinic. A salvaged computer named **WARDEN** watches the nursery. The baby learns your phrases, becomes increasingly uncanny, and eventually attacks your caretaker bracer. Care, conversation, defensive slapstick, 16 arcade games and the hidden alien-shell reveal share one continuing save.
 
+## Plain-homebrew ROM for the "encrypted ROM" warning (2026-11-22)
+
+Some older DS emulators interpret the toolchain's 0x4000 ARM9 cartridge
+offset and blank secure-area prefix as an encrypted retail ROM. This is
+original homebrew, not encrypted commercial content. The normal builds
+remain available, but packaging now also creates
+**my-baby-ai-blocksds-plain.nds**, recommended first for DraStic users
+who encounter that warning. The alternative devkitPro variant is
+**my-baby-ai-plain.nds**.
+
+The plain build relocates the exact compiled ARM9 bytes to the 0x1000
+homebrew ROM region, sets the source offset/header size accordingly,
+clears the nonexistent secure-area checksum and recalculates the header
+checksum. ARM7, filesystem, graphics, gameplay, language model and saves
+remain unchanged. Use a fresh emulator session, not a save state from an
+older ROM. See docs/QA_RELEASE.md for the validation boundaries.
+
+The automated DeSmuME native test boots this layout and exercises the
+game. This does not prove that a particular DraStic installation accepts
+it. If its warning persists, note the emulator version and when it occurs.
+
 ## First playable prototype
 
 The ARM9 program renders a furnished perspective-3D nursery and a modeled, animated, intentionally ugly-cute baby, with crib rails, dresser drawers, window, play mat, toys and teddy bear. The lower screen uses a colored bitmap touchscreen interface. Buttons, arcade cabinets, care meters, prompts and ending cards are drawn directly into DS sub-engine VRAM. There are **16 distinct arcade minigames** with individual win conditions and touch/button controls, including the full eight-cabinet unlock progression. The baby has offline integer neural inference, an adaptive conversation layer, and authored responses grounded in its actual needs and recent care. The original **48 mood-responsive lines plus 12 recent-event CHAT replies** remain available. Nursery care and prop interactions include short single-channel PSG melodies and a Room Tour mute control.

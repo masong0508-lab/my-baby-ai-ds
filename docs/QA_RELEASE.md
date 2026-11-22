@@ -182,3 +182,28 @@ For traceability, use each successful run's exact ROM SHA and its
 `game-report.json` with test measurements and screenshots of idle, active,
 moved and released touches. A failure should block a new ROM release until
 triaged or explicitly classified as an emulator limitation.
+
+## Plain-homebrew / encrypted-cartridge warning (2026-11-22)
+
+A prior released BlocksDS ROM was byte-inspected. ARM9 begins at ROM offset
+0x4000, the first 0x800 bytes are blank, and the compiled instructions begin
+at 0x4800. The ZIP itself is readable and has no encrypted entries. Some
+older loaders interpret that retail-shaped secure-area layout as needing
+commercial-ROM decryption. This is a likely explanation, not a confirmed
+diagnosis of an unidentified emulator/version.
+
+The converter tools/nds_plain_homebrew.py builds a separate DS-only
+my-baby-ai-blocksds-plain.nds or my-baby-ai-plain.nds. ARM9's ROM source
+moves to 0x1000 (below the secure-area threshold) while the compiled ARM9
+program, entry point, memory destination, ARM7, filesystem, banner and all
+other ROM sections remain byte-identical at their logical destinations.
+The input needs the known blank 0x800-byte secure prefix; unknown
+layouts and commercially encrypted games are explicitly rejected.
+
+Required validation: strict host tests cover checksum, mapping, bounds,
+protection against overlap and wrong identities. Both CI toolchains package
+and verify the additional ROM. The BlocksDS workflow boots and exercises
+the actual plain variant through the DeSmuME title, START, FEED, touch,
+3D, Toybox and egg walkthrough and archives screenshots. Normal builds
+remain available as a fallback. Native hardware, DraStic itself, sustained
+FPS/RAM and real flashcart persistence still require direct confirmation.
