@@ -2,7 +2,7 @@
 
 **Platform:** original Nintendo DS / DS Lite, with DSi supported only through the standard DS-compatible build. **Presentation:** intentionally awkward, colorful 2000s baby-game aesthetics enhanced by original environments, better character acting, a fluid touchscreen UI and playful ordinary corruptions, plus the optional Toybox/alien-egg horror cinematic.
 
-This document separates implemented checkpoints from remaining acceptance work. Updated for the arcade-response and starter-completion milestone following [PR #65](https://github.com/masong0508-lab/my-baby-ai-ds/pull/65): all sixteen cabinets, 60 authored dialogue lines, interactive nursery props, care/result acting, PSG feedback, submitted-geometry diagnostics and touch-accessible saves exist. These do not establish a complete title or physical-DS release readiness.
+This document separates implemented checkpoints from remaining acceptance work. The current priority is the neural conversation and responsiveness milestone following [PR #66](https://github.com/masong0508-lab/my-baby-ai-ds/pull/66): actual questions, topical follow-ups, truthful recent care, adaptive wording and saved preferences. All sixteen cabinets, nursery props, care/result acting, PSG feedback, submitted-geometry diagnostics and touch-accessible saves remain in place. These do not establish a complete title or physical-DS release readiness.
 
 ## Priority levels
 
@@ -48,11 +48,13 @@ This document separates implemented checkpoints from remaining acceptance work. 
 
 **Done when:** all eight games use different core mechanics, are finishable by touch/buttons, award currency consistently, and are separately checked by tests and a hands-on playthrough.
 
-## M3: baby's personality and meaningful care (P1–P2)
+## M3: baby's personality and meaningful care (current P1 focus)
 
 **Implemented checkpoint:** the fixed-weight 6-input/8-hidden/6-output integer classifier selects from **48 authored lines** in six eight-line pools, with **12 additional contextual replies** for six kinds of recent care/arcade events. A 20-byte session memory keeps four distinct events, recalls each once on healthy CHAT, prevents immediate repeated lines and expires old events. Urgent needs take precedence. Care and arcade RNG progression and the version-1 save remain unchanged. Host tests cover recall, priority, aging and RNG preservation; native DeSmuME reads the actual rendered bottle-memory reply after FEED then CHAT. See [RECENT_INTERACTION_MEMORY.md](RECENT_INTERACTION_MEMORY.md), [DIALOGUE_REACTIVITY_MILESTONE.md](DIALOGUE_REACTIVITY_MILESTONE.md) and [DAY_CYCLE_MILESTONE.md](DAY_CYCLE_MILESTONE.md).
 
-**Remaining work:** develop sustained relationship/mood flags, discoverable preferences, more topics and richer authored responses. Current event memory lasts only for this play session/day; durable memories would require an explicit save migration. The system remains a bounded authored-response selector.
+**Neural conversation checkpoint:** a six-prompt TALK view adds questions, topical continuations and explicit feedback. A small learned output adapter uses the existing neural hidden activations plus conversation context to choose warm/playful/corporate wording. Actual care outcomes and recorded events constrain the eligible responses; urgent needs cannot be trained away. Learned preferences persist in a 40-byte, checksummed companion profile bound to the exact saved Game, without changing v1 progress bytes. FEED/PLAY/NAP replies distinguish useful, redundant and tiring care. See [NEURAL_CONVERSATION.md](NEURAL_CONVERSATION.md), [LEARNING_SAVE_COMPATIBILITY.md](LEARNING_SAVE_COMPATIBILITY.md), and [NATIVE_CONVERSATION_TESTS.md](NATIVE_CONVERSATION_TESTS.md).
+
+**Remaining work:** deepen sustained relationships, meaningful preferences beyond wording, more subject-specific questions, development over several days, and durable event recollection. Short-term factual memories currently reset on load/day changes; learning a conversational style does not invent a transcript or train language understanding. Preserve old progress and independently test any future durable-event schema.
 
 Make feeding/playing/sleeping more than one-button stats: short care interactions, discoverable preferences, delayed consequences, surprise jokes and perks from building trust.
 
@@ -96,10 +98,10 @@ Add controller/key remapping where practical, stylus calibration guidance, batte
 ## Suggested work order for the next patches
 
 1. Keep both ROM builds, host/sanitizer suites and the exact-head native DeSmuME walkthrough green; fix any regression before merging.
-2. Measure sustained frame pacing and RAM on original DS/DS Lite; verify 30-minute sessions, lid resume and FAT save/reboot/recovery. Extend the current submitted-geometry diagnostics only where useful (M0/M6).
-3. Continue native-resolution nursery/egg visual review and coherent character animation, preserving rendering budgets and existing prop controls (M1/M5).
-4. Improve all sixteen cabinets' feedback, instructions and full-run balance; verify touch/button play and unlock recovery on hardware (M2/M4).
-5. Extend the bounded recent-event personality system with meaningful preferences and richer original audio, preserving saved progress (M3/M5).
+2. Focus on the neural response system: coherent questions/follow-ups, learned preferences, useful care reactions and broader original response topics, with truthful memory and saved-progress compatibility (M3).
+3. Measure sustained frame pacing and RAM on original DS/DS Lite; verify 30-minute sessions, lid resume and FAT save/reboot/recovery. Extend the current submitted-geometry diagnostics only where useful (M0/M6).
+4. Continue native-resolution nursery/egg visual review and coherent character animation when required by an interaction, preserving rendering budgets and existing prop controls (M1/M5).
+5. Improve cabinet balance and richer original audio after the response-system milestone; verify touch/button play and unlock recovery on hardware (M2/M4/M5).
 6. Add longer-term activities, ending presentations and cosmetics after the core loops are reliable.
 7. Finish release documentation, compatibility checks, attribution and tagged ROM provenance; publish with explicit hardware-validation scope (M6).
 

@@ -264,3 +264,42 @@ jobs:
           path: emulator-starter-proof/
           retention-days: 30
           if-no-files-found: warn
+
+  desmume-conversation:
+    name: Converse with the baby through native touch and buttons
+    needs: ds-only-packaging
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Retrieve the production ROM built in this run
+        uses: actions/download-artifact@v4
+        with:
+          name: my-baby-ai-blocksds-legacy-compat
+      - name: Configure Python test harness
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install actual DeSmuME emulator and screenshot backend
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python -m pip install --disable-pip-version-check py-desmume==0.0.9 Pillow
+      - name: Ask questions, recall care, follow topics and rate replies
+        shell: bash
+        env:
+          SDL_VIDEODRIVER: dummy
+          SDL_AUDIODRIVER: dummy
+        run: |
+          set -euxo pipefail
+          timeout 240 python tests/emulator_conversation.py \
+            my-baby-ai-blocksds-ds-only.nds \
+            --output emulator-conversation-proof
+      - name: Upload native conversation screens and results even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: desmume-native-conversation-evidence
+          path: emulator-conversation-proof/
+          retention-days: 30
+          if-no-files-found: warn

@@ -14,10 +14,18 @@ void ui_arcade_feedback(ArcadeFeedbackEvent event);
 /* Higher-priority footer for a failed save; draw after arcade feedback.
  * Caller retains failure state until a successful write/load/new baby. */
 void ui_save_warning(void);
+/* Optional learning-profile write failed; learning remains in RAM.
+ * Same footer-only pass; caller chooses precedence after drawing. */
+void ui_learning_save_warning(void);
 /* Explicit title-only SAVE/LOAD touch target. The boot-time storage probe
  * remains opt-in; touching START never initializes FAT. */
 int ui_title_save_touch(int x,int y);
 int ui_nursery_touch(int x,int y);
+/* Nursery speech panel, separate from ROOM and the four care cards. */
+int ui_conversation_entry_touch(int x,int y);
+/* TALK view 11: 0..5 ask a prompt, 6 BACK, 7 ASK selected; -1 inert.
+ * ui_draw's selected argument identifies the highlighted prompt 0..5. */
+int ui_conversation_touch(int x,int y);
 int ui_room_entry_touch(int x,int y);
 int ui_room_touch(int x,int y); /* 0 window, 1 lamp, 2 teddy, 3 crib, 4 back, 5 sound, 6 use */
 int ui_prank_entry_touch(int x,int y);

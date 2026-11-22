@@ -122,6 +122,7 @@ static const uint8_t glyph[96][7]={
  ['!'-32]={4,4,4,4,4,0,4},
  ['?'-32]={14,17,1,2,4,0,4},
  ['.'-32]={0,0,0,0,0,6,6},
+ [','-32]={0,0,0,0,6,4,8},
  [':'-32]={0,4,4,0,4,4,0},
  ['-'-32]={0,0,0,31,0,0,0},
  ['/'-32]={1,1,2,4,8,16,16},
@@ -273,6 +274,12 @@ void ui_save_warning(void){
  solid(0,178,256,14,NIGHT);
  fit(10,181,"SAVE FAILED. PROGRESS IN RAM!",PINK,39);
 }
+void ui_learning_save_warning(void){
+ /* Profile persistence is separate from saving the game's progress.
+  * The caller gives an actual game-save failure higher precedence. */
+ solid(0,178,256,14,NIGHT);
+ fit(10,181,"LEARNING NOT SAVED. KEPT IN RAM!",PINK,39);
+}
 static void icon_bottle(int x,int y){
  solid(x+8,y+3,9,5,BLUE);solid(x+10,y,5,3,WHITE);
  solid(x+5,y+8,15,16,WHITE);outline(x+5,y+8,15,16,TEAL);
@@ -294,6 +301,35 @@ static void icon_nap(int x,int y){
  solid(x+6,y+18,22,3,DEEP_PINK);
  label(x+11,y+1,"Z",PURPLE,1,1);
 }
+/* Stream bounded spans directly from a reply: no copied text buffer.
+ * Prefer whole words, hard-wrap long words without losing a character,
+ * and honor explicit LF/CRLF rows on the fixed 36-column grid. */
+static int speech_space(char c){
+ return c==' '||c=='\t';
+}
+static void speech_lines(const char *message,int y,int spacing,int rows){
+ const char *next=message?message:"";
+ int row;
+ for(row=0;row<rows;row++){
+  int length=0,boundary=-1;
+  while(speech_space(*next))next++;
+  if(!*next)break;
+  while(length<36&&next[length]&&next[length]!='\n'&&next[length]!='\r'){
+   if(speech_space(next[length]))boundary=length;
+   length++;
+  }
+  /* A word crossing the right edge moves intact to the next row. If
+   * the word itself exceeds one row, advance exactly the drawn span. */
+  if(length==36&&next[length]&&!speech_space(next[length])&&
+     next[length]!='\n'&&next[length]!='\r'&&boundary>0)
+   length=boundary;
+  label(17,y+row*spacing,next,INK,1,length);
+  next+=length;
+  while(speech_space(*next))next++;
+  if(*next=='\r')next++;
+  if(*next=='\n')next++;
+ }
+}
 /* The nursery follows an actual DS pet-care layout:
  * dialogue, a compact health summary, then FOUR large actions. */
 /* Art-directed nursery-care touchscreen. The original interactive
@@ -301,9 +337,6 @@ static void icon_nap(int x,int y){
  * 5-bit color gradients are suggested with two broad pixel bands, not a
  * slow per-pixel compositor. Bitmap repaints occur only on state changes. */
 static void home(const Game *s,int can_save,const char *message){
- int i,n,start=0,split=0;
- const char *speech=message?message:"";
- char first[37],second[37];
  solid(0,27,W,149,LILAC);
  solid(0,27,W,41,BLUSH);
  /* Playful but slightly uncanny voice-message panel, inspired by the care
@@ -313,7 +346,7 @@ static void home(const Game *s,int can_save,const char *message){
  solid(18,36,14,10,PINK);
  solid(20,38,3,3,PURPLE);
  solid(27,38,3,3,PURPLE);
- fit(42,35,"BABY SAYS...",PURPLE,15);
+ fit(42,35,"TOUCH TO TALK",PURPLE,15);
  /* Actionable priorities fit the original header's spare pixels:
   * no overlaid speech, clipped label, new card or changed hitbox. */
  {
@@ -328,19 +361,7 @@ static void home(const Game *s,int can_save,const char *message){
   * four care action hitboxes and the bottom Toybox navigation strip. */
  capsule(194,34,49,13,SKY,BLUE);
  fit(203,38,"ROOM",INK,5);
- n=(int)strlen(speech);
- if(n>36){
-  split=36;
-  for(i=36;i>18;i--)if(speech[i]==' '){split=i;break;}
- }else split=n;
- for(i=0;i<split&&i<36;i++)first[i]=speech[i];
- first[i]=0;
- start=split;
- while(speech[start]==' ')start++;
- for(i=0;speech[start+i]&&i<36;i++)second[i]=speech[start+i];
- second[i]=0;
- fit(17,47,first,INK,36);
- if(second[0])fit(17,56,second,INK,36);
+ speech_lines(message,47,9,2);
  /* Numerical overlays keep all FIVE stats legible when a bar is nearly
   * empty. Existing positions are unchanged for returning players. */
  panel(8,68,240,36,WHITE,PURPLE);
@@ -389,6 +410,32 @@ static void home(const Game *s,int can_save,const char *message){
  capsule(169,178,80,13,NIGHT,TEAL);
  fit(189,183,"END DAY",WHITE,10);
  (void)can_save;
+}
+/* Six conversational intentions share the nursery's existing font/cards.
+ * Replies fit up to three rows without repainting on an idle frame. */
+static void conversation_screen(int selection,const char *message){
+ static const char *const prompts[6]={
+  "HOW ARE YOU?","NEED ANYTHING?","REMEMBER?",
+  "TELL ME MORE","I LIKE THAT","NEW SUBJECT"
+ };
+ int i,selected=selection>=0&&selection<6?selection:0;
+ solid(0,27,W,149,LILAC);
+ solid(0,27,W,62,BLUSH);
+ panel(8,31,240,55,WHITE,PURPLE);
+ fit(17,36,"ASK:",PURPLE,4);
+ fit(47,36,prompts[selected],PURPLE,30);
+ speech_lines(message,48,11,3);
+ for(i=0;i<6;i++){
+  int x=i%2?132:8,y=92+(i/2)*27;
+  panel(x,y,116,24,i==selected?MINT:WHITE,i==selected?GREEN:PURPLE);
+  if(i==selected)solid(x+3,y+4,3,16,GREEN);
+  fit(x+10,y+8,prompts[i],INK,17);
+ }
+ foot(PURPLE);
+ solid(79,179,1,11,TEAL);solid(176,179,1,11,TEAL);
+ fit(12,181,"B BACK",WHITE,6);
+ fit(89,181,"D-PAD CHOOSE",MINT,12);
+ fit(202,181,"A ASK",WHITE,5);
 }
 /* First-class interactive Room mode. Cards match the actual nursery
  * landmarks seen on the TOP hardware 3D screen. All four actions are
@@ -1882,12 +1929,13 @@ void ui_draw(const Game *s,const Arcade *a,int view,int selection,
  else if(view==6)screen_accent=SKY;
  else if(view==8||view==9)screen_accent=ROSE;
  else if(view==10)screen_accent=MINT;
+ else if(view==11)screen_accent=AQUA;
  else screen_accent=TEAL;
  if(view==2&&a)screen_title="MINIGAME";
  else screen_title=view==0?"CARE":view==1?"ARCADE":
          view==3?"RESET":view==4?"ENDING":view==5?"WELCOME":
          view==6?"ALBUM":view==7?"TOUCH TEST":
-         view==8?"TOYBOX":view==10?"ROOM":"INCUBATOR";
+         view==8?"TOYBOX":view==10?"ROOM":view==11?"TALK":"INCUBATOR";
  /* Every screen paints its own content band (y=27..175), and header/foot
   * repaint the other two bands. The previous blanket 256x192 clear was
   * 49,152 redundant 16-bit VRAM writes on every animation refresh. */
@@ -1922,6 +1970,7 @@ void ui_draw(const Game *s,const Arcade *a,int view,int selection,
  case 8:roughhouse_screen(selection);break;
  case 9:egg_scene_screen(selection);break;
  case 10:room_screen(s,selection,message);break;
+ case 11:conversation_screen(selection,message);break;
  }
 }
 /* Three separated footer targets prevent accidental skip during the
@@ -1967,6 +2016,21 @@ int ui_room_touch(int x,int y){
 }
 int ui_room_entry_touch(int x,int y){
  return x>=194&&x<243&&y>=34&&y<47;
+}
+int ui_conversation_entry_touch(int x,int y){
+ return x>=8&&x<192&&y>=31&&y<66;
+}
+int ui_conversation_touch(int x,int y){
+ int column,row;
+ if(x<0||x>=W||y<0||y>=H)return -1;
+ if(y>=176)return x<80?6:x>=176?7:-1;
+ column=x>=8&&x<124?0:x>=132&&x<248?1:-1;
+ if(column<0)return -1;
+ for(row=0;row<3;row++){
+  int top=92+row*27;
+  if(y>=top&&y<top+24)return row*2+column;
+ }
+ return -1;
 }
 int ui_nursery_touch(int x,int y){
  if(x<7||x>=249)return -1;

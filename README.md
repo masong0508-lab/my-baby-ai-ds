@@ -4,9 +4,17 @@ An ugly-cute DS-era baby simulator parody with an overeducated baby, 16 arcade g
 
 ## First playable prototype
 
-The ARM9 program renders a furnished perspective-3D nursery and a modeled, animated, intentionally ugly-cute baby, with crib rails, dresser drawers, window, play mat, toys and teddy bear. The lower screen uses a colored bitmap touchscreen interface. Buttons, arcade cabinets, care meters, prompts and ending cards are drawn directly into DS sub-engine VRAM. There are **16 distinct arcade minigames** with individual win conditions and touch/button controls, including the full eight-cabinet unlock progression. The baby uses an offline integer-only intent classifier with **48 mood-responsive lines plus 12 recent-event replies**. Nursery care and prop interactions include short single-channel PSG melodies and a Room Tour mute control.
+The ARM9 program renders a furnished perspective-3D nursery and a modeled, animated, intentionally ugly-cute baby, with crib rails, dresser drawers, window, play mat, toys and teddy bear. The lower screen uses a colored bitmap touchscreen interface. Buttons, arcade cabinets, care meters, prompts and ending cards are drawn directly into DS sub-engine VRAM. There are **16 distinct arcade minigames** with individual win conditions and touch/button controls, including the full eight-cabinet unlock progression. The baby has offline integer neural inference, an adaptive conversation layer, and authored responses grounded in its actual needs and recent care. The original **48 mood-responsive lines plus 12 recent-event CHAT replies** remain available. Nursery care and prop interactions include short single-channel PSG melodies and a Room Tour mute control.
 
 **Cartridge identity:** the game ROMs are packaged with the twelve-byte title `MY BABY A.I.` and game code `MBAI`; diagnostic boot and touch-probe ROMs keep their own identifiers. The header checksum is validated without changing ARM9/ARM7 executables. The game remains native DS software and has no DSi-exclusive memory requirement.
+
+### Talk, follow up, and teach a conversational style
+
+Touch **TOUCH TO TALK** in the nursery speech panel, or press **LEFT**, to open TALK. Six choices ask how the baby feels, what it needs, what it remembers, a follow-up, positive feedback, or a new subject. Touch a question directly, or select it with the D-pad and press A; B returns to care. Asking questions does not secretly spend energy, raise corruption, advance days, or consume arcade randomness.
+
+The baby keeps track of its current subject and actual recent care, including whether a bottle or nap helped, repeated care, quiet crib rest and completed arcade results. **180 new authored responses cover 30 topics in three styles.** Urgent needs override unrelated topics. **I LIKE THAT** and **NEW SUBJECT** update a small integer neural style adapter: warm, playful, or corporate wording can become more likely from your feedback. The underlying needs classifier and all response text are authored; this is on-device preference learning, not free-text language generation.
+
+Learned preferences fit a **40-byte profile**. When saving is enabled, checksummed companions bind that profile to the exact saved baby while leaving the existing version-1 progress files unchanged. Missing or damaged learning files start neutral preferences and do not block restoring progress. Short-lived event memories still reset on load or a new day. See [neural conversation](docs/NEURAL_CONVERSATION.md), [learning save compatibility](docs/LEARNING_SAVE_COMPATIBILITY.md), and [native conversation tests](docs/NATIVE_CONVERSATION_TESTS.md).
 
 ### Care flow and recent memories
 
@@ -19,7 +27,9 @@ When the baby is comfortable, CHAT can mention a recent bottle, playtime, nap, q
 Successful steps, mistakes, wins and losses now have distinct short PSG cues and brief text feedback in the existing footer. Ignored taps and ordinary steering stay silent. Completed games trigger a finite baby cheer or a gentle regrouping gesture; both can blend into the next care action. Normal footer controls return after the message expires, while a failed save takes priority and remains visible until saving succeeds. The Bottle Balance green band now matches its actual scoring window. See [arcade feedback](docs/ARCADE_FEEDBACK.md) and [baby result reactions](docs/ARCADE_BABY_REACTIONS.md).
 
 ### Controls
+
 * A feed, B chat, X play, Y nap; the four large touchscreen buttons provide the same actions.
+* LEFT or the speech-panel **TOUCH TO TALK** opens conversation; D-pad selects a prompt, A asks, and B returns. Touching any prompt asks it immediately.
 * START or tap ARCADE to enter arcade. Use D-pad or touch cabinets to select; A/tap PLAY starts, X/tap BUY unlocks, B/tap BACK exits.
 * In an arcade challenge press the prompted direction. At higher corruption tiers, REVERSE means the opposite.
 * SELECT or tap END DAY to check for good or bad endings. After a finale, press A or B to **continue the same save**. Four good endings give one-time Diaper Dollar and Favor rewards.
@@ -61,7 +71,7 @@ These files describe the current codebase and distinguish confirmed implementati
 - **[Glitch endings](docs/glitches.md)** — ending conditions, continuing play and optional reset safety.
 - **[Graphics pipeline](docs/graphics-pipeline.md)** — hardware 3D and touchscreen rendering approach.
 
-**Recommended next engineering patch:** profile the latest ROM in melonDS and on an original DS/DS Lite, record per-scene FPS and RAM headroom, and test saving across power cycles. Automated DeSmuME touchscreen and cinematic screenshots already exist; they are not substitutes for those additional platforms.
+**Current development priority:** deepen the baby's contextual conversation, useful preferences and meaningful responses. Preserve exact-head build/native checks while extending that system. Original-DS profiling, measured RAM headroom and save testing across power cycles remain release requirements; automated DeSmuME screenshots do not replace those device checks.
 
 ### Arcade gameplay: sixteen distinct cabinets
 

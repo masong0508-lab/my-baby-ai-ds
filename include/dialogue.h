@@ -2,9 +2,15 @@
 #define MBAI_DIALOGUE_H
 #include "game.h"
 /* Six output intents from a tiny, hand-tuned two-layer integer classifier.
- * No runtime training, no internet, no dynamically allocated model. */
+ * This base stays fixed; conversation.c learns a separate response-style
+ * head. No internet or dynamically allocated model is required. */
 const char *dialogue_reply(Game *state,Care action);
 int dialogue_intent(const Game *state,Care action);
+#define DIALOGUE_HIDDEN_COUNT 8u
+/* Pure shared neural encoder for the adaptive conversation output head.
+ * Activations are the same clipped 0..127 hidden values used above. */
+void dialogue_encode(const Game *state,Care action,
+                      int8_t hidden[DIALOGUE_HIDDEN_COUNT]);
 /* Explicit, session-only memory; never part of the serialized Game.
  * A small set of distinct recent events avoids duplicate memories when
  * repeatedly using one care button. Ages count interactions, not frames. */
