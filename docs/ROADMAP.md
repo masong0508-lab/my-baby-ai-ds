@@ -31,7 +31,7 @@ This document separates implemented checkpoints from remaining acceptance work. 
 
 ## M2: make the first eight arcades genuinely different (P1)
 
-**Implementation checkpoint:** all eight starter cabinets have individual mechanics, artwork and input paths on `main`, with host gameplay/hitbox coverage and native DeSmuME touchscreen checks. Original-hardware testing and extended human balance/playability testing remain outstanding.
+**Implementation checkpoint:** all eight starter cabinets have individual mechanics, artwork and input paths on `main`, with host gameplay/hitbox coverage. The native DeSmuME walkthrough checks cabinet navigation, Bottle Balance entry and a complete Diaper Dash session; the other cabinets still need individual native playthroughs. Original-hardware testing and extended human balance/playability testing remain outstanding.
 
 **Remaining work:** improve instruction clarity, interaction feedback and fairness under normal and high-corruption timing. Verify each win/loss path, rewards and touch/button alternatives in hands-on sessions; expand mechanics only after the existing loop is readable and responsive.
 
@@ -60,7 +60,7 @@ Make feeding/playing/sleeping more than one-button stats: short care interaction
 
 ## M4: complete all sixteen arcades and unlock loop (P2)
 
-**Implementation checkpoint:** cabinets 9–16 also have distinct playable state machines, illustrated screens and host/native-emulator coverage. Implementation is complete for the sixteen advertised cabinet identities; depth, balance and physical-DS acceptance are not.
+**Implementation checkpoint:** cabinets 9–16 also have distinct playable state machines, illustrated screens and host coverage. Native DeSmuME checks their locked-cabinet menu and requirements; individual native gameplay sessions remain outstanding. Implementation exists for the sixteen advertised cabinet identities; depth, balance and physical-DS acceptance are unfinished.
 
 | Unlockable cabinet | Current implemented interaction |
 | --- | --- |
