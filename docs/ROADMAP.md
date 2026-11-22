@@ -50,6 +50,18 @@ This document separates implemented checkpoints from remaining acceptance work. 
 
 ## M3: baby's personality and meaningful care (current P1 focus)
 
+**Microphone starter (2026-11-22):** A new opt-in MIC LAB inside WARDEN
+provides ARM7 microphone capture, a level meter, train/listen/confirm controls
+and a compact user-adapted 24-label, two-example template recognizer.
+It stores features, not raw recordings, in a separate optional checksummed
+save companion. Unknown input is explicitly rejected, and spoken labels are
+only submitted to existing typed conversations upon an explicit USE command.
+This is limited, speaker-trained word/short-phrase matching, not unrestricted
+voice transcription or a trained large language model. Physical DS mic
+accuracy, multiple speakers, noise, DraStic mic forwarding and latency
+remain separate validation priorities.
+
+
 **Implemented checkpoint:** the fixed-weight 6-input/8-hidden/6-output integer classifier selects from **48 authored lines** in six eight-line pools, with **12 additional contextual replies** for six kinds of recent care/arcade events. A 20-byte session memory keeps four distinct events, recalls each once on healthy CHAT, prevents immediate repeated lines and expires old events. Urgent needs take precedence. Care and arcade RNG progression and the version-1 save remain unchanged. Host tests cover recall, priority, aging and RNG preservation; native DeSmuME reads the actual rendered bottle-memory reply after FEED then CHAT. See [RECENT_INTERACTION_MEMORY.md](RECENT_INTERACTION_MEMORY.md), [DIALOGUE_REACTIVITY_MILESTONE.md](DIALOGUE_REACTIVITY_MILESTONE.md) and [DAY_CYCLE_MILESTONE.md](DAY_CYCLE_MILESTONE.md).
 
 **Neural conversation checkpoint:** a six-prompt TALK view adds questions, topical continuations and explicit feedback. A small learned output adapter uses the existing neural hidden activations plus conversation context to choose warm/playful/corporate wording. Actual care outcomes and recorded events constrain the eligible responses; urgent needs cannot be trained away. Learned preferences persist in a 40-byte, checksummed companion profile bound to the exact saved Game, without changing v1 progress bytes. FEED/PLAY/NAP replies distinguish useful, redundant and tiring care. See [NEURAL_CONVERSATION.md](NEURAL_CONVERSATION.md), [LEARNING_SAVE_COMPATIBILITY.md](LEARNING_SAVE_COMPATIBILITY.md), and [NATIVE_CONVERSATION_TESTS.md](NATIVE_CONVERSATION_TESTS.md).

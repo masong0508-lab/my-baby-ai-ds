@@ -490,6 +490,7 @@ int ui_observer_touch(int x,int y){
  int row,col;
  if(x<0||x>=256||y<0||y>=192)return -1;
  if(y>=176)return 30+x/64;
+ if(x>=130&&x<181&&y>=88&&y<100)return 35; /* MIC */
  if(x>=216&&x<248&&y>=100&&y<115)return 34;
  if(x<8||x>=246||y<118||y>=164)return -1;
  col=(x-8)/24;row=(y-118)/16;
@@ -546,6 +547,8 @@ void ui_observer_draw(const Game *s,int can_save,unsigned speaker,
  /* Stable mode/readiness information belongs above the input field;
   * there is no blinking cursor, scrolling texture or per-frame repaint. */
  fit(17,92,"YOUR MESSAGE",AQUA,12);
+ capsule(130,88,51,12,MINT,TEAL);
+ fit(144,91,"MIC",INK,3);
  fit(190,92,stages[stage>3u?3u:stage],phosphor,9);
  panel(8,101,240,14,IVORY,TEAL);
  fit(17,104,input?input:"",INK,32);
@@ -570,6 +573,54 @@ void ui_observer_draw(const Game *s,int can_save,unsigned speaker,
  fit(145,181,"TEACH",LEMON,5);
  fit(202,181,"X SEND",WHITE,6);
 }
+/* A user-initiated microphone lab. No listening in CARE or idle WARDEN.
+ * The 256x192 bitmap is fully drawn only on interactions/meter updates. */
+int ui_mic_touch(int x,int y){
+ if(x<0||x>=256||y<0||y>=192)return 0;
+ if(y>=176)return 4;
+ if(y>=129&&y<163&&x>=8&&x<248)return x<84?1:x<170?2:3;
+ return 0;
+}
+void ui_mic_draw(const Game *s,int can_save,const char *label,
+                 const char *status,const char *match,unsigned level,
+                 unsigned learned,int listening){
+ unsigned width;
+ if(!pixels||!s)return;
+ cursor_visible=0;screen_accent=AQUA;
+ header("MIC LAB",s,can_save);
+ solid(0,27,256,149,RGB(13,20,23));
+ panel(8,31,240,48,WHITE,TEAL);
+ fit(17,36,"OFFLINE VOICE LESSONS",PURPLE,25);
+ fit(17,49,"LABEL:",PURPLE,6);
+ fit(62,49,label&&*label?label:"HELLO",INK,24);
+ fit(17,64,"INPUT",PURPLE,6);
+ solid(64,64,172,9,GRAY);
+ width=level>100u?172u:level*172u/100u;
+ solid(64,64,(int)width,9,listening?GREEN:AQUA);
+ panel(8,83,240,40,IVORY,TEAL);
+ fit(17,88,status?status:"MIC OFF. A TRAIN / X LISTEN.",INK,36);
+ fit(17,104,"MATCH:",PURPLE,6);
+ fit(61,104,match&&*match?match:"NONE / AWAITING SAMPLE",INK,27);
+ capsule(8,131,76,30,MINT,GREEN);
+ fit(25,139,"A TRAIN",INK,7);
+ capsule(90,131,76,30,SKY,BLUE);
+ fit(106,139,"X LISTEN",INK,8);
+ capsule(172,131,76,30,LEMON,GOLD);
+ fit(192,139,"Y USE",INK,5);
+ {
+  char count[32];
+  snprintf(count,sizeof(count),"SAVED LABELS %u / 24",learned>24u?24u:learned);
+  fit(17,166,count,WHITE,25);
+ }
+ foot(TEAL);
+ fit(13,182,"B BACK   TYPE LABEL IN WARDEN FIRST",WHITE,39);
+}
+/* Save failure takes precedence over mic status, preserving live RAM model. */
+void ui_voice_save_warning(void){
+ solid(0,178,256,14,NIGHT);
+ fit(10,181,"VOICE LESSONS NOT SAVED. IN RAM!",PINK,39);
+}
+
 /* First-class interactive Room mode. Cards match the actual nursery
  * landmarks seen on the TOP hardware 3D screen. All four actions are
  * available through native touch, virtual stylus and D-pad fallback. */

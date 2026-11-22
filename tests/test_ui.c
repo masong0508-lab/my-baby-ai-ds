@@ -421,6 +421,7 @@ static void observer_touch_and_keys(void){
  for(int y=-2;y<194;y++)for(int x=-2;x<258;x++){
   int expected=-1;
   if(x>=0&&x<256&&y>=176&&y<192)expected=30+x/64;
+  else if(x>=130&&x<181&&y>=88&&y<100)expected=35;
   else if(x>=216&&x<248&&y>=100&&y<115)expected=34;
   else for(int key=0;key<30;key++){
    int kx=8+(key%10)*24,ky=118+(key/10)*16;
@@ -432,6 +433,13 @@ static void observer_touch_and_keys(void){
  assert(ui_observer_touch(INT_MIN,INT_MAX)==-1);
  assert(ui_observer_touch(INT_MAX,INT_MIN)==-1);
  assert(!ui_observer_entry_touch(INT_MAX,INT_MIN));
+ for(int y=-2;y<194;y++)for(int x=-2;x<258;x++){
+  int expected=0;
+  if(x>=0&&x<256&&y>=176&&y<192)expected=4;
+  else if(x>=8&&x<248&&y>=129&&y<163)
+   expected=x<84?1:x<170?2:3;
+  assert(ui_mic_touch(x,y)==expected);
+ }
 }
 static void observer_layout(void){
  const uint16_t ink=TEST_RGB(8,7,12),white=TEST_RGB(31,31,31);
@@ -447,11 +455,25 @@ static void observer_layout(void){
  verify_coverage();
  verify_text(12,7,"MONITOR",7,white,2);
  verify_text(17,34,"WARDEN",6,phosphor,1);
+ verify_text(144,91,"MIC",3,ink,1);
  verify_text(167,34,"BRACER 100%",11,phosphor,1);
  verify_text(190,92,"FOUND",9,phosphor,1);
  verify_text(17,104,"ABCDEFGHIJKLMNOPQRSTUVWXYZ012345",32,ink,1);
  for(int row=0;row<4;row++)verify_text(17,45+11*row,line,36,phosphor,1);
  verify_text(137,34,"...",3,TEST_RGB(31,28,13),1);
+ /* The microphone lab has a complete offline/bounded fallback layout,
+  * independent of whether an emulator actually supports microphone input. */
+ ui_mic_draw(&g,1,"HELLO","NO MIC INPUT. USE KEYBOARD.","",60u,4u,0);
+ verify_coverage();
+ verify_text(12,7,"MIC LAB",7,white,2);
+ verify_text(25,139,"A TRAIN",7,ink,1);
+ verify_text(106,139,"X LISTEN",8,ink,1);
+ verify_text(192,139,"Y USE",5,ink,1);
+ ui_voice_save_warning();
+ verify_text(10,181,"VOICE LESSONS NOT SAVED. IN RAM!",39,
+             TEST_RGB(31,19,25),1);
+ ui_observer_draw(&g,1,0,input,reply,0u,0u,100u);
+ verify_coverage();
  monitor=fingerprint();
  for(unsigned page=0;page<2u;page++)for(unsigned selected=0;selected<30u;selected++){
   unsigned key=selected+page*32u;

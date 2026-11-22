@@ -224,6 +224,19 @@ def typing_scenario(player, initial):
                                    "chats": 0, "plays": 0, "naps": 0,
                                    "integrity": 100, "hits": 0}
     original_reply = entry["reply"]
+    # Microphone features are opt-in; DeSmuME can test the real UI and
+    # cancellation even when the host provides no microphone waveform.
+    player.tap(150, 94)
+    screen = player.wait("native MIC LAB opens", lambda im:
+                         text_at(im, 12, 7, 7, 2, "white") == "MIC LAB",
+                         limit=120)
+    player.capture("microphone_lab_keyboard_fallback", screen)
+    player.key(Keys.KEY_X)
+    player.step(25)
+    player.capture("microphone_listening_without_injected_audio", player.screen())
+    player.key(Keys.KEY_B)
+    returned = player.terminal("MIC B returns to WARDEN", input_text="")
+    assert parse_status(returned) == parse_status(entry), returned
     player.key(Keys.KEY_RIGHT)
     _, selected = player.terminal("D-pad selection does not type", input_text="")
     assert selected["selected_key"] == 1 and selected["reply"] == original_reply
