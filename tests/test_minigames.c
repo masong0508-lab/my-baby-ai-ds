@@ -335,6 +335,93 @@ static void courtroom_crayons(void){
  g.corruption=65;game_arcade_start(&g,&a,14);
  assert(a.timer==180);
 }
+/* A timed-out question must still agree with its visible answer choices.
+ * These cabinets once fell into the retired direction-game retry path,
+ * leaving stale answers/evidence behind a newly changed prompt. */
+static void check_retry_prompt(const Game *g,const Arcade *a){
+ unsigned fast=game_glitch_tier(g)>=3;
+ int i,matches=0;
+ assert(a->active&&!a->finished);
+ if(a->id==10){
+  assert(a->timer==(fast?120:180));
+  assert(a->stage>=1&&a->stage<=4);
+  assert(a->direction>=1&&a->direction<=4);
+  for(i=0;i<3;i++)if(a->notes[i]==a->stage+a->direction){
+   matches++;assert(i==a->target);
+  }
+  assert(matches==1);
+ }else if(a->id==12){
+  assert(a->timer==(fast?125:180));
+  assert(a->stage>=20&&a->stage<=69);
+  assert(a->direction==a->stage||a->direction==a->stage+5);
+  assert(a->target==(a->stage==a->direction?0:1));
+ }else{
+  unsigned mask=0;
+  assert(a->id==14&&a->timer==(fast?180:270));
+  assert(a->stage==0&&!a->touch_active);
+  for(i=0;i<3;i++){
+   assert(a->notes[i]<3);
+   mask|=1u<<a->notes[i];
+  }
+  assert(mask==7u);
+ }
+}
+static void answer_retry_round(Game *g,Arcade *a){
+ if(a->id==14){
+  int i;
+  for(i=0;i<3;i++)game_arcade_input(g,a,a->notes[a->stage]);
+ }else game_arcade_input(g,a,a->target);
+}
+static void timed_question_recovery(void){
+ static const int ids[3]={10,12,14};
+ static const unsigned corruption[4]={2,58,65,98};
+ static const int xs[3]={46,128,210},ys[3]={134,92,134};
+ Game g;Arcade a;
+ int cabinet,tier,seed,strike,i;
+ for(cabinet=0;cabinet<3;cabinet++)for(tier=0;tier<4;tier++)
+ for(seed=1;seed<=16;seed++){
+  game_init(&g);g.unlocked=0xffffu;g.rng=(uint32_t)seed;
+  g.corruption=(uint8_t)corruption[tier];
+  game_arcade_start(&g,&a,ids[cabinet]);
+  answer_retry_round(&g,&a);
+  assert(a.round==1);
+  for(strike=1;strike<=2;strike++){
+   unsigned duration=a.timer,round=a.round;
+   if(a.id==14){
+    /* Time out halfway through a real stylus evidence gesture. */
+    int node=a.notes[0];
+    game_arcade_court_touch(&g,&a,1,xs[node],ys[node]);
+    assert(a.stage==1&&a.touch_active);
+   }
+   for(i=0;i<(int)duration;i++)game_arcade_tick(&g,&a);
+   assert(a.mistakes==strike&&a.round==round);
+   assert(g.wins==0&&g.losses==0&&g.dollars==8&&g.favors==1);
+   check_retry_prompt(&g,&a);
+   answer_retry_round(&g,&a);
+   assert(a.round==round+1);
+  }
+  while(a.active)answer_retry_round(&g,&a);
+  assert(a.finished==1&&g.wins==1&&g.losses==0);
+  assert(g.dollars==13&&g.favors==1);
+  for(i=0;i<5;i++)game_arcade_tick(&g,&a);
+  assert(g.wins==1&&g.dollars==13);
+
+  /* The third timeout still ends the game exactly once, with no reward. */
+  game_init(&g);g.unlocked=0xffffu;g.rng=(uint32_t)seed;
+  g.corruption=(uint8_t)corruption[tier];
+  game_arcade_start(&g,&a,ids[cabinet]);
+  for(strike=1;strike<=3;strike++){
+   unsigned duration=a.timer;
+   for(i=0;i<(int)duration;i++)game_arcade_tick(&g,&a);
+   assert(a.mistakes==strike&&a.round==0);
+   if(strike<3)check_retry_prompt(&g,&a);
+  }
+  assert(!a.active&&a.finished==2&&g.losses==1&&g.wins==0);
+  assert(g.dollars==8&&g.favors==1);
+  for(i=0;i<5;i++)game_arcade_tick(&g,&a);
+  assert(g.losses==1&&g.wins==0&&g.dollars==8);
+ }
+}
 static void ceo_of_daycare(void){
  Game g;Arcade a;int i;
  game_init(&g);g.unlocked=0xffffu;game_arcade_start(&g,&a,15);
@@ -375,6 +462,7 @@ int main(void){
  crib_kart();baby_beatbox();sock_market();naptime();rattle();
  corporate_crawl();stroller_drift();cereal_cipher();tantrum_blocks();
  first_audit();glitch_gardening();courtroom_crayons();ceo_of_daycare();
+ timed_question_recovery();
  puts("PASS: all 16 arcade mechanics, touch gestures, collision, memory, strategy, timers");
  return 0;
 }

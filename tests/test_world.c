@@ -2,7 +2,37 @@
 #include <string.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <nds.h>
 #include "world.h"
+/* Capture actual submitted triangle vertices before the no-op transforms.
+ * A rigid model transform preserves triangle area. This catches repeated
+ * hand-cap poles without pretending the host shim emulates DS pixels. */
+static int primitive_mode;
+static unsigned primitive_vertices,submitted_triangles;
+static float triangle_points[3][3];
+void test_gl_begin(int mode){
+ primitive_mode=mode;primitive_vertices=0;
+}
+void test_gl_vertex(float x,float y,float z){
+ if(primitive_mode==GL_TRIANGLES){
+  unsigned n=primitive_vertices%3u;
+  triangle_points[n][0]=x;triangle_points[n][1]=y;triangle_points[n][2]=z;
+  if(n==2u){
+   float ax=triangle_points[1][0]-triangle_points[0][0];
+   float ay=triangle_points[1][1]-triangle_points[0][1];
+   float az=triangle_points[1][2]-triangle_points[0][2];
+   float bx=x-triangle_points[0][0],by=y-triangle_points[0][1];
+   float bz=z-triangle_points[0][2];
+   float cx=ay*bz-az*by,cy=az*bx-ax*bz,cz=ax*by-ay*bx;
+   assert(cx*cx+cy*cy+cz*cz>1.e-12f);
+   submitted_triangles++;
+  }
+ }
+ primitive_vertices++;
+}
+void test_gl_end(void){
+ if(primitive_mode==GL_TRIANGLES)assert(primitive_vertices%3u==0u);
+}
 int main(void){
  Game s;Roughhouse r;int i;unsigned worst_v=0,worst_p=0;
  game_init(&s);world_init();
@@ -60,14 +90,14 @@ int main(void){
     last=q.x;
    }
    world_draw_nursery(&s,130u,3,18u,i,-1,16u,
-                      i==0,i!=1,18u,0);
+                      i==0,i!=1,18u,0,0);
    assert(world_vertex_count()<=5000);
    assert(world_polygon_count()<=1850);
   }
   /* Visual-state changes must not alter any saved Game data. */
   {
    Game original=s;
-   world_draw_nursery(&s,132u,0,0u,0,-1,16u,1,0,40u,0);
+   world_draw_nursery(&s,132u,0,0u,0,-1,16u,1,0,40u,0,0);
    assert(memcmp(&original,&s,sizeof(s))==0);
    world_draw(&s,133u,0); /* normal care restores night + lamp */
    assert(world_polygon_count()<=1850);
@@ -90,7 +120,7 @@ int main(void){
   assert(first.x-interrupt.x<.08f && interrupt.x-first.x<.08f);
   assert(first.look_x-interrupt.look_x<.08f);
   assert(end.x==crib.x&&end.look_x==crib.look_x);
-  world_draw_nursery(&s,222u,0,0u,3,0,1u,0,1,40u,&midway);
+  world_draw_nursery(&s,222u,0,0u,3,0,1u,0,1,40u,&midway,0);
   assert(world_vertex_count()<=5000);
   assert(world_polygon_count()<=1850);
  }
@@ -102,7 +132,7 @@ int main(void){
   s.mood=95;
   for(age=0u;age<=56u;age++){
    world_draw_nursery(&s,173u+age,4,age,3,-1,16u,
-                      0,1,40u,0);
+                      0,1,40u,0,0);
    assert(world_vertex_count()<=5000);
    assert(world_polygon_count()<=1850);
   }
@@ -126,7 +156,7 @@ int main(void){
    assert(angle-prev<=3&&prev-angle<=3);
    prev=angle;
    world_draw_nursery(&s,350u+tick,4,18u,3,-1,16u,
-                      0,0,tick,0);
+                      0,0,tick,0,0);
    assert(world_vertex_count()<=5000);
    assert(world_polygon_count()<=1850);
   }
@@ -153,7 +183,7 @@ int main(void){
    assert(v<=0&&v>=-12);
    assert(v-old<=3 && old-v<=3);
    old=v;
-   world_draw_nursery(&s,300u+tick,0,0u,2,-1,16u,0,1,tick,0);
+   world_draw_nursery(&s,300u+tick,0,0u,2,-1,16u,0,1,tick,0,0);
    assert(world_vertex_count()<=5000);
    assert(world_polygon_count()<=1850);
   }
@@ -176,6 +206,58 @@ int main(void){
    old=v;
   }
  }
+ /* A room retarget starts at the current head angle, not at neutral.
+  * Exercise every prop/neutral pair, plus interruptions at EVERY tick:
+  * rapid WINDOW->CRIB->TEDDY and BACK retain the visible pose. */
+ {
+  int from_focus,to_focus;
+  for(from_focus=-1;from_focus<4;from_focus++){
+   int from=world_baby_attention_angle(from_focus,16u);
+   for(to_focus=-1;to_focus<4;to_focus++){
+    int target=world_baby_attention_angle(to_focus,16u),previous=from;
+    unsigned age;
+    assert(world_baby_attention_from(from,to_focus,0u)==from);
+    assert(world_baby_attention_from(from,to_focus,16u)==target);
+    assert(world_baby_attention_from(from,to_focus,UINT32_MAX)==target);
+    for(age=0u;age<=16u;age++){
+     int sampled=world_baby_attention_from(from,to_focus,age),next_focus;
+     assert(sampled>=-7&&sampled<=6);
+     assert(sampled-previous<=2&&previous-sampled<=2);
+     if(target>=from)assert(sampled>=previous&&sampled<=target);
+     else assert(sampled<=previous&&sampled>=target);
+     for(next_focus=-1;next_focus<4;next_focus++){
+      int restart=world_baby_attention_from(sampled,next_focus,0u);
+      assert(restart==sampled); /* no one-frame head jump on reversal */
+     }
+     previous=sampled;
+    }
+   }
+  }
+  /* Snapshot a genuinely incomplete turn, then immediately reverse and
+   * return to the player while the original camera is still travelling. */
+  {
+   int lamp=world_baby_attention_from(0,1,11u);
+   int toward_crib=world_baby_attention_from(lamp,3,3u);
+   int towards_baby=world_baby_attention_from(toward_crib,-1,1u);
+   assert(lamp<0&&toward_crib<0);
+   assert(world_baby_attention_from(lamp,3,0u)==lamp);
+   assert(world_baby_attention_from(toward_crib,-1,0u)==toward_crib);
+   assert(towards_baby>=toward_crib&&towards_baby<=0);
+   assert(world_baby_attention_from(toward_crib,-1,16u)==0);
+  }
+  /* Attention changes only an existing transform: same mesh submissions,
+   * same saved needs, no geometry growth during either turn direction. */
+  {
+   Game original=s;
+   unsigned vertices,polygons;
+   world_draw_nursery(&s,128u,0,56u,3,1,6u,0,1,40u,0,0);
+   vertices=world_vertex_count();polygons=world_polygon_count();
+   world_draw_nursery(&s,128u,0,56u,3,1,6u,0,1,40u,0,-7);
+   assert(world_vertex_count()==vertices&&world_polygon_count()==polygons);
+   assert(vertices<=5000&&polygons<=1850);
+   assert(memcmp(&original,&s,sizeof(s))==0);
+  }
+ }
  /* Arm gestures now rotate one connected shoulder-to-hand structure.
   * FEED reaches, CHAT invites, PLAY reaches farther, NAP folds in. */
  assert(world_baby_arm_reach(0)==7);
@@ -190,6 +272,21 @@ int main(void){
  assert(world_baby_neck_tilt(2,0u)==world_baby_neck_tilt(2,80u));
  assert(world_baby_arm_reach(3)>world_baby_arm_reach(2));
  assert(world_baby_arm_reach(2)>world_baby_arm_reach(1));
+ /* Both rotating hands retain their complete 8-face top and bottom caps.
+  * Reverting them to collapsed quad-strip poles removes these triangles
+  * and can reintroduce the brown FEED scanline seen in native DeSmuME. */
+ {
+  int action;
+  unsigned age;
+  for(action=0;action<=4;action++){
+   for(age=0u;age<=56u;age++){
+    submitted_triangles=0;
+    world_draw_care(&s,128u,action,age);
+    assert(submitted_triangles==32u); /* 2 hands x 2 caps x 8 faces */
+    assert(world_vertex_count()<=5000&&world_polygon_count()<=1850);
+   }
+  }
+ }
  /* The same care-age sequence replays consistently no matter when
   * the physical button is pressed. Keep the 80-age curve in range. */
  {
