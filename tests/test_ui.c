@@ -183,6 +183,13 @@ int main(void){
  assert(!ui_room_entry_touch(220,55));
  assert(!ui_room_entry_touch(120,40));
  assert(!ui_room_entry_touch(243,40));
+ assert(ui_room_touch(220,54)==7); /* explicit in-room SAVE */
+ assert(ui_room_touch(198,49)==7);
+ assert(ui_room_touch(243,62)==7);
+ assert(ui_room_touch(197,55)==-1);
+ assert(ui_room_touch(244,55)==-1);
+ assert(ui_room_touch(220,48)==-1);
+ assert(ui_room_touch(220,63)==-1);
  assert(ui_room_touch(28,90)==0); /* window */
  assert(ui_room_touch(180,90)==1); /* lamp */
  assert(ui_room_touch(28,139)==2); /* teddy */
