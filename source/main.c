@@ -59,7 +59,7 @@ static void save_live_baby(void){
  }
  if(storage_ok)
   message=save_write(SAVE_BASE,&baby)?
-          "BABY SAVED. BACKUP SECURED!":
+          "CURRENT BABY SAVED TO STORAGE.":
           "SAVE WRITE FAILED. PROGRESS IN RAM!";
  else message="NO SAVE DEVICE - RAM ONLY.";
 }

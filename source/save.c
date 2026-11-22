@@ -10,6 +10,11 @@ typedef struct {uint32_t magic;uint16_t version,size;Game game;uint32_t hash;} R
 static int newer(uint32_t a,uint32_t b){
  return a!=b&&(uint32_t)(a-b)<0x80000000u;
 }
+static const Record *latest_valid(const Record *a,int x,const Record *b,int y){
+ if(y&&(!x||newer(b->game.sequence,a->game.sequence)||
+        b->game.sequence==a->game.sequence))return b;
+ return x?a:NULL;
+}
 static int valid_game(const Game *g){
  return g->days!=0&&g->rng!=0&&
         (g->unlocked&255u)==255u&&
@@ -38,19 +43,26 @@ static int read_one(const char *base,int slot,Record *r){
         r->hash==digest(r)&&valid_game(&r->game);
 }
 int save_load(const char *base,Game *out){
- Record a,b;int x,y;
+ Record a,b;const Record *latest;int x,y;
  if(!out)return 0;
- x=read_one(base,0,&a);y=read_one(base,1,&b);if(!x&&!y)return 0;
- *out=(y&&(!x||newer(b.game.sequence,a.game.sequence)||b.game.sequence==a.game.sequence))?b.game:a.game;return 1;
+ x=read_one(base,0,&a);y=read_one(base,1,&b);
+ latest=latest_valid(&a,x,&b,y);if(!latest)return 0;
+ *out=latest->game;return 1;
 }
 int save_write(const char *base,Game *s){
- Record a,b,r;int x,y,slot;char fn[192];FILE *f;
+ Record a,b,r;const Record *latest;int x,y,slot;char fn[192];FILE *f;
  if(!s||!valid_game(s))return 0;
  x=read_one(base,0,&a);y=read_one(base,1,&b);
- slot=!x?0:!y?1:newer(a.game.sequence,b.game.sequence)?1:0;
+ latest=latest_valid(&a,x,&b,y);
+ slot=!x?0:!y?1:latest==&a?1:0;
  if(!path(fn,sizeof(fn),base,slot))return 0;
  memset(&r,0,sizeof(r));r.magic=MAGIC;r.version=1;r.size=sizeof(Game);r.game=*s;
- r.game.sequence=s->sequence+1;r.hash=digest(&r);
+ /* Room SAVE may first enable storage after starting a NEW baby in RAM.
+  * Its sequence need not match disk. Advance the latest valid disk record
+  * so a successful write reloads this baby, while retaining the old slot
+  * as the fallback. Copy no old gameplay state into the current baby. */
+ r.game.sequence=(latest?latest->game.sequence:s->sequence)+1u;
+ r.hash=digest(&r);
  f=fopen(fn,"wb");if(!f)return 0;
  if(fwrite(&r,1,sizeof(r),f)!=sizeof(r)||fflush(f)!=0){fclose(f);return 0;}
  if(fclose(f)!=0)return 0;

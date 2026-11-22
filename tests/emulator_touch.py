@@ -127,8 +127,19 @@ def test_actual_game(path: Path, output: Path) -> dict:
     # distinct right-hand SAVE/LOAD card. Its hitbox and native screenshot
     # must agree with the host C test (x=159..236, y=140..167).
     save_card = title.crop((159, 192 + 140, 237, 192 + 168))
-    assert len(set(save_card.get_flattened_data())) >= 6, (
-        "Title SAVE/LOAD card is blank or fails to render on real DS"
+    # This deliberately flat card uses FOUR colors (mint fill, teal edge,
+    # dark caption, white corners). A palette-size threshold rejected the
+    # correctly rendered ROM; verify the visible button parts instead.
+    save_pixels = list(save_card.get_flattened_data())
+    mint_fill = sum(1 for r, g, b in save_pixels
+                    if r > 140 and g > 200 and b > 140 and g > r + 30)
+    teal_edge = sum(1 for r, g, b in save_pixels
+                    if r < 130 and g > 150 and b > 160 and g > r + 60)
+    label_ink = sum(1 for r, g, b in save_pixels
+                    if r < 100 and g < 100 and b < 130)
+    assert mint_fill > 1200 and teal_edge > 120 and label_ink > 75, (
+        "Title SAVE/LOAD card lacks its fill, border or readable caption "
+        f"(mint={mint_fill}, edge={teal_edge}, text={label_ink})"
     )
     emu.input.touch_set_pos(201, 154)
     frames(emu, 15)
