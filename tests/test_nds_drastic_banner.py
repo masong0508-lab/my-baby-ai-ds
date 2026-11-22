@@ -81,7 +81,7 @@ def main():
     corrupted[0x15e:0x160]=crc16(corrupted[:0x15e]).to_bytes(2,"little")
     reject(corrupted)
     corrupted=bytearray(fixture())
-    struct.pack_into("<I",corrupted,0x2c,0x3000)
+    struct.pack_into("<I",corrupted,0x2c,0x5000)
     corrupted[0x15e:0x160]=crc16(corrupted[:0x15e]).to_bytes(2,"little")
     reject(corrupted)
     corrupted=bytearray(fixture())
