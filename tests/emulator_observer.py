@@ -235,7 +235,7 @@ def typing_scenario(player, initial):
     player.step(25)
     player.capture("microphone_listening_without_injected_audio", player.screen())
     player.key(Keys.KEY_B)
-    returned = player.terminal("MIC B returns to WARDEN", input_text="")
+    _, returned = player.terminal("MIC B returns to WARDEN", input_text="")
     assert parse_status(returned) == parse_status(entry), returned
     player.key(Keys.KEY_RIGHT)
     _, selected = player.terminal("D-pad selection does not type", input_text="")
