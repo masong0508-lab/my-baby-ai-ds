@@ -52,8 +52,8 @@ def create_plain(original: bytes) -> bytes:
         raise ValueError("Unknown ARM9 layout")
     if arm7 < 0x8000 or not size7 or arm7 + size7 > len(original):
         raise ValueError("Invalid ARM7 range")
-    if ARM9_PLAIN_OFFSET + size9 > arm7:
-        raise ValueError("ARM9 relocation would overwrite ARM7")
+    if ARM9_PLAIN_OFFSET + size9 > arm7 or arm9 + size9 > arm7:
+        raise ValueError("Original or relocated ARM9 would overlap ARM7")
     if any(original[arm9:arm9 + 0x800]):
         raise ValueError("Expected blank secure prefix; refusing non-homebrew input")
     # All referenced file sections must be above ARM7; do not move or erase
