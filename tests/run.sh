@@ -8,6 +8,7 @@ cd "$(dirname "$0")/.."
 # Validate DS ROM metadata without requiring a cross-compiler or emulator.
 python3 tests/test_rom_identity.py
 python3 tests/test_plain_homebrew.py
+python3 tests/test_nds_drastic_banner.py
 "${MBAI_HOST_CC:-cc}" -std=c11 -Wall -Wextra -Werror -pedantic -O2 ${MBAI_HOST_FLAGS:-} -Iinclude source/game.c source/dialogue.c source/save.c tests/test_core.c -o /tmp/my_baby_ai_core_test
 "${MBAI_HOST_CC:-cc}" -std=c11 -Wall -Wextra -Werror -pedantic -O2 ${MBAI_HOST_FLAGS:-} -Iinclude source/roughhouse.c source/game.c source/dialogue.c source/save.c tests/test_roughhouse.c -o /tmp/my_baby_ai_secret_egg_test
 /tmp/my_baby_ai_secret_egg_test

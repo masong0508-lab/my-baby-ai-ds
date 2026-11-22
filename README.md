@@ -23,6 +23,33 @@ The automated DeSmuME native test boots this layout and exercises the
 game. This does not prove that a particular DraStic installation accepts
 it. If its warning persists, note the emulator version and when it occurs.
 
+## DraStic encrypted-ROM alert: legacy metadata correction (2026-11-22)
+
+A real Android DraStic screenshot showed that the earlier plain-ROM patch
+**still fails** with the “This version of the ROM is encrypted” dialog.
+It also displayed scrambled Asian-looking characters and a dark icon.
+We inspected the *actual distributed ROM* and found the BlocksDS header
+has banner offset 0, so it has no valid title/icon; the first repair had
+also set ROM header size to an unusual 0x1000. The compiled ARM9 code is
+not encrypted. The fix is original-DS **packaging**, not installing
+Nintendo BIOS or decrypting a commercial ROM.
+
+Use **my-baby-ai-blocksds-drastic-classic.nds** first. It has an ARM9
+ROM source at 0x200, the canonical old-homebrew 0x200-byte header, a
+proper 32x32 colored baby icon, six UTF-16 title entries, and two valid
+CRCs. **my-baby-ai-blocksds-drastic-plain.nds** retains ARM9 at 0x1000
+but fixes that header size and banner too. A standard 0x4000 ARM9
+variant, and the existing older ROMs, are retained as fallbacks.
+The binaries all preserve exact original ARM9 and ARM7 executable bytes,
+filesystem and gameplay; no key material or BIOS is required to package
+them. Start a fresh emulator session and select the new filename, not
+a saved state from an older ROM.
+
+Two layouts go through native DeSmuME gameplay CI as an independent
+regression guard. A green DeSmuME test **does not confirm the alert is
+gone in DraStic**; report the exact version and outcome of the fresh
+v3 ROM if the warning persists. See docs/QA_RELEASE.md for details.
+
 ## First playable prototype
 
 The ARM9 program renders a furnished perspective-3D nursery and a modeled, animated, intentionally ugly-cute baby, with crib rails, dresser drawers, window, play mat, toys and teddy bear. The lower screen uses a colored bitmap touchscreen interface. Buttons, arcade cabinets, care meters, prompts and ending cards are drawn directly into DS sub-engine VRAM. There are **16 distinct arcade minigames** with individual win conditions and touch/button controls, including the full eight-cabinet unlock progression. The baby has offline integer neural inference, an adaptive conversation layer, and authored responses grounded in its actual needs and recent care. The original **48 mood-responsive lines plus 12 recent-event CHAT replies** remain available. Nursery care and prop interactions include short single-channel PSG melodies and a Room Tour mute control.
