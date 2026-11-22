@@ -26,6 +26,11 @@ read clearly and remain part of the acceptance review.
   tiny catchlight, and full closure retains the existing joined crease
   marks. No rectangular skin shutter covers the cheeks. All facial parts
   still share the existing neck/attention transform.
+- **Speech aperture:** native review also identified a pre-existing long
+  dark line across the jaw at the smallest CHAT syllable. The mouth's thin
+  ellipsoid now uses the same positive-area surface treatment at its old
+  visible front depth. The tongue follows the opening instead of remaining
+  below a nearly closed syllable. Toybox impact gasps share this correction.
 - **Materials:** cheeks use the same shaded surface treatment. The bib
   becomes a soft cream cloth patch; the romper has more distinct teal
   midtones, and booties have broad, subdued toe trim instead of thin
@@ -43,9 +48,13 @@ The optional creature geometry and its material colors are untouched.
 
 ## Submission budgets and host verification
 
-The focused strict C11 world test passes. The sampled nursery maximum is
-**4,424 submitted vertices / 1,645 polygons**, down from **4,702 / 1,808**:
-278 fewer vertices and 163 fewer polygons despite the contact surfaces.
+The focused strict C11 world test passes. Before adding the WARDEN landmark,
+the sampled nursery maximum is **4,394 submitted vertices / 1,629 polygons**,
+down from **4,702 / 1,808**: 308 fewer vertices and 179 fewer polygons despite
+the contact surfaces. The mouth correction alone saves another 30 vertices
+and 16 polygons compared with the initial eye/material refinement.
+With the physical WARDEN wall terminal and connected hostile poses integrated,
+the same sampled maximum is **4,402 vertices / 1,631 polygons**.
 This is a command-submission count, not measured FPS or total RAM usage.
 
 The nursery regression gate is tightened to **4,500 vertices / 1,700
@@ -62,6 +71,8 @@ Review the candidate production ROM at 256×192 per screen before merging:
 
 1. CARE and TALK: eye rims/irises must remain inset and readable, with no
    white plaques, face clipping, detached catchlights or added teeth.
+   Low CHAT syllables must also stay within the intended mouth footprint;
+   inspect the LIKE acknowledgement against its preserved before capture.
 2. NAP, low energy and rapid care changes: check complete/partial blinks,
    connected face/arms and the return to idle.
 3. ROOM window, lamp, teddy and crib views: check coherent broad lighting,

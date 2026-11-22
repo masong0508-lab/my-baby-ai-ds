@@ -30,6 +30,13 @@ it does not treat a screenshot captured halfway through a VRAM repaint as
 a finished puzzle. All waits have bounded emulator-cycle budgets, and the
 CI process has an additional 240-second wall-clock timeout.
 
+The held Teether drag also waits, with the stylus still down, for the
+title, status, progress counters, cue and both tray colors to be readable.
+This wait accepts any internally consistent score. The unchanged-score
+and moved-receipt assertions run afterward, so the wait cannot accept
+early scoring or hide a receipt drawn underneath the tray. Its extra
+cycles and before/held counters are preserved in the screenshot event.
+
 ## Regression found by this test
 
 The `b13aab7` production baseline failed the Teether held-receipt visibility
@@ -46,6 +53,26 @@ On that baseline, Sock loss/restart/timeout recovery and Beatbox recovery
 completed. A separate native exploration confirmed six Teether sorts and
 the earned Cereal purchase/two-timeout recovery. Those partial checks do
 not replace a full green run of the strict harness on the corrected ROM.
+
+The Last Nursery candidate `5d652724` exposed a separate capture-timing
+assumption in that held-receipt check. On the exact production ROM below,
+both CI and a local replay reached cycle 2226 while the title and counter
+panel were blank during a repaint. Keeping the native stylus held for one
+more emulator cycle restored the complete panel with zero sorts and one
+mistake; the dragged receipt remained on its tray. Another repaint at
+cycle 2234 completed at 2235. Waiting for the rendered cabinet, instead
+of assuming the fixed hold ends on a complete paint, resolves this test
+synchronization issue without changing ROM code or the scoring/visibility
+assertions.
+
+Reproduced ROM SHA-256:
+`bbe3f7d57d94fc829f9176cc9d0295d0a7b57e0d5e5f0bf6730caa1a3393d007`.
+
+The corrected harness completed the full route on that unchanged ROM in
+3,749 emulator cycles. The held check needed one extra cycle, retained
+zero sorts/one mistake before release, and measured 588 changed receipt
+pixels. All six released receipts then scored normally, and the earned
+Cereal route finished with seven wins, $29 and two Favors.
 
 ## Run locally
 

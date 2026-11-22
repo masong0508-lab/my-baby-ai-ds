@@ -54,10 +54,13 @@ sequence, but no damage is permitted to occur unnoticed during setup.
 
 The terminal remains open for 660 emulator cycles. Its attack log must stay
 unchanged, demonstrating that typing pauses the hostile clock. Returning to
-CARE must expose a clear GUARD badge and windup footer. Touching GUARD blocks
+CARE must expose a clear GUARD badge and windup footer. The test advances 36
+emulator cycles and requires that warning to remain visible before capturing
+the eased upper-screen anticipation pose. Touching GUARD blocks
 the attack, keeps integrity at 100, and records one actual block.
 
-The next windup is allowed to finish. The test captures the hit/lunge, then
+The next windup is allowed to finish. The test captures the hit/lunge after
+32 additional emulator cycles and rechecks the hit notice and care meters, then
 checks that WARDEN reports one confirmed hit and integrity 92. Typing REPAIR
 restores integrity 100 while preserving the observed hit and block history.
 Care meters, day and currency must remain unchanged by these attacks/repairs.

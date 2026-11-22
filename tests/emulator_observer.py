@@ -205,7 +205,16 @@ class ObserverPlayer(Player):
                     "WINDUP! TAP GUARD / RIGHT")
 
         image = self.wait(name, matches, limit=limit, stride=2)
-        self.capture(name, image, view=view, warning="WINDUP! TAP GUARD / RIGHT")
+        # The GUARD redraw can precede the upper LCD's eased anticipation
+        # pose. Keep the real warning visible for a bounded interval so
+        # evidence shows its narrowed eyes and connected arm reach. This
+        # is still inside the observed native windup; assert that the
+        # warning survives before allowing the test's actual counter.
+        self.step(36)
+        image = self.screen()
+        assert matches(image), "Windup ended before its pose evidence was captured"
+        self.capture(name, image, view=view, warning="WINDUP! TAP GUARD / RIGHT",
+                     pose_capture_delay_cycles=36)
         return image
 
 
@@ -340,8 +349,15 @@ def hostility_scenario(player):
     image = player.wait("unblocked attack lands", lambda im:
                         care_reply(im).startswith("YOUR BRACER TOOK A HIT!"), limit=360, stride=2)
     assert care_values(image) == after_care
+    # Capture the lunge after its connected rig has eased into the strike,
+    # not the first bitmap frame that announces the already-recorded hit.
+    player.step(32)
+    image = player.screen()
+    assert care_reply(image).startswith("YOUR BRACER TOOK A HIT!")
+    assert care_values(image) == after_care
     player.capture("care_actual_unblocked_hit_and_lunge", image,
-                   reply=care_reply(image), **care_values(image))
+                   reply=care_reply(image), pose_capture_delay_cycles=32,
+                   **care_values(image))
     player.enter("keypad", "monitor_after_actual_hit")
     hit = parse_attacks(player.ask("ATTACKS", "monitor_truthful_damage_record"))
     assert hit == {"stage": "HOSTILE", "windups": 2, "hits": 1,

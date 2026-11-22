@@ -333,6 +333,15 @@ static void baby_eye(float x,float y,float z,float scale,int lid){
   soft_mark(x-.010f*scale,center+.024f*scale,z+.038f,
              .023f*scale,.018f*scale,31,31,29);
 }
+/* Low CHAT syllables used a wafer-thin ellipsoid whose pole bands could
+ * rasterize as a long horizontal line across the jaw. The same intended
+ * aperture is now eight positive-area triangles at the old front depth.
+ * The tongue follows the aperture instead of floating below a closed
+ * syllable. Both surfaces stay on the shared head/neck transform. */
+static void baby_mouth(float open){
+ face_oval(0,.252f,.468f,.094f,.085f*open,12,4,9,-1);
+ soft_mark(0,.252f-.040f*open,.476f,.095f,.025f*open,30,15,19);
+}
 unsigned world_vertex_count(void){return frame_vertices;}
 unsigned world_polygon_count(void){return frame_polygons;}
 /* Four physically anchored hanging charms. One shared parent transform
@@ -967,8 +976,7 @@ static void baby_model(const Game *s,uint32_t frame,int action,
    * to its ordinary expression. Reuse the CHAT mouth geometry, no
    * new material, sprites, or animation allocations. */
   float gasp=.42f+(float)rag->impact/9.f*.48f;
-  ellipse(0,.252f,.451f,.094f,.085f*gasp,.020f,12,4,9);
-  soft_mark(0,.212f,.476f,.095f,.025f*gasp,30,15,19);
+  baby_mouth(gasp);
  }else if((action==2||action==WORLD_BABY_LUNGE||(happy&&action==3)||
            action==WORLD_BABY_CHEER)&&weight>40){
   /* CHAT syllables must remain visible when the baby is unhappy, too:
@@ -979,8 +987,7 @@ static void baby_model(const Game *s,uint32_t frame,int action,
   float speech=action==2?(float)world_baby_speech_open(action_age)/256.f:1.f;
   float open=action==WORLD_BABY_CHEER?.72f:action==2?
               .12f+(happy?.88f:.59f)*speech:1.f;
-  ellipse(0,.252f,.451f,.094f,.085f*open,.020f,12,4,9);
-  soft_mark(0,.212f,.476f,.095f,.025f*open,30,15,19);
+  baby_mouth(open);
  }else if(happy||(action==WORLD_BABY_REGROUP&&weight>40)){
   /* A loss receives encouragement through the existing closed smile. */
   soft_mark(-.065f,.278f,.444f,.052f,.017f,18,9,11);

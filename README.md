@@ -20,7 +20,7 @@ Tap **CPU** or press **UP** in CARE to open the terminal. **TARGET / Y** switche
 
 The optional **152-byte observation profile** saves taught phrases, observed history and bracer state in a checksummed companion tied to the exact v1 Game. Missing or damaged companions do not prevent normal progress loading. Saving remains explicit; RAM-only play does not persist after reboot.
 
-The actual nursery renderer now has shallower rounded eyes, softer cheeks/bib, stronger clothing and room shading, grounded furniture/boots, a physical WARDEN wall terminal, and connected wind-up/lunge acting. CARE/TALK cards have clearer hierarchy and selection. Sampled normal-scene submission maxima are **4,432 vertices / 1,647 polygons**, down from 4,702 / 1,808. These are geometry counts, not FPS measurements.
+The actual nursery renderer now has shallower rounded eyes, softer cheeks/bib, stronger clothing and room shading, grounded furniture/boots, a physical WARDEN wall terminal, and connected wind-up/lunge acting. Speaking mouths stay within their intended aperture instead of stretching into a dark line across the jaw. CARE/TALK cards have clearer hierarchy and selection. Sampled normal-scene submission maxima are **4,402 vertices / 1,631 polygons**, down from 4,702 / 1,808. These are geometry counts, not FPS measurements.
 
 See [story and progression](docs/THE_LAST_NURSERY.md), [observer rules and persistence](docs/SHELTER_OBSERVER.md), [word-model architecture and limits](docs/NARRATIVE_LANGUAGE_MODEL.md), [reference analysis](docs/SNES_REFERENCE_ANALYSIS.md), and [native observer tests](docs/NATIVE_OBSERVER_TESTS.md).
 

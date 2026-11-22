@@ -91,7 +91,10 @@ steady indicator and bracer bar use actual observer state. The same connected
 body rig performs a readable wind-up and finite forward lunge, without extra
 character geometry, screen shake or flashes.
 
-The integrated normal-scene host maximum is **4,432 vertices / 1,647 polygons**
+Speaking and impact mouths use the same positive-area facial surface treatment,
+preventing thin ellipsoid bands from becoming a long dark line across the jaw.
+
+The integrated normal-scene host maximum is **4,402 vertices / 1,631 polygons**
 (previously 4,702 / 1,808). The normal nursery gate is now **4,500 / 1,700**;
 the broader Toybox/egg gate stays 5,000 / 1,850, and title stays 1,024 / 350.
 The model has no additional textures, VRAM allocations or framebuffer.
