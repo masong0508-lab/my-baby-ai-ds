@@ -45,6 +45,13 @@ int ui_observer_entry_touch(int x,int y);
 void ui_observer_alert(const char *text);
 void ui_observer_guard_prompt(unsigned integrity);
 void ui_observer_save_warning(void);
+void ui_voice_save_warning(void);
+/* Explicit microphone lab (view 13): no implied voice control, no raw
+ * samples in the UI. Touch 1 TRAIN, 2 LISTEN, 3 USE, 4 BACK. */
+int ui_mic_touch(int x,int y);
+void ui_mic_draw(const Game *s,int can_save,const char *label,
+                 const char *status,const char *match,unsigned level,
+                 unsigned learned,int listening);
 int ui_room_entry_touch(int x,int y);
 int ui_room_touch(int x,int y); /* 0 window, 1 lamp, 2 teddy, 3 crib, 4 back, 5 sound, 6 use */
 int ui_prank_entry_touch(int x,int y);

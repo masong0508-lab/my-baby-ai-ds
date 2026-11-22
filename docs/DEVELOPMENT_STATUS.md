@@ -10,6 +10,19 @@ Implemented source now includes a typed two-role terminal, a pretrained 412-toke
 
 The nursery graphics use shallow rounded facial surfaces, bounded speech/impact mouths, stronger materials/contact shadows and a physical WARDEN terminal; finite hostile poses reuse the same connected rig. CARE/TALK and the new terminal are drawn directly into existing DS bitmap VRAM. Host-sampled normal scenes peak at 4,402 vertices/1,631 polygons. No texture bank, heap-based inference or extra framebuffer was added. Actual native results must be recorded against the candidate; these source/host facts are not a physical-DS performance claim.
 
+## Microphone and trainable word-control checkpoint
+
+A new MIC LAB uses both libnds ARM7 microphone APIs behind a bounded
+1,024-byte PCM16 buffer, 8,192 Hz capture and ARM9 cache invalidation.
+A 24-slot, two-example-per-label adaptive feature-template matcher
+can suggest typed WARDEN/BABY queries. Explicit USE confirmation is required;
+the baby does not execute voice commands autonomously. A separate
+exact-Game-bound voice companion persists under 3.5 KiB of learned features
+when FAT/DLDI is enabled, without modifying v1 progress, conversation
+styles or observer logs. Neither speech-to-text nor live mic reliability
+on the user's DraStic or a physical DS has been proven; current automated
+coverage is synthetic acoustic training plus native mic-screen/exit testing.
+
 ## What exists in the repository
 
 | Area | Current implementation | Limitations / missing verification |

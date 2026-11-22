@@ -382,9 +382,13 @@ def test_beatbox(player):
             else:
                 player.tap(36 + pad * 62, 145)
             if position < 2:
-                image = player.wait("accepted Beatbox note", lambda im:
+                image = player.wait("accepted Beatbox note with fully drawn progress", lambda im:
                     all(color_at(im, 148 + i * 18, 108) == "green"
-                        for i in range(position + 1)))
+                        for i in range(position + 1)) and
+                    progress(im, 3) == (tune, 1))
+                # The renderer updates the two UI regions separately. Do not
+                # accept the new note until BOTH the note markers and the
+                # complete score/mistake HUD are visible together.
                 assert progress(image, 3) == (tune, 1)
         if tune < 2:
             player.expect_progress(tune + 1, 1, goal=3)

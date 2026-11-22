@@ -4,6 +4,7 @@
 #include <nds.h>
 #include <fat.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <string.h>
 #include "game.h"
 #include "arcade_feedback.h"
@@ -12,6 +13,9 @@
 #include "conversation_save.h"
 #include "observer.h"
 #include "observer_save.h"
+#include "voice.h"
+#include "voice_save.h"
+#include "mic_input.h"
 #include "save.h"
 #include "world.h"
 #include "ui.h"
@@ -33,6 +37,7 @@ static ArcadeFeedback arcade_feedback;
 static uint8_t save_write_failed;
 static uint8_t learning_write_failed;
 static uint8_t observer_write_failed;
+static uint8_t voice_write_failed;
 static int storage_ok,view=5,selected,album_page,reset_step,last_ending,pose;
 static int talk_selected;
 static uint32_t pose_age;
@@ -43,6 +48,13 @@ static ConversationProfile learning;
 static ConversationSession conversation;
 static ObserverProfile shelter;
 static ObserverSession observer;
+static VoiceProfile voice_profile;
+static VoiceCapture voice_capture;
+static char voice_word[33]="HELLO",voice_status[96]="TYPE A WORD IN WARDEN, THEN OPEN MIC.";
+static unsigned voice_mode; /* 0 idle, 1 train, 2 listen */
+static uint32_t voice_started;
+static int voice_match=-1;
+/* No full-time mic use, training PCM files or changes to v1 Game. */
 static char terminal_input[33];
 static unsigned terminal_speaker,terminal_key;
 static int terminal_sent;
@@ -77,6 +89,10 @@ static void reset_care_motion(void){
  care_motion=(WorldBabyMotion){0};
 }
 static void reset_care_session(void){
+ mic_input_stop();voice_mode=0;voice_match=-1;
+ voice_profile_reset(&voice_profile);voice_capture_reset(&voice_capture);
+ strcpy(voice_word,"HELLO");
+ strcpy(voice_status,"TYPE A WORD IN WARDEN, THEN OPEN MIC.");
  dialogue_memory_reset(&memories,baby.days);
  conversation_profile_reset(&learning);
  conversation_session_reset(&conversation,baby.days,baby.rng);
@@ -85,7 +101,8 @@ static void reset_care_session(void){
  terminal_input[0]='\0';terminal_key=0;terminal_speaker=OBSERVER_MONITOR;
  terminal_sent=0;
  arcade_feedback_reset(&arcade_feedback);
- save_write_failed=0;learning_write_failed=0;observer_write_failed=0;talk_selected=0;
+ save_write_failed=0;learning_write_failed=0;observer_write_failed=0;
+ voice_write_failed=0;talk_selected=0;
  reset_care_motion();
 }
 /* Failed writes must NEVER be silent: the game remains fully playable
@@ -103,9 +120,13 @@ static int persist(void){
    * v1 Game. A companion failure must never invalidate care progress. */
   learning_write_failed=(uint8_t)!conversation_save_write(SAVE_BASE,&baby,&learning);
   observer_write_failed=(uint8_t)!observer_save_write(SAVE_BASE,&baby,&shelter);
+  /* Avoid a 3-KiB companion write until a genuine voice lesson exists. */
+  voice_write_failed=(uint8_t)(voice_profile.used!=0u&&
+      !voice_save_write(SAVE_BASE,&baby,&voice_profile));
   if(learning_write_failed)message="LEARNING NOT SAVED. KEPT IN RAM!";
   else if(observer_write_failed)message="SHELTER MEMORY NOT SAVED. IN RAM!";
-  if(learning_write_failed||observer_write_failed)return 0;
+  else if(voice_write_failed)message="VOICE LESSONS NOT SAVED. IN RAM!";
+  if(learning_write_failed||observer_write_failed||voice_write_failed)return 0;
  }
  return 1;
 }
@@ -205,6 +226,54 @@ static void terminal_send(uint32_t frame){
   sfx_play(SFX_CHAT);
  }
  if(memcmp(&before,&shelter,sizeof(shelter))!=0)(void)persist();
+}
+/* Speak-to-command is opt-in. A microphone match is a suggestion only;
+ * pressing USE forwards it to the already guarded typed terminal. */
+static void open_microphone(void){
+ size_t n=strlen(terminal_input);
+ mic_input_stop();voice_mode=0;voice_match=-1;
+ if(!n)strcpy(voice_word,"HELLO");
+ else memcpy(voice_word,terminal_input,n+1u);
+ strcpy(voice_status,"A TRAIN TWICE. X LISTEN. Y USE A MATCH.");
+ view=13;
+}
+static void start_microphone(unsigned mode,uint32_t frame){
+ if(voice_mode){mic_input_stop();voice_mode=0;}
+ voice_match=-1;
+ if(mode==1u&&(!voice_word[0]||strlen(voice_word)>VOICE_TEXT)){
+  strcpy(voice_status,"TYPE A LABEL OF 1-24 CHARACTERS IN WARDEN.");return;
+ }
+ /* Don't classify the game's own PSG chimes as the player's voice. */
+ sfx_stop();
+ if(!mic_input_start(&voice_capture)){
+  strcpy(voice_status,"MIC UNAVAILABLE. B BACK, USE KEYBOARD.");return;
+ }
+ voice_mode=mode;voice_started=frame;
+ strcpy(voice_status,"WAIT FOR QUIET CALIBRATION, THEN SPEAK.");
+}
+static int microphone_tick(uint32_t frame){
+ unsigned score;int result;
+ if(!voice_mode||!mic_input_is_active())return 0;
+ if(voice_capture.state<VOICE_READY&&frame-voice_started<200u)return 0;
+ mic_input_stop();
+ if(voice_capture.state!=VOICE_READY){
+  strcpy(voice_status,voice_capture.state==VOICE_TOO_SHORT?
+         "TOO SHORT. TRY A LONGER WORD.":"NO CLEAR SPEECH. TRY AGAIN.");
+ }else if(voice_mode==1u){
+  result=voice_train(&voice_profile,voice_word,&voice_capture);
+  if(result){
+   strcpy(voice_status,result==1?
+    "FIRST EXAMPLE SAVED. TRAIN THE SAME WORD AGAIN.":
+    "ANOTHER EXAMPLE SAVED. READY TO LISTEN.");
+   if(storage_ok)(void)persist();
+  }else strcpy(voice_status,"LABEL INVALID OR CAPTURE TOO SHORT.");
+ }else{
+  voice_match=voice_recognize(&voice_profile,&voice_capture,&score);
+  if(voice_match<0)strcpy(voice_status,"UNSURE. TRAIN MORE OR SPEAK MORE CLEARLY.");
+  else snprintf(voice_status,sizeof(voice_status),"MATCH %s. Y USE TO SEND.",
+                voice_label(&voice_profile,(unsigned)voice_match));
+ }
+ voice_mode=0;return 1;
 }
 static void terminal_teach(void){
  ObserverProfile before=shelter;
@@ -448,6 +517,8 @@ int main(void){
     terminal_send(frame);dirty=1;
    }else if((down&KEY_SELECT)||picked==34){
     terminal_key^=32u;dirty=1;
+   }else if(picked==35){
+    open_microphone();dirty=1;
    }else if(picked>=0&&picked<30){
     terminal_key=page|(unsigned)picked;
     terminal_type(ui_observer_key(terminal_key));dirty=1;
@@ -459,6 +530,25 @@ int main(void){
    }else if(down&KEY_RIGHT){terminal_key=page|((index/10u)*10u+(index+1u)%10u);dirty=1;
    }else if(down&KEY_UP){terminal_key=page|((index+20u)%30u);dirty=1;
    }else if(down&KEY_DOWN){terminal_key=page|((index+10u)%30u);dirty=1;
+   }
+  }else if(view==13){
+   int picked=tap?ui_mic_touch(touch.px,touch.py):0;
+   if((down&KEY_B)||picked==4){
+    mic_input_stop();voice_mode=0;view=12;dirty=1;
+   }else if((down&KEY_A)||picked==1){
+    start_microphone(1u,frame);dirty=1;
+   }else if((down&KEY_X)||picked==2){
+    start_microphone(2u,frame);dirty=1;
+   }else if((down&KEY_Y)||picked==3){
+    if(voice_match>=0){
+     const char *label=voice_label(&voice_profile,(unsigned)voice_match);
+     if(label[0]){
+      strcpy(terminal_input,label);
+      view=12;terminal_send(frame);dirty=1;
+     }
+    }else{
+     strcpy(voice_status,"NO CONFIDENT MATCH TO USE.");dirty=1;
+    }
    }
   }else if(view==1){
    if(down&KEY_UP){selected=(selected&~3)|((selected+2)&3);dirty=1;}
@@ -710,7 +800,8 @@ int main(void){
    if(down&KEY_B){view=0;reset_step=0;message="RESET CANCELED.";dirty=1;}
    else if(!reset_step){if(down&KEY_A){reset_step=1;dirty=1;}}
    else if((down&KEY_X)&&(held&(KEY_L|KEY_R))==(KEY_L|KEY_R)){
-    if(storage_ok&&(!observer_save_erase(SAVE_BASE)||
+    if(storage_ok&&(!voice_save_erase(SAVE_BASE)||
+                    !observer_save_erase(SAVE_BASE)||
                     !conversation_save_erase(SAVE_BASE)||
                     !save_erase(SAVE_BASE))){message="SAVE ERASE FAILED. NO RESET.";}
     else{
@@ -739,6 +830,7 @@ int main(void){
      if(save_load(SAVE_BASE,&baby)){
       reset_care_session();
       (void)conversation_save_load(SAVE_BASE,&baby,&learning);
+      (void)voice_save_load(SAVE_BASE,&baby,&voice_profile);
       message=observer_save_load(SAVE_BASE,&baby,&shelter)?
        "BABY AND SHELTER MEMORY RESTORED!":"BABY LOADED. WARDEN STARTS WATCHING.";
      }
@@ -885,6 +977,9 @@ int main(void){
    if(active&&observer.windup&&pose!=WORLD_BABY_WINDUP)
     observer_pose(WORLD_BABY_WINDUP,frame);
   }
+  if(view==13&&voice_mode){
+   if(microphone_tick(frame)||frame%8u==0u)dirty=1;
+  }
   sfx_tick();
   world_observer_status(observer_stage(&shelter),shelter.integrity,
                         observer.windup!=0u);
@@ -896,7 +991,7 @@ int main(void){
     world_draw_care_from(&baby,frame,pose,pose_age,&care_motion);
    else if(view==8||(view==0&&rag.moving))
     world_draw_roughhouse(&baby,frame,&rag);
-   else if(view==0||view==10||view==11||view==12)
+   else if(view==0||view==10||view==11||view==12||view==13)
     world_draw_nursery(&baby,frame,pose,pose_age,
                        room_focus,room_previous,room_camera_age,
                        room_daylight,room_lamp,room_prop_age,
@@ -909,7 +1004,13 @@ int main(void){
      (view==2&&frame%arcade_redraw_period(&arc)==0u)){
    /* The actual per-frame draw must receive the Room prop selection and
     * lamp/day flags. Startup UI paint is NOT the Room redraw path. */
-   if(view==12)ui_observer_draw(&baby,storage_ok,terminal_speaker,
+   if(view==13)ui_mic_draw(&baby,storage_ok,voice_word,
+       voice_mode?voice_capture.state==VOICE_CALIBRATE?
+         "MEASURING ROOM NOISE...":voice_capture.state==VOICE_WAIT?
+         "LISTENING. SAY YOUR WORD NOW.":"HEARD YOU. FINISH THE WORD.":voice_status,
+       voice_match<0?"":voice_label(&voice_profile,(unsigned)voice_match),
+       voice_capture.level,voice_profile.used,voice_mode!=0u);
+   else if(view==12)ui_observer_draw(&baby,storage_ok,terminal_speaker,
            terminal_input,observer.reply,terminal_key,observer_stage(&shelter),
            shelter.integrity);
    else ui_draw(&baby,&arc,view,view==6?album_page:
@@ -932,6 +1033,7 @@ int main(void){
     if(save_write_failed)ui_save_warning();
     else if(learning_write_failed)ui_learning_save_warning();
     else if(observer_write_failed)ui_observer_save_warning();
+    else if(voice_write_failed)ui_voice_save_warning();
     else if(view==2||(view==1&&(event==ARCADE_FEEDBACK_WIN||
                            event==ARCADE_FEEDBACK_LOSS)))
      ui_arcade_feedback(event);

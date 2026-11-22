@@ -56,6 +56,30 @@ The ARM9 program renders a furnished perspective-3D nursery and a modeled, anima
 
 **Cartridge identity:** the game ROMs are packaged with the twelve-byte title `MY BABY A.I.` and game code `MBAI`; diagnostic boot and touch-probe ROMs keep their own identifiers. The header checksum is validated without changing ARM9/ARM7 executables. The game remains native DS software and has no DSi-exclusive memory requirement.
 
+### Microphone lessons and offline spoken prompts
+
+In WARDEN's **CPU** terminal, type a short word or phrase (up to 24
+characters), then tap the new **MIC** badge above the keyboard. In the MIC
+LAB press **A/TRAIN**, speak after the quiet calibration, then repeat TRAIN
+to store a second example. Press **X/LISTEN** to attempt recognition.
+If a label matches confidently, press **Y/USE** to send that text to the
+currently selected BABY or WARDEN terminal. **B/BACK** cancels.
+
+The DS microphone uses a finite ARM7 8,192 Hz capture session, with a
+1 KiB aligned double buffer and cache-safe PCM16 processing on ARM9.
+The user-trainable matcher supports **24 distinct labeled words or short
+phrases**, two compact feature examples each, under 3.5 KiB of profile
+RAM; raw audio is not stored. This is a speaker-dependent template
+classifier, **not full speech-to-text, arbitrary conversation recognition,
+or an always-listening neural language model**. Each recognized command
+requires an explicit USE confirmation; no automatic care action is taken.
+
+Optional lessons persist in a separate checksummed Game-bound voice
+sidecar when save storage is available. In RAM-only mode the lessons
+last for the current session. Unsupported emulator microphones show
+an error and preserve the full keyboard and button fallbacks.
+See [microphone architecture, controls and test limits](docs/VOICE_MIC_MILESTONE.md).
+
 ### WARDEN, typed conversation, and the hidden shelter
 
 Tap **CPU** or press **UP** in CARE to open the terminal. **TARGET / Y** switches between WARDEN and BABY. Type on the touchscreen or use the D-pad and A; **SEND / X / START** sends. **123 / SELECT** switches to the number/symbol keyboard, L deletes, R inserts a space, and B returns.
