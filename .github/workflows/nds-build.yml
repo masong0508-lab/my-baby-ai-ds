@@ -109,6 +109,26 @@ jobs:
           test -s my-baby-ai-ds-only.nds
           ndstool -i my-baby-ai-ds-only.nds
 
+      - name: Package plain homebrew ROM for older emulators
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python3 tools/nds_plain_homebrew.py my-baby-ai-ds-only.nds my-baby-ai-plain.nds
+          python3 - <<'PY'
+          from pathlib import Path
+          import sys
+          sys.path.insert(0, 'tools')
+          from nds_plain_homebrew import create_plain, crc16, u32
+          original = Path('my-baby-ai-ds-only.nds').read_bytes()
+          plain = Path('my-baby-ai-plain.nds').read_bytes()
+          assert plain == create_plain(original)
+          assert u32(plain, 0x20) == 0x1000 and plain[0x12] == 0
+          assert plain[u32(original, 0x30):] == original[u32(original, 0x30):]
+          assert crc16(plain[:0x15e]) == int.from_bytes(plain[0x15e:0x160], 'little')
+          print('No retail secure-area boot required; ARM7 and filesystem unchanged')
+          PY
+          ndstool -i my-baby-ai-plain.nds
+
       - name: Build bare-metal ARM7 native touch comparison ROM
         shell: bash
         run: |
@@ -133,5 +153,6 @@ jobs:
           path: |
             my-baby-ai.nds
             my-baby-ai-ds-only.nds
+            my-baby-ai-plain.nds
           if-no-files-found: error
           retention-days: 30
