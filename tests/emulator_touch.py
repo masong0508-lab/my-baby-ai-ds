@@ -531,6 +531,21 @@ def test_actual_game(path: Path, output: Path) -> dict:
         f"Touch FEED did not change needs bars or dialogue UI "
         f"({feed_changed} pixels)"
     )
+    # The rotating hand's collapsed quad-strip cap formerly produced a
+    # 77px brown scanline through the teddy and empty nursery background.
+    # Normal teddy/skin shapes are compact in this region; reject the
+    # long warm streak in an actual emulated feeding pose.
+    feed_arm_streak = 0
+    for yy in range(100, 124):
+        run = 0
+        for xx in range(16, 115):
+            rr, gg, bb = after_feed.getpixel((xx, yy))
+            run = run + 1 if rr > gg + 50 and gg < 190 and bb < 170 else 0
+            feed_arm_streak = max(feed_arm_streak, run)
+    assert feed_arm_streak < 40, (
+        "Rotated feeding hand emits a horizontal surface streak "
+        f"({feed_arm_streak}px)"
+    )
     # The shoulders must move as articulated limbs, not independent
     # floating hand ellipsoids. This samples a real CHAT gesture.
     stylus_tap(emu, 187, 131)
@@ -1153,6 +1168,7 @@ def test_actual_game(path: Path, output: Path) -> dict:
         "crosshair_release_changed_pixels": cross_removed,
         "touch_START_changed_pixels": start_changed,
         "touch_FEED_changed_pixels": feed_changed,
+        "3D_feed_hand_horizontal_streak_length": feed_arm_streak,
         "touch_ARCADE_changed_pixels": arcade_changed,
         "touch_BOTTLE_changed_pixels": bottle_changed,
         "touch_DIAPER_changed_pixels": diaper_changed,

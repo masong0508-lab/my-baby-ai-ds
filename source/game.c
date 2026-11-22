@@ -764,6 +764,12 @@ void game_arcade_tick(Game *s,Arcade *a){
   else if(a->id==2)teether_next(s,a);
   else if(a->id==5)sock_next(s,a);
   else if(a->id==7)rattle_next(s,a);
+  /* Rebuild the whole cabinet-specific question after a timeout. The
+   * old direction fallback changed visible numbers but kept stale
+   * answers, and failed to clear an unfinished courtroom gesture. */
+  else if(a->id==10)cereal_next(s,a);
+  else if(a->id==12)audit_next(s,a);
+  else if(a->id==14)court_next(s,a);
   else round_next(s,a);
  }
 }

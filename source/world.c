@@ -501,11 +501,19 @@ int world_teddy_bow_angle(uint32_t age){
 }
 /* Both eyes, cheeks and hair track the selected furniture together.
  * Small yaw angles avoid oversized profile distortions on 256x192. */
-int world_baby_attention_angle(int focus,uint32_t age){
+int world_baby_attention_from(int from,int focus,uint32_t age){
  static const int gazes[4]={-6,-7,-5,6};
- int scale=age>=16u?256:smooth8(age,16u);
- if(focus<0||focus>=4)return 0;
- return gazes[focus]*scale/256;
+ int target=focus>=0&&focus<4?gazes[focus]:0;
+ if(age>=16u)return target;
+ /* Capture the sampled head angle before changing a Room focus, just
+  * like the lens anchor. Restarting every turn from zero made the face
+  * snap toward the player when switching props or leaving the room. */
+ if(from< -7)from=-7;
+ if(from>6)from=6;
+ return from+(target-from)*smooth8(age,16u)/256;
+}
+int world_baby_attention_angle(int focus,uint32_t age){
+ return world_baby_attention_from(0,focus,age);
 }
 /* Quiet respiration stays inside the existing torso mesh: no additional
  * geometry or textures. One 128-tick inhale/exhale cycle uses the same
@@ -566,6 +574,39 @@ int world_baby_lid_open(uint32_t frame,int action,uint32_t age){
  }
  return openness;
 }
+/* Rotating hand caps must be real triangles, not quad-strip poles with
+ * two coincident vertices carrying different colors. Native DeSmuME
+ * captured a 77px brown scanline across the teddy during FEED while an
+ * upper hand cap crossed that row. Keep the same silhouette and polygons;
+ * only these two articulated hands spend twelve extra vertices apiece. */
+static void baby_hand(float x,float y,float z){
+ const float rx=.13f,ry=.125f,rz=.13f;
+ int cap,i,j,k;
+ for(cap=0;cap<2;cap++){
+  int ring=cap?2:1,pole=cap?3:0;
+  glBegin(GL_TRIANGLES);
+  for(i=0;i<8;i++){
+   j=i;k=(i+1)&7;
+   color(31,24,20,(j<3?2:j<5?-3:0)+(cap?1:-1));
+   glVertex3f(x+rx*w[ring]*cx[j],y+ry*h[ring],z+rz*w[ring]*cz[j]);
+   /* One pole vertex, with one stable color across adjacent triangles. */
+   color(31,24,20,cap?1:-2);
+   glVertex3f(x,y+ry*h[pole],z);
+   color(31,24,20,(k<3?2:k<5?-3:0)+(cap?1:-1));
+   glVertex3f(x+rx*w[ring]*cx[k],y+ry*h[ring],z+rz*w[ring]*cz[k]);
+  }
+  glEnd();
+ }
+ glBegin(GL_QUAD_STRIP);
+ for(i=0;i<=8;i++){
+  j=i&7;
+  color(31,24,20,(j<3?2:j<5?-3:0)-1);
+  glVertex3f(x+rx*w[1]*cx[j],y+ry*h[1],z+rz*w[1]*cz[j]);
+  glVertex3f(x+rx*w[2]*cx[j],y+ry*h[2],z+rz*w[2]*cz[j]);
+ }
+ glEnd();
+ frame_vertices+=66;frame_polygons+=24;
+}
 static void baby_arm(int direction,int angle,int forward){
  float side=(float)direction;
  glPushMatrix();
@@ -575,7 +616,7 @@ static void baby_arm(int direction,int angle,int forward){
  ellipse(0,0,0,.205f,.22f,.195f,19,26,27);
  tilted_ellipse(side*.10f,-.16f,.17f,
                 .14f,.18f,.14f,direction*26,31,23,19);
- ellipse(side*.18f,-.25f,.305f,.13f,.125f,.13f,31,24,20);
+ baby_hand(side*.18f,-.25f,.305f);
  glPopMatrix(1);
 }
 /* Baby A.I. hero model. One stable chibi silhouette with a connected
@@ -828,7 +869,8 @@ EggCamera world_nursery_camera(int focus,int previous,uint32_t age){
 void world_draw_nursery(const Game *s,uint32_t frame,int activity,
                         uint32_t action_age,int focus,int from,
                         uint32_t camera_age,int daylight,int lamp,
-                        uint32_t prop_age,const EggCamera *camera_start){
+                        uint32_t prop_age,const EggCamera *camera_start,
+                        int attention_start){
  EggCamera camera=camera_start?
    world_nursery_camera_from(*camera_start,focus,camera_age):
    world_nursery_camera(focus,from,camera_age);
@@ -854,7 +896,7 @@ void world_draw_nursery(const Game *s,uint32_t frame,int activity,
  tour_lamp_on=1;
  flat_floor(-.10f,-1.124f,.31f,.84f,.255f,18,16,23);
  baby_model(s,frame,activity,0,action_age,
-            world_baby_attention_angle(focus,camera_age));
+            world_baby_attention_from(attention_start,focus,camera_age));
  if(focus==2&&prop_age<40u){
   /* One *finite* teddy bow. Arms, face and plush fabric remain attached
    * beneath the exact same parent transform. */
@@ -869,7 +911,7 @@ void world_draw_nursery(const Game *s,uint32_t frame,int activity,
 }
 void world_draw_care(const Game *s,uint32_t frame,int activity,
                      uint32_t action_age){
- world_draw_nursery(s,frame,activity,action_age,-1,-1,16u,0,1,40u,0);
+ world_draw_nursery(s,frame,activity,action_age,-1,-1,16u,0,1,40u,0,0);
 }
 /* Compatibility for existing host callers and noninteractive views: they
  * sample the deliberately posed hold, while live gameplay uses action age. */

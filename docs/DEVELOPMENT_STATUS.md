@@ -1,27 +1,28 @@
 # Development status — My Baby A.I.!
 
-This is a source-based inventory of `main`, updated through November 21, 2026 after the game's DeSmuME and BlocksDS verification milestones. **Implemented** means code exists, not that a feature has passed emulator and physical-hardware validation. See [ROADMAP.md](ROADMAP.md) for completion work, [FEATURE_IDEAS.md](FEATURE_IDEAS.md) for design pitches, and [QA_RELEASE.md](QA_RELEASE.md) for the test gates.
+This is a source-based inventory of `main`, updated through November 21, 2026 at `47021429eb958bd56b62872866f22d3bae2008ae` after the touch-save milestone. **Implemented** means code exists; validation scope is stated separately. PR #63's exact head passed the [host/sanitizer and devkitPro workflow](https://github.com/masong0508-lab/my-baby-ai-ds/actions/runs/44965796160) and the [BlocksDS/native DeSmuME workflow](https://github.com/masong0508-lab/my-baby-ai-ds/actions/runs/44965796140) before merge. Physical hardware remains unverified. See [ROADMAP.md](ROADMAP.md), [FEATURE_IDEAS.md](FEATURE_IDEAS.md) and [QA_RELEASE.md](QA_RELEASE.md). The later feature notes below retain their historical scope; this matrix describes the current checkpoint.
 
 ## What exists in the repository
 
 | Area | Current implementation | Limitations / missing verification |
 | --- | --- | --- |
 | Nintendo DS ROM | devkitPro `nds-dev` + `libnds` ARM9 `Makefile`, GitHub Actions `nds-build.yml`; PR #1 produced a real `.nds` ROM artifact | A compiled header is **not** proof of a playable, stable emulator/flashcart session. Re-test latest `main` on every release |
-| Dual-screen rendering | `source/world.c`: perspective-3D nursery with crib, dresser, window, floorboards, toys, teddy and a procedural 3D baby; `source/ui.c`: sub-screen 16-bit bitmap interface | Most art is procedural geometry with fixed camera; limited pose variation; no authored texture/rig pipeline or multiple explorable rooms |
-| Care loop | `source/game.c`: feed, chat, play and nap affect needs, mood, chaos and corruption | Room Tour now offers meaningful window, lamp, teddy and crib interactions, including quiet-night rest; long-term developmental skills and broader rooms remain missing |
+| Dual-screen rendering | `source/world.c`: furnished perspective-3D nursery, procedural baby with care/need-driven gestures, interpolated Room Tour cameras and staged egg film; `source/ui.c`: sub-screen 16-bit bitmap interface | No authored texture/rig pipeline or multiple explorable rooms; anatomy, pose readability and sustained device performance need continued review |
+| Care loop | Feed/chat/play/nap, daily need changes, contextual care hints, window/lamp/teddy/crib interactions and quiet-night rest | Long-term developmental skills, durable event memory and broader rooms remain missing |
 | Baby dialogue | `source/dialogue.c`: fixed-weight 6-input → 8-hidden → 6-output integer classifier; six response sets of eight lines (48 authored lines) | Not a generative LLM or trained neural model. No durable conversational/event memory, word recognition, typed chat, or long-running relationship |
 | Arcade | 16 named cabinets; eight unlocked initially; distinct gameplay and art for all 16 named cabinets; the formerly generic cabinets 8–15 now have jump/duck, steering, counting, timing, audit, watering, path-tracing and management gameplay | **16 of 16 have individual mechanics on main**, with host regression and real DeSmuME touchscreen coverage. Extended balance, original hardware and DraStic touch compatibility remain unconfirmed |
 | Economy | Diaper Dollars, Favors and unlock costs in `game_unlock`; wins award currency | Limited sinks/long-term rewards; no purchasable décor, apparel, talent upgrades, sticker collection, or balanced price curve |
 | Glitches | Five corruption tiers, occasional visual disruption, reverse directions, shorter arcade response windows | Effects are narrow; no per-mode corruption language, glitch frequency controls, or accessibility balancing beyond the visual effect toggle |
-| Endings | Four good, four bad, ending album, continuing play; separately confirmed optional reset | Basic text/bitmap endings rather than bespoke cinematics; needs stress testing around reset and recovery |
-| Saves | DLDI/libfat storage, two checksummed alternating save slots, validation and scoped erase | FAT write interruption, filesystem failures, version migration and real-flashcart persistence need testing |
+| Endings | Four good/four ordinary bad endings plus optional alien-egg ending #9, staged 3D egg film, three-page album/replay, continuing play and separately confirmed reset | Ordinary endings still use text/bitmap presentation; full device reset/recovery sessions remain outstanding |
+| Saves | Explicit title SAVE/LOAD and in-Room SAVE by stylus or X; RAM-only boot; checksummed alternating slots; writes advance the newest valid disk sequence without loading over the current baby | Host round trips cover rollover and corrupted-slot recovery; native DeSmuME verifies save controls/status, not real FAT persistence. Flashcart reboot, interrupted writes, filesystem failures and any future migration still need device tests |
 | Audio | `source/sfx.c`: actual single-voice DS PSG care melodies, room-switch/mobile cues, Toybox impacts and egg film audio; Y mute works in Room Tour and Toybox | No authored multi-track soundtrack, sampled voices or tested original-hardware mixing |
-| Tests | Host-side logic, dialogue, UI and geometry budgets; GitHub Actions cross-compiles the ROM; DeSmuME 0.9.12 emulator CI now injects real touchscreen presses, verifies tap/move/release, START GAME and FEED, and captures screenshots | Still no verified original-DS hardware run, FPS/RAM telemetry, 30-minute soak, save-persistence proof, or working native touch on the reported DraStic installation |
+| Render diagnostics | SELECT-on-title stylus page shows changing VERTS/POLYS counts from the actual renderer's software submissions, with budget warnings; host tests and native DeSmuME verify the display | Shows the diagnostic scene's submitted geometry; not GPU occupancy/throughput, measured FPS/frame time, free VRAM or RAM watermark. Hardware timing and memory profiling remain unfinished |
+| Tests | Strict host gameplay/save/dialogue/UI/geometry tests, ASan/UBSan, both ROM toolchains and DS-only packaging; native DeSmuME walkthrough covers stylus, save controls, care, Room Tour, arcade, Toybox and egg/replay with screenshot artifacts | Still no verified original-DS run, measured FPS/RAM baseline, 30-minute soak, physical save-persistence proof or working native touch on the reported DraStic installation |
 | Distribution | CI artifact `my-baby-ai-nds` attached to successful workflow run | No tagged release, release notes, license/attribution review or player-facing manual yet |
 
 ## Current game loop (implemented)
 
-1. Open the title screen and enter the nursery.
+1. Open the title screen; optionally use SAVE/LOAD to restore existing progress, or START directly in RAM-only mode. Room Tour SAVE can explicitly enable storage later and save the current baby.
 2. Use A/B/X/Y or the touchscreen to feed/chat/play/nap; state updates immediately.
 3. Enter the arcade, select one of 16 named cabinets, and play any of 16 individually implemented arcade cabinets, eight available initially and eight unlockable through progression; each uses its own rules, illustrated screen and touch/button mapping.
 4. Progress days, gain currency/Favors, influence corruption and collect endings.
@@ -29,11 +30,11 @@ This is a source-based inventory of `main`, updated through November 21, 2026 af
 
 ## Gaps that matter most
 
-**Critical before claiming a verified playable build:** boot and frame-by-frame rendering in melonDS, input testing on both screens, 30-minute play session, save/reload, and original-hardware flashcart testing. The GitHub Actions compiler cannot certify those.
+**Critical before claiming hardware-verified release readiness:** test the exact build in melonDS and on original DS/DS Lite, including input, 30-minute sessions, frame pacing/RAM, lid resume and flashcart save/reboot/recovery. Native DeSmuME gameplay has passed; that result does not certify these other targets or sustained performance.
 
 **Critical before claiming a complete game:** balance and validate all sixteen mini-games on real DS hardware; further authored baby acting and environments; longer-term activities and progression; richer original soundtrack; stronger personality memory; accessible settings; an achievable economy; and end-to-end game balance.
 
-**Important documentation correction:** The neural classifier is already implemented, but it is a compact hand-tuned integer intent classifier, not a modern language model. DeSmuME has booted real ROM artifacts and completed native stylus, minigame and secret-cinematic checks. Physical original DS, specific DraStic versions, performance telemetry and actual flashcart save restoration remain to be verified.
+**Important documentation correction:** All sixteen cabinet mechanics and 48 authored dialogue lines exist. The classifier is a compact hand-tuned integer intent selector, with all six needs/context classes reachable; it is not a modern language model. Submitted-geometry counters exist, while measured frame-time/FPS/RAM telemetry does not. Native DeSmuME has exercised real ROM gameplay and save-control feedback; physical original DS, specific DraStic versions and flashcart save restoration remain unverified.
 
 ## Non-goals for the baseline DS release
 
