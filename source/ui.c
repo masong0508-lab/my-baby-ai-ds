@@ -390,7 +390,11 @@ static void room_screen(const Game *s,int state,const char *message){
  fit(85,50,selected==0?(day?"DAYLIGHT":"MOONLIGHT"):
               selected==1?(lamp?"LAMP: ON":"LAMP: OFF"):
               selected==2?"TEDDY SAYS HELLO":"NURSERY NAP",TEAL,22);
- fit(18,61,message?message:"TOUCH A FURNITURE CARD.",MUTED,36);
+ /* Explicit in-game SAVE; remains available after a RAM-only START.
+  * Card is above prop hitboxes and inside the existing 256x192 panel. */
+ capsule(198,49,46,14,MINT,TEAL);
+ fit(209,53,"SAVE",INK,5);
+ fit(18,63,message?message:"TOUCH A FURNITURE CARD.",MUTED,36);
  for(i=0;i<4;i++){
   x=i%2?132:8;
   y=i/2?122:77;
@@ -1922,6 +1926,7 @@ int ui_roughhouse_touch(int x,int y){
  * whitespace. All hitboxes are visibly filled in room_screen(). */
 int ui_room_touch(int x,int y){
  if(x<0||x>=256||y<0||y>=192)return -1;
+ if(x>=198&&x<244&&y>=49&&y<63)return 7; /* SAVE */
  if(y>=176){
   /* Footer labels are ACTUAL touch buttons (not invisible instructions).
    * Center retains the historic BACK area to preserve existing tests. */
