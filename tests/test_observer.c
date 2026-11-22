@@ -140,10 +140,12 @@ int main(void){
  contains(observer_answer(&p,&s,&g,1,"WHAT DID I TEACH"),"1: TINY BOSS");
  assert(memcmp(&g,&original,sizeof(g))==0);
  care(&p,&s,&g,PLAY);assert(s.echo_ready);
+ /* The spontaneous quote is an actual care reply; later BOND questions
+  * legitimately overwrite the one shared terminal reply buffer. */
+ assert(strcmp(s.reply,"YOU TAUGHT ME: TINY BOSS")==0);
  contains(observer_answer(&p,&s,&g,1,"BOND"),"WE PLAYED 1 TIMES");
  contains(observer_answer(&p,&s,&g,1,"MORE"),"WE PLAYED 1 TIMES");
  contains(observer_answer(&p,&s,&g,0,"BOND"),"CARE F0 C0 P1 N0");
- assert(strcmp(s.reply,"YOU TAUGHT ME: TINY BOSS")==0);
  /* Staying on PLAY must return from a learned quote to generated
   * make-believe without another topic unlocking the local variation. */
  {
