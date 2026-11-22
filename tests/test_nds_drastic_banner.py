@@ -7,26 +7,26 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[1]/"tools"))
 from nds_drastic_banner import BANNER_LEN, crc16, make_rom, u32, build_banner, TITLE, CODE
 
 def fixture(existing_banner=False)->bytes:
-    data=bytearray(0x9000)
+    data=bytearray(0xb000)
     data[:12]=TITLE;data[12:16]=CODE
     data[0x10:0x12]=b"00";data[0x12]=0;data[0x14]=2
     for off,value in (
         (0x20,0x4000),(0x24,0x02000800),(0x28,0x02000000),(0x2c,0x1c00),
-        (0x30,0x6000),(0x34,0x02380000),(0x38,0x02380000),(0x3c,0x0800),
-        (0x40,0x7000),(0x44,9),(0x48,0x7200),(0x4c,0),
-        (0x80,0x7400),(0x84,0x4000)
+        (0x30,0x8000),(0x34,0x02380000),(0x38,0x02380000),(0x3c,0x0800),
+        (0x40,0x9000),(0x44,9),(0x48,0x9200),(0x4c,0),
+        (0x80,0x9400),(0x84,0x4000)
     ):
         struct.pack_into("<I",data,off,value)
     for i in range(0x800,0x1c00):
         data[0x4000+i]=(i*53+3)&255
     for i in range(0x800):
-        data[0x6000+i]=(i*17+7)&255
-    data[0x7000:0x7009]=b"\x04\x00\x00\xf0\x00\x00\x00\x00\x00"
+        data[0x8000+i]=(i*17+7)&255
+    data[0x9000:0x9009]=b"\x04\x00\x00\xf0\x00\x00\x00\x00\x00"
     if existing_banner:
         banner=build_banner()
-        data[0x7800:0x7800+BANNER_LEN]=banner
-        struct.pack_into("<I",data,0x68,0x7800)
-        struct.pack_into("<I",data,0x80,0x7800+BANNER_LEN)
+        data[0x9800:0x9800+BANNER_LEN]=banner
+        struct.pack_into("<I",data,0x68,0x9800)
+        struct.pack_into("<I",data,0x80,0x9800+BANNER_LEN)
     data[0x15e:0x160]=crc16(data[:0x15e]).to_bytes(2,"little")
     return bytes(data)
 
