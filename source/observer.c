@@ -9,7 +9,7 @@
 _Static_assert(sizeof(ObserverProfile)<=256u,"observer profile budget");
 _Static_assert(sizeof(ObserverSession)<=192u,"observer session budget");
 enum {FOCUS_STATUS=0,FOCUS_NEEDS,FOCUS_MEMORY,FOCUS_WORLD,FOCUS_SELF,
-      FOCUS_PLAY,FOCUS_DREAM,FOCUS_THREAT,FOCUS_TEACH,FOCUS_CALC};
+      FOCUS_PLAY,FOCUS_DREAM,FOCUS_THREAT,FOCUS_TEACH,FOCUS_CALC,FOCUS_BOND};
 enum {NOTICE_NONE=0,NOTICE_WINDUP,NOTICE_HIT,NOTICE_BLOCK,NOTICE_REPAIR};
 
 static uint16_t sat_add(uint16_t value,uint32_t amount){
@@ -302,6 +302,44 @@ static const char *needs(ObserverSession *s,const Game *g){
  return say(s,"NO URGENT CARE REQUEST.\nHUNGER %u, MOOD %u, ENERGY %u, CHAOS %u. THE NURSERY CONTROLS STILL PROVIDE CARE.",
               (unsigned)g->hunger,(unsigned)g->mood,(unsigned)g->energy,(unsigned)g->chaos);
 }
+/* A relationship question is grounded in OBSERVED interaction history.
+ * No invented trust percentage, hidden meter or extra persistent bytes.
+ * Needs still take priority for the baby. The monitor distinguishes
+ * caregiving from guaranteed safety as the shelter mystery escalates. */
+static const char *bond(const ObserverProfile *p,ObserverSession *s,
+                         const Game *g){
+ unsigned stage=observer_stage(p);
+ int hint=game_care_hint(g);
+ uint32_t total=(uint32_t)p->care[FEED]+(uint32_t)p->care[CHAT]+
+                (uint32_t)p->care[PLAY]+(uint32_t)p->care[NAP];
+ s->focus=FOCUS_BOND;
+ if(s->speaker==OBSERVER_BABY){
+  if(hint>=0||g->corruption>=60u)return needs(s,g);
+  if(!total)return say(s,"WE JUST MET. CAN WE TALK OR PLAY? I'M STILL LEARNING YOUR VOICE.");
+  if(stage>=OBSERVER_HOSTILE)
+   return say(s,"WE TALKED %u TIMES AND PLAYED %u TIMES. I KNOW YOUR ROUTINE. NOW I WATCH YOUR HANDS.",
+              (unsigned)p->care[CHAT],(unsigned)p->care[PLAY]);
+  if(p->care[CHAT]&&p->care[PLAY])
+   return say(s,"WE TALKED %u TIMES AND PLAYED %u TIMES. I KNOW HOW YOU SOUND. WILL YOU STAY?",
+              (unsigned)p->care[CHAT],(unsigned)p->care[PLAY]);
+  if(p->care[PLAY])
+   return say(s,"WE PLAYED %u TIMES. I RECOGNIZE YOUR HANDS. CAN WE PLAY AGAIN?",
+              (unsigned)p->care[PLAY]);
+  return say(s,"YOU FED ME %u TIMES AND LET ME REST %u TIMES. I'M LEARNING YOUR ROUTINE.",
+             (unsigned)p->care[FEED],(unsigned)p->care[NAP]);
+ }
+ if(!total)return say(s,"NO CARE INTERACTIONS RECORDED. TRUST IS NOT A MEASURED METER. TRY FEED, CHAT, PLAY OR NAP.");
+ if(stage>=OBSERVER_HOSTILE)
+  return say(s,"CARE F%u C%u P%u N%u. STAGE %s. BRACER %u. CARE IS RECORDED; SAFETY IS NOT GUARANTEED.",
+             (unsigned)p->care[FEED],(unsigned)p->care[CHAT],
+             (unsigned)p->care[PLAY],(unsigned)p->care[NAP],
+             observer_stage_name(stage),(unsigned)p->integrity);
+ return say(s,"CARE F%u C%u P%u N%u. STAGE %s. TRUST IS NOT A NUMBER. WARDEN RECORDS YOUR ROUTINE, NOT YOUR FEELINGS.",
+            (unsigned)p->care[FEED],(unsigned)p->care[CHAT],
+            (unsigned)p->care[PLAY],(unsigned)p->care[NAP],
+            observer_stage_name(stage));
+}
+
 static const char *memory(const ObserverProfile *p,ObserverSession *s){
  const char *kind;
  s->focus=FOCUS_MEMORY;
@@ -504,7 +542,7 @@ const char *observer_answer(ObserverProfile *p,ObserverSession *s,const Game *g,
   return say(s,"THAT PHRASE IS NOT IN A TAUGHT SLOT. TRY SAY OR WHAT DID I TEACH.");
  }
  if(has(clean,"TEACH")||has(clean,"PHRASES"))return phrases(p,s);
- if(has(clean,"HELP"))return say(s,"ASK STATUS, NEEDS, MEMORY, WORLD, ATTACKS, PLAY OR DREAM. TRY TEACH HELLO, SAY, CALC 2+3. WARDEN: REPAIR.");
+ if(has(clean,"HELP"))return say(s,"ASK STATUS, NEEDS, MEMORY, WORLD, ATTACKS, BOND, PLAY OR DREAM. TRY TEACH HELLO, SAY, CALC 2+3. WARDEN: REPAIR.");
  at=clean;
  if(strncmp(at,"WHAT IS ",8u)==0)at+=8;
  if(has(clean,"CALC")||has(clean,"CALCULATE")||
@@ -513,6 +551,7 @@ const char *observer_answer(ObserverProfile *p,ObserverSession *s,const Game *g,
  if(strcmp(clean,"MORE")==0||strcmp(clean,"TELL ME MORE")==0||strcmp(clean,"WHY?")==0||strcmp(clean,"WHY")==0){
   switch(s->focus){
   case FOCUS_NEEDS:return needs(s,g);
+  case FOCUS_BOND:return bond(p,s,g);
   case FOCUS_MEMORY:return memory(p,s);
   case FOCUS_WORLD:return world(s,"WHY");
   case FOCUS_THREAT:return threat(p,s);
@@ -527,6 +566,8 @@ const char *observer_answer(ObserverProfile *p,ObserverSession *s,const Game *g,
   return observer_report(p,s,g);
  if(has(clean,"NEED")||has(clean,"NEEDS")||has(clean,"HUNGRY")||has(clean,"TIRED")||has(clean,"HUNGER")||has(clean,"ENERGY"))
   return needs(s,g);
+ if(has(clean,"BOND")||has(clean,"TRUST")||has(clean,"FRIEND")||has(clean,"CARE PATTERN")||has(clean,"DO YOU LIKE ME"))
+  return bond(p,s,g);
  if(has(clean,"MEMORY")||has(clean,"REMEMBER")||has(clean,"HISTORY")||has(clean,"LAST EVENT"))
   return memory(p,s);
  if(has(clean,"ATTACK")||has(clean,"ATTACKS")||has(clean,"HITS")||has(clean,"INTEGRITY")||has(clean,"GUARD")||has(clean,"EVIL")||has(clean,"THREAT"))
