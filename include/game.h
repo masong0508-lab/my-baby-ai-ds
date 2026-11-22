@@ -3,6 +3,8 @@
 #include <stdint.h>
 #define MBAI_GAMES 16
 #define MBAI_ROUNDS 6
+/* Bottle meter and scoring share the same inclusive safe-balance limit. */
+#define MBAI_BOTTLE_SAFE_BALANCE 22
 typedef enum { FEED=0, CHAT=1, PLAY=2, NAP=3 } Care;
 typedef enum {
  END_OK=0, END_BOTTLE=1, END_CEO=2, END_REBOOT=3, END_INTERN=4,

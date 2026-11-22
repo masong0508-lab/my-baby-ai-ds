@@ -252,6 +252,27 @@ static void foot(uint16_t color){
  solid(0,176,256,2,screen_accent);
  (void)color;
 }
+void ui_arcade_feedback(ArcadeFeedbackEvent event){
+ const char *text;
+ uint16_t color;
+ switch(event){
+ case ARCADE_FEEDBACK_PROGRESS:text="NICE! KEEP GOING.";color=MINT;break;
+ case ARCADE_FEEDBACK_MISS:text="OOPS! TRY AGAIN.";color=PINK;break;
+ case ARCADE_FEEDBACK_WIN:text="YOU WON! GREAT JOB.";color=LEMON;break;
+ case ARCADE_FEEDBACK_LOSS:text="ROUND LOST. TRY AGAIN.";color=WHITE;break;
+ default:return;
+ }
+ /* This pass follows the full UI draw and precedes the virtual cursor.
+  * No flashes, new surface, or writes into the cabinet's playfield. */
+ solid(0,178,256,14,NIGHT);
+ fit(10,181,text,color,39);
+}
+void ui_save_warning(void){
+ /* A game result must not hide that its progress is only in RAM. This
+  * remains a caller-controlled warning, separate from the feedback TTL. */
+ solid(0,178,256,14,NIGHT);
+ fit(10,181,"SAVE FAILED. PROGRESS IN RAM!",PINK,39);
+}
 static void icon_bottle(int x,int y){
  solid(x+8,y+3,9,5,BLUE);solid(x+10,y,5,3,WHITE);
  solid(x+5,y+8,15,16,WHITE);outline(x+5,y+8,15,16,TEAL);
@@ -944,7 +965,10 @@ static void bar(int x,int y,int width,int value,int total,uint16_t color){
 }
 static void bottle_challenge(const Arcade *a){
  char text[40];
- int cursor=128+a->balance/2;
+ /* Round away from zero: balance +/-23 must sit OUTSIDE the safe band,
+  * rather than looking safe at the same pixel as the +/-22 boundary. */
+ int offset=a->balance<0?-((-(int)a->balance+1)/2):((int)a->balance+1)/2;
+ int cursor=128+offset;
  arcade_wall(BLUSH);
  panel(7,31,242,41,WHITE,TEAL);
  label(15,35,"BOTTLE BALANCE",PURPLE,2,14);
@@ -954,7 +978,8 @@ static void bottle_challenge(const Arcade *a){
  sprite(cursor+14,91,2,spr_bottle,18);
  sparkle(17,104,LEMON);sparkle(225,104,PINK);
  solid(25,132,206,3,TEAL);
- solid(92,129,72,9,MINT);
+ solid(128-MBAI_BOTTLE_SAFE_BALANCE/2,129,
+       MBAI_BOTTLE_SAFE_BALANCE+1,9,MINT);
  solid(cursor-2,127,5,14,DEEP_PINK);
  snprintf(text,sizeof(text),"STEADY %u/150",a->hold_frames);
  fit(83,115,text,PURPLE,27);

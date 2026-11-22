@@ -3,7 +3,10 @@
 #include <stdint.h>
 #include "game.h"
 #include "roughhouse.h"
-/* Transient articulated care rig. Angles are degrees; lid is 0..256;
+/* Completed-arcade acting. IDs 1..4 retain care, 5/6 retain Toybox use.
+ * These are renderer poses, never Care commands or saved game state. */
+enum { WORLD_BABY_CHEER=7,WORLD_BABY_REGROUP=8 };
+/* Transient articulated care/result rig. Angles are degrees; lid is 0..256;
  * bounce is Q8 hop height (one hop unit is .0022 world units).
  * Furniture attention and the continuous idle breath/bob stay independent. */
 typedef struct {
@@ -15,16 +18,17 @@ typedef struct {
 typedef struct {
  WorldBabyPose start,baseline;
 } WorldBabyMotion;
-/* Capture before game_care changes needs; begin after it changes them.
- * Action IDs are idle=0, FEED=1, CHAT=2, PLAY=3, NAP=4. A null motion
- * samples the original one-shot curve; interruptions settle by age 12. */
+/* Capture before care/arcade changes needs; begin after it changes them.
+ * Action IDs are idle=0, FEED=1, CHAT=2, PLAY=3, NAP=4, plus results above.
+ * A null motion samples the unblended one-shot curve; interruptions
+ * settle by age 12. */
 WorldBabyPose world_baby_pose(const Game *state,uint32_t frame,int action,
                               uint32_t age,const WorldBabyMotion *motion);
 void world_baby_motion_start(WorldBabyMotion *motion,WorldBabyPose from,
                              const Game *state,uint32_t frame,int action);
 void world_init(void);
 void world_draw(const Game *state,uint32_t frame,int pose);
-/* Live gameplay: age since last care tap, for finite easing and recovery. */
+/* Live gameplay: age since care/result, for finite easing and recovery. */
 void world_draw_care(const Game *state,uint32_t frame,int pose,uint32_t age);
 void world_draw_care_from(const Game *state,uint32_t frame,int pose,
                           uint32_t age,const WorldBabyMotion *motion);

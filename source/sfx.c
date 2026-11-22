@@ -22,11 +22,17 @@ void sfx_set_enabled(int on){
 int sfx_is_enabled(void){return enabled!=0;}
 int sfx_is_playing(void){return current!=0;}
 void sfx_play(SfxCue cue){
- if(!enabled||cue<=SFX_NONE||cue>SFX_MOBILE)return;
+ if(!enabled||cue<=SFX_NONE||cue>SFX_ARCADE_LOSS)return;
  /* Bedtime jingles and care chirps cannot silence the dramatic reveal or
   * cut through a shell-crack/unseal cue. Horror retains absolute priority. */
  if(cue>=SFX_FEED&&(current==SFX_SCARE||
                     current==SFX_CRACK||current==SFX_UNSEAL))return;
+ /* A quick new cabinet cannot chop the short result melody into a
+  * substep chirp. Deliberate care and a new final result may supersede it.
+  * Arcade feedback also stays below the cinematic's low pulse. */
+ if(cue>=SFX_ARCADE_PROGRESS&&current==SFX_PULSE)return;
+ if((cue==SFX_ARCADE_PROGRESS||cue==SFX_ARCADE_MISS)&&
+    (current==SFX_ARCADE_WIN||current==SFX_ARCADE_LOSS))return;
  /* Rebound is low-priority: it must never cut short the main contact,
   * shell opening, dramatic pulse, or reveal. */
  if(cue==SFX_BOUNCE&&current!=SFX_NONE)return;
@@ -103,6 +109,27 @@ void sfx_tick(void){
   duration=27;
   hz=age<9u?587u:age<18u?740u:659u;
   volume=age<17u?16u:(27u-age)*2u;
+  break;
+ case SFX_ARCADE_PROGRESS:
+  /* A small upward confirmation, brief enough for a three-note puzzle. */
+  duration=8;hz=age<4u?659u:784u;
+  volume=age<5u?16u:(8u-age)*4u;
+  break;
+ case SFX_ARCADE_MISS:
+  /* Soft two-note dip; a recoverable error does not sound like a scare. */
+  duration=10;hz=age<4u?311u:233u;
+  volume=age<6u?16u:(10u-age)*3u;
+  break;
+ case SFX_ARCADE_WIN:
+  /* Original four-note ascent, ending with a short upper-octave tail. */
+  duration=24;
+  hz=age<5u?523u:age<10u?659u:age<16u?784u:1047u;
+  volume=age<17u?24u:(24u-age)*3u;
+  break;
+ case SFX_ARCADE_LOSS:
+  /* Quiet descending resolution, separate from the ordinary miss. */
+  duration=20;hz=age<6u?392u:age<12u?311u:262u;
+  volume=age<12u?18u:(20u-age)*2u;
   break;
  case SFX_SCARE:
   /* Distinct attack + low distorted synthetic growl in one PSG voice:

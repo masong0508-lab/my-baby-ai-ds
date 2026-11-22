@@ -221,7 +221,47 @@ def sock_answer(image):
     return choices.index(target), {"stripe": target, "choices": choices}
 
 
-def play_socks(player, name, mistakes=0):
+FEEDBACK = {
+    "progress": ("NICE! KEEP GOING.", "mint"),
+    "miss": ("OOPS! TRY AGAIN.", "pink"),
+    "win": ("YOU WON! GREAT JOB.", "lemon"),
+    "loss": ("ROUND LOST. TRY AGAIN.", "white"),
+}
+
+
+def expect_feedback(player, kind, name):
+    caption, ink = FEEDBACK[kind]
+    image = player.wait(f"visible {kind} feedback", lambda im:
+                        text_at(im, 10, 181, 39, ink=ink) == caption,
+                        limit=60, stride=2)
+    player.capture(name, image, feedback=caption)
+    return image
+
+
+def result_feedback(player, kind):
+    """Verify outcome text, archive finite acting, then check footer recovery.
+
+    The exact joint paths and interruption continuity have host coverage.
+    These are native ROM frames for the corresponding visible result;
+    the image difference guards against a completely frozen reaction.
+    """
+    expect_feedback(player, kind, f"arcade_{kind}_feedback")
+    player.step(16)
+    acting = player.capture(f"arcade_{kind}_baby_reaction")
+    player.step(160)
+    settled = player.menu()
+    assert text_at(settled, 12, 181, 6, ink="white") == "A PLAY"
+    assert text_at(settled, 199, 181, 6, ink="white") == "B BACK"
+    delta = ImageChops.difference(acting, settled).crop((54, 65, 198, 179))
+    changed = sum(pixel != (0, 0, 0) for pixel in delta.getdata())
+    assert changed > 80, f"The baby never recovered from its {kind} reaction: {changed}"
+    player.capture(f"arcade_{kind}_baby_settled", settled,
+                   reaction_changed_pixels=changed, footer_restored=True)
+    return {"caption": FEEDBACK[kind][0], "footer_restored": True,
+            "reaction_changed_pixels": changed}
+
+
+def play_socks(player, name, mistakes=0, verify_feedback=False):
     answers = []
     for round_number in range(6):
         image = player.expect_progress(round_number, mistakes)
@@ -233,6 +273,8 @@ def play_socks(player, name, mistakes=0):
             player.tap(46 + lane * 82, 145)
         if round_number < 5:
             player.expect_progress(round_number + 1, mistakes)
+            if verify_feedback and round_number == 0:
+                expect_feedback(player, "progress", "sock_correct_feedback")
     player.win(name)
     return answers
 
@@ -247,14 +289,20 @@ def test_socks(player):
         if mistake < 2:
             player.capture(f"sock_wrong_{mistake + 1}",
                            player.expect_progress(0, mistake + 1), **facts)
+            if mistake == 0:
+                expect_feedback(player, "miss", "sock_mistake_feedback")
     player.capture("sock_loss_returns_to_menu", player.menu(), wins=0, dollars=8)
+    loss_reaction = result_feedback(player, "loss")
     player.capture("sock_retry_resets_counters", player.start(5))
     # Exercise the real no-input timeout and then use its replacement puzzle.
     timed_out = player.expect_progress(0, 1, limit=1400)
     player.capture("sock_timeout_retry", timed_out, **sock_answer(timed_out)[1])
-    answers = play_socks(player, "sock_recovery_win", mistakes=1)
+    answers = play_socks(player, "sock_recovery_win", mistakes=1, verify_feedback=True)
+    win_reaction = result_feedback(player, "win")
     return {"wrong_choice_loss": True, "restart_reset": True,
             "timeout_recovery_win": True, "visible_answers": answers,
+            "loss_reaction": loss_reaction, "win_reaction": win_reaction,
+            "progress_and_mistake_feedback": True,
             "native_touch_and_dpad": True}
 
 

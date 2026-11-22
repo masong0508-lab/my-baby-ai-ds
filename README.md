@@ -14,6 +14,10 @@ Rapid care taps carry the baby's current arm, head, eyelid and bounce pose into 
 
 When the baby is comfortable, CHAT can mention a recent bottle, playtime, nap, quiet crib rest or completed arcade win/loss. Four distinct events fit in a 20-byte session memory; needs take priority, repeated replies are avoided, and events expire with further interactions or a new day. Loading or resetting a baby starts a fresh memory. The existing save format remains unchanged. See [care-motion details](docs/CARE_MOTION_CONTINUITY.md) and [recent-interaction memory](docs/RECENT_INTERACTION_MEMORY.md).
 
+### Arcade reactions and clear feedback
+
+Successful steps, mistakes, wins and losses now have distinct short PSG cues and brief text feedback in the existing footer. Ignored taps and ordinary steering stay silent. Completed games trigger a finite baby cheer or a gentle regrouping gesture; both can blend into the next care action. Normal footer controls return after the message expires, while a failed save takes priority and remains visible until saving succeeds. The Bottle Balance green band now matches its actual scoring window. See [arcade feedback](docs/ARCADE_FEEDBACK.md) and [baby result reactions](docs/ARCADE_BABY_REACTIONS.md).
+
 ### Controls
 * A feed, B chat, X play, Y nap; the four large touchscreen buttons provide the same actions.
 * START or tap ARCADE to enter arcade. Use D-pad or touch cabinets to select; A/tap PLAY starts, X/tap BUY unlocks, B/tap BACK exits.
@@ -36,7 +40,7 @@ Discover **Tiny Diploma Ceremony**, **Rattle Arcade Champion**, **Bugs Become Fe
 
 The top screen now runs a multi-object, shaded, original low-poly scene via the DS hardware 3D engine. The lower screen uses 256×192 native pixel art and interactive status displays with a 16-bit BG bitmap in **128 KiB of dedicated VRAM** (not an extra 128 KiB main-RAM framebuffer), plus a small embedded bitmap font. The UI refreshes on changes, with lower-frequency countdown updates. See `docs/graphics-pipeline.md`.
 
-**Verification status (November 2026):** Standard devkitARM and independent BlocksDS ROMs have passed CI. Native DeSmuME tests cover stylus input, core views, care/Room Tour, the alien-egg film, a complete Diaper Dash session, and a separate walkthrough of Sock Market, Beatbox, Tax Return Teether and an earned Cereal Cipher unlock. The arcade walkthrough includes selected losses, wrong-answer and timeout retries, visible receipt dragging, and exact reward/purchase totals. **Physical original DS/DraStic operation, sustained FPS/RAM telemetry, long soak tests and real flashcart save persistence remain unverified.** All sixteen minigames have host mechanic coverage; native completion covers five cabinets and Bottle Balance entry. See [native arcade tests](docs/NATIVE_ARCADE_TESTS.md), [development status](docs/DEVELOPMENT_STATUS.md) and [release QA](docs/QA_RELEASE.md).
+**Verification status (November 2026):** Standard devkitARM and independent BlocksDS ROMs have passed CI. Native DeSmuME suites cover stylus input, core views, care/Room Tour, the alien-egg film, completion of all eight starter cabinets, and an earned Cereal Cipher unlock and victory. They include selected losses, wrong-answer and timeout retries, actual steering/timing/dragging, result feedback and reward/purchase totals. **Physical original DS/DraStic operation, sustained FPS/RAM telemetry, long soak tests and real flashcart save persistence remain unverified.** All sixteen minigames have host mechanic coverage; native completion covers nine cabinets, with the other seven paid games still outstanding. See [starter playthroughs](docs/NATIVE_STARTER_ARCADE_TESTS.md), [native arcade tests](docs/NATIVE_ARCADE_TESTS.md), [development status](docs/DEVELOPMENT_STATUS.md) and [release QA](docs/QA_RELEASE.md).
 
 ### Title screen, album, settings
 

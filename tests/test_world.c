@@ -10,10 +10,18 @@
 static int primitive_mode;
 static unsigned primitive_vertices,submitted_triangles;
 static float triangle_points[3][3];
+static int capture_geometry;
+static uint32_t geometry_hash;
 void test_gl_begin(int mode){
  primitive_mode=mode;primitive_vertices=0;
 }
 void test_gl_vertex(float x,float y,float z){
+ if(capture_geometry){
+  uint32_t bits;
+  memcpy(&bits,&x,sizeof(bits));geometry_hash=(geometry_hash^bits)*16777619u;
+  memcpy(&bits,&y,sizeof(bits));geometry_hash=(geometry_hash^bits)*16777619u;
+  memcpy(&bits,&z,sizeof(bits));geometry_hash=(geometry_hash^bits)*16777619u;
+ }
  if(primitive_mode==GL_TRIANGLES){
   unsigned n=primitive_vertices%3u;
   triangle_points[n][0]=x;triangle_points[n][1]=y;triangle_points[n][2]=z;
@@ -39,9 +47,9 @@ static void assert_baby_pose_equal(WorldBabyPose a,WorldBabyPose b){
  assert(a.lean==b.lean&&a.neck==b.neck&&a.yaw==b.yaw);
  assert(a.lid==b.lid&&a.bounce==b.bounce);
 }
-static void assert_baby_pose_bounds(WorldBabyPose p){
- assert(p.reach_left>=-14&&p.reach_left<=59);
- assert(p.reach_right>=-14&&p.reach_right<=59);
+static void assert_baby_pose_bounds_to(WorldBabyPose p,int reach_max){
+ assert(p.reach_left>=-14&&p.reach_left<=reach_max);
+ assert(p.reach_right>=-14&&p.reach_right<=reach_max);
  assert(p.forward_left>=0&&p.forward_left<=13);
  assert(p.forward_right>=0&&p.forward_right<=14);
  assert(p.lean>=-3&&p.lean<=5);
@@ -50,14 +58,18 @@ static void assert_baby_pose_bounds(WorldBabyPose p){
  assert(p.lid>=0&&p.lid<=256);
  assert(p.bounce>=0&&p.bounce<=4608);
 }
+static void assert_baby_pose_bounds(WorldBabyPose p){
+ assert_baby_pose_bounds_to(p,59);
+}
 static void assert_baby_channel_step(int a,int b,int limit){
  assert(a-b<=limit&&b-a<=limit);
 }
-static void assert_baby_pose_step(WorldBabyPose a,WorldBabyPose b){
+static void assert_baby_pose_step_to(WorldBabyPose a,WorldBabyPose b,
+                                     int reach_step){
  /* Even the widest PLAY -> sleepy NAP reversal must cross its range
   * over the 12-tick handoff. A reset would jump roughly fifty degrees. */
- assert_baby_channel_step(a.reach_left,b.reach_left,11);
- assert_baby_channel_step(a.reach_right,b.reach_right,11);
+ assert_baby_channel_step(a.reach_left,b.reach_left,reach_step);
+ assert_baby_channel_step(a.reach_right,b.reach_right,reach_step);
  assert_baby_channel_step(a.forward_left,b.forward_left,3);
  assert_baby_channel_step(a.forward_right,b.forward_right,3);
  assert_baby_channel_step(a.lean,b.lean,2);
@@ -67,6 +79,15 @@ static void assert_baby_pose_step(WorldBabyPose a,WorldBabyPose b){
   * an interrupted NAP can reopen at the same time (32 more units). */
  assert_baby_channel_step(a.lid,b.lid,100);
  assert_baby_channel_step(a.bounce,b.bounce,600);
+}
+static void assert_baby_pose_step(WorldBabyPose a,WorldBabyPose b){
+ assert_baby_pose_step_to(a,b,11);
+}
+static uint32_t baby_geometry(const Game *s,int action,unsigned age){
+ geometry_hash=2166136261u;capture_geometry=1;
+ world_draw_care(s,128u,action,age);
+ capture_geometry=0;
+ return geometry_hash;
 }
 int main(void){
  Game s;Roughhouse r;int i;unsigned worst_v=0,worst_p=0;
@@ -307,6 +328,198 @@ int main(void){
  assert(world_baby_neck_tilt(2,0u)==world_baby_neck_tilt(2,80u));
  assert(world_baby_arm_reach(3)>world_baby_arm_reach(2));
  assert(world_baby_arm_reach(2)>world_baby_arm_reach(1));
+ /* Completed rounds have their own positive, finite acting. CHEER's
+  * raised hands and single lift differ from PLAY; REGROUP offers low
+  * hands and one small head tilt without a fall, shake or prolonged sulk. */
+ assert(WORLD_BABY_CHEER==7&&WORLD_BABY_REGROUP==8);
+ {
+  Game baby,original;
+  WorldBabyPose cheer,regroup,idle;
+  int action;
+  unsigned age;
+  game_init(&baby);original=baby;
+  idle=world_baby_pose(&baby,128u,0,0u,0);
+  cheer=world_baby_pose(&baby,128u,WORLD_BABY_CHEER,18u,0);
+  regroup=world_baby_pose(&baby,128u,WORLD_BABY_REGROUP,18u,0);
+  assert(cheer.reach_left==76&&cheer.reach_right==76);
+  assert(cheer.forward_left==9&&cheer.forward_right==9);
+  assert(cheer.neck==4&&cheer.bounce==3072&&cheer.lid==256);
+  assert(regroup.reach_left==20&&regroup.reach_right==20);
+  assert(regroup.forward_left==12&&regroup.forward_right==12);
+  assert(regroup.neck==-4&&regroup.bounce==0&&regroup.lid==208);
+  for(action=WORLD_BABY_CHEER;action<=WORLD_BABY_REGROUP;action++){
+   WorldBabyPose previous=world_baby_pose(&baby,128u,action,0u,0);
+   assert_baby_pose_equal(previous,idle);
+   for(age=1u;age<=180u;age++){
+    WorldBabyPose p=world_baby_pose(&baby,128u,action,age,0);
+    assert_baby_pose_bounds_to(p,76);
+    assert_baby_pose_step_to(previous,p,13);
+    if(age<=12u){
+     assert(p.reach_left>=previous.reach_left);
+     assert(p.forward_left>=previous.forward_left);
+    }else if(age<=30u)assert(p.reach_left==previous.reach_left);
+    else assert(p.reach_left<=previous.reach_left);
+    if(action==WORLD_BABY_CHEER){
+     if(age<=18u)assert(p.bounce>=previous.bounce);
+     else assert(p.bounce<=previous.bounce);
+     if(age>=40u)assert(p.bounce==0);
+    }else{
+     assert(p.bounce==0);
+     if(age<=12u)assert(p.lid<=previous.lid);
+     if(age>=30u)assert(p.lid>=previous.lid);
+     if(age>=19u&&age<=34u)assert(p.neck>=previous.neck);
+    }
+    if(age>=56u)assert_baby_pose_equal(p,idle);
+    submitted_triangles=0;
+    world_draw_care(&baby,128u,action,age);
+    assert(submitted_triangles==32u);
+    assert(world_vertex_count()<=4702u&&world_polygon_count()<=1808u);
+    previous=p;
+   }
+   assert_baby_pose_equal(world_baby_pose(&baby,128u,action,UINT32_MAX,0),idle);
+  }
+  assert(memcmp(&baby,&original,sizeof(baby))==0);
+  /* A comforting expression must not worsen existing tired eyes. */
+  baby.energy=0;
+  idle=world_baby_pose(&baby,128u,0,0u,0);
+  regroup=world_baby_pose(&baby,128u,WORLD_BABY_REGROUP,18u,0);
+  assert(regroup.lid==idle.lid&&regroup.lid>=96);
+ }
+ /* Check the actual submitted face geometry at low mood. Both outcomes
+  * retain their positive expression; ordinary idle still reflects needs.
+  * The shim records geometry only, not the DS's transformed pixels. */
+ {
+  Game baby;
+  uint32_t bright_regroup,bright_cheer,bright_idle,dull_idle;
+  game_init(&baby);
+  bright_regroup=baby_geometry(&baby,WORLD_BABY_REGROUP,18u);
+  bright_cheer=baby_geometry(&baby,WORLD_BABY_CHEER,18u);
+  bright_idle=baby_geometry(&baby,0,0u);
+  baby.mood=0;
+  dull_idle=baby_geometry(&baby,0,0u);
+  assert(bright_idle!=dull_idle);
+  assert(baby_geometry(&baby,WORLD_BABY_REGROUP,18u)==bright_regroup);
+  assert(baby_geometry(&baby,WORLD_BABY_CHEER,18u)==bright_cheer);
+  assert(baby_geometry(&baby,WORLD_BABY_REGROUP,56u)==dull_idle);
+  assert(baby_geometry(&baby,WORLD_BABY_CHEER,56u)==dull_idle);
+ }
+ /* Every care/result pairing, every interruption age, and sleepy needs.
+  * Result-to-care, care-to-result and repeated results all begin at the
+  * sampled rig and join their new curve at12, including blink boundaries. */
+ {
+  static const int actions[]={0,1,2,3,4,WORLD_BABY_CHEER,WORLD_BABY_REGROUP};
+  static const uint8_t energies[]={0,24,54,100};
+  unsigned from,to,need,old_age,age;
+  for(from=0u;from<sizeof(actions)/sizeof(actions[0]);from++){
+   for(to=1u;to<sizeof(actions)/sizeof(actions[0]);to++){
+    if(actions[from]<WORLD_BABY_CHEER&&actions[to]<WORLD_BABY_CHEER)continue;
+    for(need=0u;need<sizeof(energies)/sizeof(energies[0]);need++){
+     for(old_age=0u;old_age<=56u;old_age++){
+      Game baby,original;
+      WorldBabyMotion motion;
+      WorldBabyPose captured,previous;
+      uint32_t frame=164u+old_age;
+      game_init(&baby);
+      baby.energy=energies[need];baby.hunger=92;baby.chaos=96;
+      captured=world_baby_pose(&baby,frame,actions[from],old_age,0);
+      if(actions[to]<=4)(void)game_care(&baby,(Care)(actions[to]-1));
+      original=baby;
+      world_baby_motion_start(&motion,captured,&baby,frame,actions[to]);
+      previous=world_baby_pose(&baby,frame,actions[to],0u,&motion);
+      assert_baby_pose_equal(previous,captured);
+      for(age=0u;age<=56u;age++){
+       WorldBabyPose p=world_baby_pose(&baby,frame+age,actions[to],age,&motion);
+       assert_baby_pose_bounds_to(p,76);
+       assert_baby_pose_step_to(previous,p,13);
+       if(age>=12u)
+        assert_baby_pose_equal(p,world_baby_pose(&baby,frame+age,
+                                                actions[to],age,0));
+       if(need==0u&&old_age==18u){
+        submitted_triangles=0;
+        world_draw_care_from(&baby,frame+age,actions[to],age,&motion);
+        assert(submitted_triangles==32u);
+        assert(world_vertex_count()<=4702u&&world_polygon_count()<=1808u);
+       }
+       previous=p;
+      }
+      assert_baby_pose_equal(previous,world_baby_pose(&baby,frame+56u,0,0u,0));
+      assert(memcmp(&baby,&original,sizeof(baby))==0);
+     }
+    }
+   }
+  }
+ }
+ /* A genuine arcade finish changes mood/chaos before the new pose starts.
+  * Capture before the decisive input and ensure acting never increments
+  * wins/losses, advances RNG, or applies another care command. */
+ {
+  int won;
+  for(won=0;won<=1;won++){
+   Game baby,finished;
+   Arcade arcade;
+   WorldBabyPose captured;
+   WorldBabyMotion motion;
+   unsigned round,age,attempts=won?5u:2u;
+   int reaction=won?WORLD_BABY_CHEER:WORLD_BABY_REGROUP;
+   game_init(&baby);baby.mood=20;baby.chaos=68;baby.hunger=92;
+   game_arcade_start(&baby,&arcade,5);
+   for(round=0u;round<attempts;round++){
+    int key=game_arcade_expected(&arcade);
+    game_arcade_input(&baby,&arcade,won?key:(key+1)%3);
+    assert(arcade.active);
+   }
+   captured=world_baby_pose(&baby,128u,3,18u,0);
+   {
+    int key=game_arcade_expected(&arcade);
+    game_arcade_input(&baby,&arcade,won?key:(key+1)%3);
+   }
+   assert(!arcade.active&&arcade.finished==(won?1:2));
+   assert(baby.wins==(unsigned)won&&baby.losses==(unsigned)!won);
+   finished=baby;
+   world_baby_motion_start(&motion,captured,&baby,128u,reaction);
+   assert_baby_pose_equal(world_baby_pose(&baby,128u,reaction,0u,&motion),
+                          captured);
+   for(age=0u;age<=56u;age++)
+    world_draw_care_from(&baby,128u+age,reaction,age,&motion);
+   assert(memcmp(&finished,&baby,sizeof(baby))==0);
+  }
+ }
+ /* Alternating and repeated outcomes may themselves interrupt a blend.
+  * Rapid care afterwards must still capture the current animated rig. */
+ {
+  static const int sequence[]={WORLD_BABY_CHEER,WORLD_BABY_CHEER,
+    WORLD_BABY_REGROUP,WORLD_BABY_REGROUP,3,4,WORLD_BABY_CHEER,1,
+    WORLD_BABY_REGROUP,2};
+  Game baby;
+  WorldBabyMotion motion={{0},{0}};
+  WorldBabyPose displayed;
+  unsigned event,tick,age=0u;
+  uint32_t frame=128u;
+  int action=0;
+  game_init(&baby);baby.energy=5;baby.hunger=93;baby.chaos=96;
+  displayed=world_baby_pose(&baby,frame,0,0u,0);
+  for(event=0u;event<256u;event++){
+   WorldBabyPose captured=world_baby_pose(&baby,frame,action,age,
+                                          action?&motion:0);
+   action=sequence[event%(sizeof(sequence)/sizeof(sequence[0]))];
+   if(action<=4)(void)game_care(&baby,(Care)(action-1));
+   world_baby_motion_start(&motion,captured,&baby,frame,action);age=0u;
+   assert_baby_pose_equal(world_baby_pose(&baby,frame,action,age,&motion),
+                          captured);
+   for(tick=0u;tick<1u+event%12u;tick++){
+    WorldBabyPose current=world_baby_pose(&baby,frame,action,age,&motion);
+    assert_baby_pose_bounds_to(current,76);
+    assert_baby_pose_step_to(displayed,current,13);
+    displayed=current;frame++;age++;
+   }
+  }
+  for(;age<=56u;age++,frame++){
+   WorldBabyPose current=world_baby_pose(&baby,frame,action,age,&motion);
+   assert_baby_pose_step_to(displayed,current,13);
+   displayed=current;
+  }
+  assert_baby_pose_equal(displayed,world_baby_pose(&baby,frame-1u,0,0u,0));
+ }
  /* Regression: held PLAY has a wide reach and raised body. Starting
   * FEED/CHAT/NAP previously reset those channels to idle in one frame.
   * The renderer now consumes the same compact rig we capture here. */
