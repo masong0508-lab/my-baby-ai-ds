@@ -111,6 +111,13 @@ jobs:
           python3 tools/nds_legacy_header.py my-baby-ai-blocksds-minimal-arm7.nds my-baby-ai-blocksds-minimal-arm7-ds-only.nds
           python3 tools/nds_plain_homebrew.py my-baby-ai-blocksds-ds-only.nds my-baby-ai-blocksds-plain.nds
           python3 tools/nds_plain_homebrew.py my-baby-ai-blocksds-minimal-arm7-ds-only.nds my-baby-ai-blocksds-minimal-arm7-plain.nds
+          # V3 is a separate original-DS ROM, preserving the previous builds.
+          # Classic has a canonical 0x200 homebrew header and a valid
+          # 32x32 icon/UTF-16 banner. The prior v2 ROM had no banner.
+          python3 tools/nds_drastic_banner.py my-baby-ai-blocksds-ds-only.nds my-baby-ai-blocksds-drastic-classic.nds --layout classic
+          python3 tools/nds_drastic_banner.py my-baby-ai-blocksds-ds-only.nds my-baby-ai-blocksds-drastic-plain.nds --layout plain
+          python3 tools/nds_drastic_banner.py my-baby-ai-blocksds-ds-only.nds my-baby-ai-blocksds-drastic-standard.nds --layout standard
+          python3 tools/nds_drastic_banner.py my-baby-ai-blocksds-minimal-arm7-ds-only.nds my-baby-ai-blocksds-minimal-arm7-drastic-classic.nds --layout classic
           python3 - <<'PY'
           from pathlib import Path
           from sys import path
@@ -152,6 +159,10 @@ jobs:
             my-baby-ai-blocksds-minimal-arm7-ds-only.nds
             my-baby-ai-blocksds-plain.nds
             my-baby-ai-blocksds-minimal-arm7-plain.nds
+            my-baby-ai-blocksds-drastic-classic.nds
+            my-baby-ai-blocksds-drastic-plain.nds
+            my-baby-ai-blocksds-drastic-standard.nds
+            my-baby-ai-blocksds-minimal-arm7-drastic-classic.nds
           if-no-files-found: error
           retention-days: 30
 
@@ -359,5 +370,50 @@ jobs:
         with:
           name: desmume-observer-evidence
           path: emulator-observer-proof/
+          retention-days: 30
+          if-no-files-found: warn
+
+  desmume-drastic-banner:
+    name: Boot classic and plain ROMs with validated icon and title
+    needs: ds-only-packaging
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Retrieve the exact ROMs built in this run
+        uses: actions/download-artifact@v4
+        with:
+          name: my-baby-ai-blocksds-legacy-compat
+      - name: Set up native DS emulator
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install actual DeSmuME and screenshot backend
+        shell: bash
+        run: python -m pip install --disable-pip-version-check py-desmume==0.0.9 Pillow
+      - name: Verify both legacy layouts with actual title and gameplay
+        shell: bash
+        env:
+          SDL_VIDEODRIVER: dummy
+          SDL_AUDIODRIVER: dummy
+        run: |
+          set -euxo pipefail
+          python3 tests/test_nds_drastic_banner.py
+          timeout 220 python tests/emulator_touch.py \
+            blocksds-touch-probe-ds-only.nds \
+            my-baby-ai-blocksds-drastic-classic.nds \
+            --output emulator-drastic-classic --stage game
+          timeout 220 python tests/emulator_touch.py \
+            blocksds-touch-probe-ds-only.nds \
+            my-baby-ai-blocksds-drastic-plain.nds \
+            --output emulator-drastic-plain --stage game
+      - name: Archive real native screenshots and results even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: desmume-drastic-v3-compatibility-evidence
+          path: |
+            emulator-drastic-classic/
+            emulator-drastic-plain/
           retention-days: 30
           if-no-files-found: warn

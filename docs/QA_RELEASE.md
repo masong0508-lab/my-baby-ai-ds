@@ -207,3 +207,34 @@ the actual plain variant through the DeSmuME title, START, FEED, touch,
 3D, Toybox and egg walkthrough and archives screenshots. Normal builds
 remain available as a fallback. Native hardware, DraStic itself, sustained
 FPS/RAM and real flashcart persistence still require direct confirmation.
+
+## DraStic screenshot: false encrypted alert persists with v2 (2026-11-22)
+
+The user supplied a real DraStic screenshot showing an encrypted-ROM/ARM7 BIOS
+dialog after the v2 compatibility package, with the library name rendered
+as garbled Chinese-looking glyphs and a dark corrupted icon. The reported
+problem is **not fixed** merely because DeSmuME can play v2.
+
+Inspection of the exact distributed BlocksDS image found:
+- `0x68` banner offset is zero: there is no DS icon/title banner.
+- `0x84` header size was 0x1000 in v2, rather than a standard 0x200
+  old-homebrew or 0x4000 newer image size.
+- ARM9 is original compiled code; the first 0x800 bytes of the toolchain
+  0x4000 source area are blank. No retail encrypted secure area is present.
+
+Added `tools/nds_drastic_banner.py` with deterministic 32x32 pixel icon,
+proper six-language v1 UTF-16 title, banner CRC, header CRC, and
+separate `classic` (ARM9 ROM offset 0x200, header 0x200), `plain`
+(ARM9 ROM offset 0x1000, header 0x200), and `standard` fallback
+(ARM9 0x4000, header 0x4000) images. The ARM9 and ARM7 byte sequences
+are preserved, as are their RAM destinations, entry points, NitroFS,
+and prior saves. The converter rejects nonblank secure-area prefixes,
+unknown game identities, invalid source checksums, code overlaps and
+corrupt existing banners.
+
+Strict host metadata tests check the title, palette/icon tiles,
+checksum and compiler-code invariance; both CI builders package these
+new variants. A separate native DeSmuME job boots and plays the
+actual classic/0x1000 variants through title, stylus, nursery,
+Toybox and egg. **DraStic field acceptance remains unknown** until
+the screenshot reporter tries this new file on the same app.
