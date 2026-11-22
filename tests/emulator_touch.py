@@ -22,6 +22,7 @@ from pathlib import Path
 from PIL import ImageChops
 from desmume.controls import Keys, keymask
 from desmume.emulator import DeSmuME
+from emulator_pixels import read_text
 
 FRAMES_BOOT = 120
 FRAMES_HOLD = 24
@@ -550,6 +551,13 @@ def test_actual_game(path: Path, output: Path) -> dict:
     # floating hand ellipsoids. This samples a real CHAT gesture.
     stylus_tap(emu, 187, 131)
     after_chat = picture(emu, output, "game_nursery_chat_reach")
+    # Read the ROM's actual bitmap letters. A changing card alone cannot
+    # prove that recent care reached the session-memory dialogue path.
+    remembered_feed = read_text(after_chat, 17, 192 + 47, ink="ink")
+    assert remembered_feed in {
+        "THAT BOTTLE HIT THE SPOT. THANK YOU.",
+        "THE LAST BOTTLE EARNED FIVE STARS.",
+    }, f"CHAT did not recall the immediately preceding FEED: {remembered_feed!r}"
     chat_changed = difference(after_feed, after_chat, (34, 20, 222, 182))
     assert chat_changed > 28, (
         f"CHAT failed to visibly raise the connected infant arms ({chat_changed})"
@@ -570,8 +578,13 @@ def test_actual_game(path: Path, output: Path) -> dict:
     # and the additional arm-slump threshold (25). A mere four taps
     # stopped at energy 45 and only verified a subtle eyelid response.
     # Let the one-shot PLAY reach gesture finish before photographing.
-    for _ in range(6):
+    for play_index in range(6):
         stylus_tap(emu, 66, 160)
+        if play_index < 2:
+            # The second PLAY interrupts the first before its 56-tick
+            # recovery. Archive native rig frames for visual review;
+            # test_world checks exact continuity of every rig channel.
+            picture(emu, output, f"game_nursery_play_interruption_{play_index + 1}")
         frames(emu, 13)
     frames(emu, 80)
     tired_baby = picture(emu, output, "game_nursery_baby_low_energy")
@@ -1141,6 +1154,7 @@ def test_actual_game(path: Path, output: Path) -> dict:
         "3D_care_pose_changed_pixels": pose_changed,
         "3D_nap_upright_romper_pixels": upright_romper_pixels,
         "3D_chat_reach_changed_pixels": chat_changed,
+        "CHAT_recent_feed_reply": remembered_feed,
         "3D_chat_recovery_changed_pixels": recovered_change,
         "3D_low_energy_baby_changed_pixels": tired_expression_changed,
         "low_energy_meter_changed_pixels": exhausted_energy_bar_pixels,

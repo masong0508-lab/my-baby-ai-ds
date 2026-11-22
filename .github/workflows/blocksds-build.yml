@@ -186,3 +186,42 @@ jobs:
           path: emulator-proof/
           retention-days: 30
           if-no-files-found: warn
+
+  desmume-arcade:
+    name: Play native arcade retries and earn the Cereal unlock
+    needs: ds-only-packaging
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Retrieve the production ROM built in this run
+        uses: actions/download-artifact@v4
+        with:
+          name: my-baby-ai-blocksds-legacy-compat
+      - name: Configure Python test harness
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install actual DeSmuME emulator and screenshot backend
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python -m pip install --disable-pip-version-check py-desmume==0.0.9 Pillow
+      - name: Play visible puzzles using native stylus and keypad controls
+        shell: bash
+        env:
+          SDL_VIDEODRIVER: dummy
+          SDL_AUDIODRIVER: dummy
+        run: |
+          set -euxo pipefail
+          timeout 240 python tests/emulator_arcade.py \
+            my-baby-ai-blocksds-ds-only.nds \
+            --output emulator-arcade-proof
+      - name: Upload native arcade screens and results even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: desmume-native-arcade-evidence
+          path: emulator-arcade-proof/
+          retention-days: 30
+          if-no-files-found: warn

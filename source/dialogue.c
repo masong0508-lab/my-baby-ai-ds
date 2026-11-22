@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include <string.h>
 #include "dialogue.h"
 /*
  * Compact, offline Q0-ish integer neural classifier. Hand-tuned fixed
@@ -112,4 +113,124 @@ const char *dialogue_reply(Game *state,Care action){
  /* One extra bit of the EXISTING save-compatible RNG doubles variety.
   * No new Game field, transcript buffer or runtime text allocation. */
  return lines[intent][(x>>12)&(VARIANTS-1u)];
+}
+/* Twelve authored recollections, selected only after a corresponding
+ * event really happened. Static ROM text, not a generated transcript.
+ * Every line fits one 36-character nursery speech row. */
+#define MEMORY_KINDS 6
+#define MEMORY_VARIANTS 2
+#define MEMORY_CAPACITY 4u
+#define MEMORY_MAX_AGE 8u
+#define NO_REPLY UINT8_MAX
+static const char *const memories[MEMORY_KINDS][MEMORY_VARIANTS]={
+ {"THAT BOTTLE HIT THE SPOT. THANK YOU.",
+  "THE LAST BOTTLE EARNED FIVE STARS."},
+ {"OUR PLAYTIME DESERVES AN ENCORE.",
+  "YOU MADE PLAYTIME FEEL SPECIAL."},
+ {"THAT NAP FIXED MY WHOLE AFTERNOON.",
+  "I AM BACK FROM MY PAID NAP. THANKS."},
+ {"THAT ARCADE WIN GOES ON YOUR REVIEW.",
+  "OUR WIN EARNED AN EXTRA GIGGLE."},
+ {"THAT ARCADE LOSS IS OFF THE RECORD.",
+  "ONE LOSS WILL NOT CANCEL PLAYTIME."},
+ {"THAT QUIET CRIB NAP WAS FIRST CLASS.",
+  "THE DARK, QUIET CRIB HELPED ME REST."}
+};
+void dialogue_memory_reset(DialogueMemory *memory,uint32_t day){
+ if(!memory)return;
+ memset(memory,0,sizeof(*memory));
+ memory->day=day;memory->last_reply=NO_REPLY;
+}
+static void memory_sync_day(DialogueMemory *memory,uint32_t day){
+ if(memory->day!=day)dialogue_memory_reset(memory,day);
+}
+static void memory_remove(DialogueMemory *memory,unsigned index){
+ unsigned i;
+ for(i=index+1u;i<memory->count;i++)
+  memory->recent[i-1u]=memory->recent[i];
+ if(memory->count)memory->count--;
+}
+static void memory_age(DialogueMemory *memory){
+ unsigned i=0;
+ while(i<memory->count){
+  memory->recent[i].age++;
+  if(memory->recent[i].age>=MEMORY_MAX_AGE)memory_remove(memory,i);
+  else i++;
+ }
+}
+static void memory_record(DialogueMemory *memory,DialogueEvent event){
+ unsigned i=0;
+ while(i<memory->count){
+  if(memory->recent[i].kind==(unsigned)event||
+     (event==DIALOGUE_EVENT_QUIET_REST&&
+      memory->recent[i].kind==DIALOGUE_EVENT_NAP))memory_remove(memory,i);
+  else i++;
+ }
+ if(memory->count>=MEMORY_CAPACITY)memory->count=MEMORY_CAPACITY-1u;
+ for(i=memory->count;i>0u;i--)memory->recent[i]=memory->recent[i-1u];
+ memory->recent[0].kind=(uint8_t)event;
+ memory->recent[0].age=0;memory->recent[0].spoken=0;
+ memory->count++;
+}
+void dialogue_memory_event(DialogueMemory *memory,DialogueEvent event,
+                           uint32_t day){
+ if(!memory||event<DIALOGUE_EVENT_FEED||event>DIALOGUE_EVENT_QUIET_REST)
+  return;
+ memory_sync_day(memory,day);
+ /* Successful quiet rest completes the NAP just recorded by care. It
+  * upgrades that one interaction, not a second tick of every memory. */
+ if(!(event==DIALOGUE_EVENT_QUIET_REST&&memory->count&&
+      memory->recent[0].kind==DIALOGUE_EVENT_NAP&&
+      memory->recent[0].age==0))memory_age(memory);
+ memory_record(memory,event);
+}
+static unsigned known_reply(const char *reply){
+ unsigned i,j;
+ if(!reply)return NO_REPLY;
+ for(i=0;i<OUTPUTS;i++)for(j=0;j<VARIANTS;j++)
+  if(reply==lines[i][j])return i*VARIANTS+j;
+ return NO_REPLY;
+}
+const char *dialogue_contextual_reply(DialogueMemory *memory,
+                                      const Game *state,Care action,
+                                      const char *fallback){
+ unsigned reply,i;
+ if(!memory||!state||action<FEED||action>NAP)return fallback;
+ memory_sync_day(memory,state->days);
+ memory_age(memory);
+ /* Current needs take precedence over a cheerful reminiscence even if
+  * the intent classifier happens to prefer a different authored mood. */
+ if(action==CHAT&&state->hunger<65&&state->energy>40&&
+    state->mood>40&&state->corruption<60&&state->chaos<65){
+  int intent=dialogue_intent(state,CHAT);
+  if(intent==0||intent==3){
+   for(i=0;i<memory->count;i++){
+    DialogueMemoryEntry *entry=&memory->recent[i];
+    if(!entry->spoken){
+     unsigned kind=(unsigned)entry->kind-1u;
+     unsigned variant=(state->rng>>16)&1u;
+     reply=OUTPUTS*VARIANTS+kind*MEMORY_VARIANTS+variant;
+     if(reply==memory->last_reply){variant^=1u;reply^=1u;}
+     entry->spoken=1;memory->last_reply=(uint8_t)reply;
+     return memories[kind][variant];
+    }
+   }
+  }
+ }
+ /* game_care already advanced the shared RNG exactly once. If it chose
+  * the preceding line again, take another variant of that SAME intent
+  * using existing bits, so neither game randomness nor needs change. */
+ reply=known_reply(fallback);
+ if(reply!=NO_REPLY&&reply==memory->last_reply){
+  unsigned intent=reply/VARIANTS;
+  unsigned variant=reply%VARIANTS;
+  variant=(variant+1u+(state->rng>>20)%(VARIANTS-1u))%VARIANTS;
+  reply=intent*VARIANTS+variant;
+  fallback=lines[intent][variant];
+ }
+ memory->last_reply=(uint8_t)reply;
+ if(action==FEED)memory_record(memory,DIALOGUE_EVENT_FEED);
+ else if(action==PLAY)memory_record(memory,DIALOGUE_EVENT_PLAY);
+ else if(action==NAP)memory_record(memory,DIALOGUE_EVENT_NAP);
+ return fallback;
 }

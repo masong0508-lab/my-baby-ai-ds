@@ -574,6 +574,84 @@ int world_baby_lid_open(uint32_t frame,int action,uint32_t age){
  }
  return openness;
 }
+/* Sample the actual channels submitted to the rig, not an action label.
+ * The Toybox path uses the same original impulse/settle responses, while
+ * ordinary care can capture an interrupted gesture before needs change. */
+static WorldBabyPose baby_pose_sample(const Game *s,uint32_t frame,
+                                      int action,uint32_t age,
+                                      const Roughhouse *rag){
+ WorldBabyPose p;
+ unsigned phase=age%36u,hop=phase<18u?phase:36u-phase;
+ int weight=rag?256:(action?world_baby_care_weight(age):0);
+ int sleepy=!rag&&s->energy<25?-4*(25-(int)s->energy)/25:0;
+ int reach=7+(world_baby_arm_reach(action)-7)*weight/256+sleepy;
+ /* .00145 * 160 = 29/125. Preserve the original whole-degree wave
+  * without doing float work for a tiny transient integer rig. */
+ int wave=((int)hop-9)*29*weight/(125*256);
+ /* A settled Toybox shell must not retain an asymmetric impact pose. */
+ int recoil=rag&&rag->moving?(rag->vr>3?5:rag->vr< -3?-5:0):0;
+ int neck=world_baby_neck_tilt(action,age)*weight/256;
+ /* The staged fractured-doll reveal holds recognizable open eyes. */
+ int lid=rag&&!rag->moving&&rag->charge>=ROUGHHOUSE_CRACK_CHARGE?
+          256:world_baby_lid_open(frame,action,age);
+ p.reach_left=(int16_t)(reach+wave+recoil);
+ p.reach_right=(int16_t)(reach-wave-recoil);
+ p.forward_left=(int16_t)((action==1?13:action==2?8:
+                           action==3?10:0)*weight/256);
+ p.forward_right=(int16_t)(p.forward_left+(action==2?6*weight/256:0));
+ p.lean=(int16_t)((action==1?3:action==2?-3:action==3?5:
+                   action==4?-3:0)*weight/256);
+ if(!rag){
+  neck+=world_baby_need_fidget(s->hunger,s->chaos,frame)*(256-weight)/256;
+  lid=lid*world_baby_drowsy_lid(s->energy)/256;
+ }
+ if(rag&&rag->moving)neck-=rag->vr/3;
+ if(neck>16)neck=16;
+ if(neck< -16)neck=-16;
+ p.neck=(int16_t)neck;
+ p.yaw=(int16_t)((action==2?3:action==3?-2:0)*weight/256);
+ p.lid=(int16_t)lid;
+ p.bounce=(int16_t)(action==3?(int)hop*weight:0);
+ return p;
+}
+static int16_t care_channel(int current,int from,int baseline,int keep){
+ return (int16_t)(current+(from-baseline)*keep/256);
+}
+WorldBabyPose world_baby_pose(const Game *s,uint32_t frame,int action,
+                              uint32_t age,const WorldBabyMotion *motion){
+ WorldBabyPose p=baby_pose_sample(s,frame,action,age,0);
+ int keep;
+ if(!motion||age>=12u)return p;
+ keep=256-smooth8(age,12u);
+ /* Add only the decaying difference from the new zero-age baseline.
+  * Blending the whole new pose again would double-ease every gesture.
+  * At age zero every channel exactly equals the interrupted sample;
+  * by age twelve the established hold/recovery curve is unchanged. */
+ p.reach_left=care_channel(p.reach_left,motion->start.reach_left,
+                           motion->baseline.reach_left,keep);
+ p.reach_right=care_channel(p.reach_right,motion->start.reach_right,
+                            motion->baseline.reach_right,keep);
+ p.forward_left=care_channel(p.forward_left,motion->start.forward_left,
+                             motion->baseline.forward_left,keep);
+ p.forward_right=care_channel(p.forward_right,motion->start.forward_right,
+                              motion->baseline.forward_right,keep);
+ p.lean=care_channel(p.lean,motion->start.lean,motion->baseline.lean,keep);
+ p.neck=care_channel(p.neck,motion->start.neck,motion->baseline.neck,keep);
+ p.yaw=care_channel(p.yaw,motion->start.yaw,motion->baseline.yaw,keep);
+ p.lid=care_channel(p.lid,motion->start.lid,motion->baseline.lid,keep);
+ p.bounce=care_channel(p.bounce,motion->start.bounce,
+                      motion->baseline.bounce,keep);
+ /* A natural blink can advance during the handoff; its additive lid
+  * correction must never turn a shutter inside-out or open past the eye. */
+ if(p.lid<0)p.lid=0;
+ if(p.lid>256)p.lid=256;
+ return p;
+}
+void world_baby_motion_start(WorldBabyMotion *motion,WorldBabyPose from,
+                             const Game *s,uint32_t frame,int action){
+ motion->start=from;
+ motion->baseline=baby_pose_sample(s,frame,action,0u,0);
+}
 /* Rotating hand caps must be real triangles, not quad-strip poles with
  * two coincident vertices carrying different colors. Native DeSmuME
  * captured a 77px brown scanline across the teddy during FEED while an
@@ -626,45 +704,21 @@ static void baby_arm(int direction,int angle,int forward){
  * Only ROM-native primitive meshes; no texture or framebuffer allocation. */
 static void baby_model(const Game *s,uint32_t frame,int action,
                        const Roughhouse *rag,uint32_t action_age,
-                       int attention){
- unsigned beat=frame%120u,arms=action_age%36u;
- const unsigned hop=action_age%36u;
+                       int attention,const WorldBabyMotion *motion){
+ unsigned beat=frame%120u;
+ const WorldBabyPose rig=rag?baby_pose_sample(s,frame,action,action_age,rag):
+   world_baby_pose(s,frame,action,action_age,motion);
  /* Rig motion is staged in one short action. Lower-body bounce, shoulder
   * rotation, hand reach, neck reaction and eyelid shape share this curve. */
  const int weight=rag?256:(action?world_baby_care_weight(action_age):0);
- const float intensity=(float)weight/256.f;
  const float breath=rag?0.f:(float)world_baby_breath(frame)/256.f;
  const float bob=((float)(beat<60u?beat:120u-beat)-30.f)*.00022f+
-                 (action==3?(float)(hop<18u?hop:36u-hop)*.0022f*intensity:0.f);
- const float wave=((float)(arms<18u?arms:36u-arms)-9.f)*.00145f*intensity;
+                 (float)rig.bounce*.0022f/256.f;
  /* Primary body rotation comes from the fixed-point toy simulation. The
   * secondary shoulder/neck reactions are tiny and remain physically
   * connected to the parent model rather than becoming floating parts. */
  const float settle=rag?(float)rag->impact*.0025f:0.f;
- /* Care IDs: FEED=1, CHAT=2, PLAY=3, NAP=4. Each reaches using
-  * a shared shoulder pivot, not isolated upward-moving arm balls. */
- /* A sleepy baby lets the arms hang slightly after the last care action.
-  * Toybox collision physics remains untouched and retains its recoil. */
- const int sleepy_reach=!rag&&s->energy<25?
-                        -4*(25-(int)s->energy)/25:0;
- const int base_reach=7+(world_baby_arm_reach(action)-7)*weight/256+
-                      sleepy_reach;
- const int wave_deg=(int)(wave*160.f);
- /* A roll that has already settled must not hold one hand in a
-  * permanent asymmetric 'impact' pose. Only real angular velocity
-  * produces a short connected arm reaction. */
- const int recoil=rag&&rag->moving?(rag->vr>3?5:rag->vr< -3?-5:0):0;
- const int lean=(action==1?3:action==2?-3:action==3?5:
-                 action==4?-3:0)*weight/256;
- const int reach_forward=(action==1?13:action==2?8:
-                          action==3?10:0)*weight/256;
- /* The fractured-baby FILM must show recognizable eyes in its first
-  * shot. Ordinary care keeps natural blinking, including NAP; the
-  * view-only staged damaged doll holds its eyes open for the reveal. */
- int lid=rag&&!rag->moving&&
-         rag->charge>=ROUGHHOUSE_CRACK_CHARGE?
-         256:world_baby_lid_open(frame,action,action_age);
- if(!rag)lid=lid*world_baby_drowsy_lid(s->energy)/256;
+ const int lid=rig.lid;
  const float lid_height=(float)lid/256.f;
  /* Hungry and exhausted infants should look unsettled even when
   * an old positive mood score hasn't yet caught up with their needs.
@@ -674,7 +728,7 @@ static void baby_model(const Game *s,uint32_t frame,int action,
                   (frame%151u)<12u;
  glPushMatrix();
  glTranslatef(-.12f,bob-settle,.23f);
- glRotateZi(model_angle(lean)); /* torso and limbs ease together */
+ glRotateZi(model_angle(rig.lean)); /* torso and limbs ease together */
  /* Footed one-piece romper, short legs and soft shoes: no adult denim. */
  ellipse(0,-.75f,-.07f,.46f,.31f,.34f,19,26,27);
  ellipse(-.32f,-.93f,.14f,.245f,.22f,.27f,18,25,27);
@@ -703,33 +757,20 @@ static void baby_model(const Game *s,uint32_t frame,int action,
  soft_mark(0,-.38f,.332f,.044f,.027f,30,25,14);
  /* Rotating the whole forearm+hand hierarchy preserves contact with
   * the sleeve in every action and during roughhouse recoil. */
- baby_arm(-1,base_reach+wave_deg+recoil,reach_forward);
- baby_arm(1,base_reach-wave_deg-recoil,
-          reach_forward+(action==2?6*weight/256:0));
+ baby_arm(-1,rig.reach_left,rig.forward_left);
+ baby_arm(1,rig.reach_right,rig.forward_right);
  /* Neck pivot moves the entire face, eyes, cheeks, hair, and mouth AS ONE.
   * The free head briefly lags the shell's rolling body by at most 16deg. */
  glPushMatrix();
- {
-  int neck=world_baby_neck_tilt(action,action_age)*weight/256;
-  if(!rag){
-   int rest=256-weight;
-   int fidget=world_baby_need_fidget(s->hunger,s->chaos,frame);
-   neck+=fidget*rest/256; /* care commands take priority over idle unrest */
-  }
-  if(rag&&rag->moving)neck-=rag->vr/3;
-  if(neck>16)neck=16;
-  if(neck< -16)neck=-16;
-  if(neck){
-   /* Pivot below the jaw, rather than spinning the head around its middle. */
-   glTranslatef(0,.10f,0);
-   glRotateZi(model_angle(neck));
-   glTranslatef(0,-.10f,0);
-  }
+ if(rig.neck){
+  /* Pivot below the jaw, rather than spinning the head around its middle. */
+  glTranslatef(0,.10f,0);
+  glRotateZi(model_angle(rig.neck));
+  glTranslatef(0,-.10f,0);
  }
  /* A tiny eye-line turn keeps head and arms reading as one intention.
   * Avoid large yaw: low-poly eyes/ears remain recognizable in profile. */
- if(action==2||action==3)
-  glRotateYi(model_angle((action==2?3:-2)*weight/256));
+ if(rig.yaw)glRotateYi(model_angle(rig.yaw));
  if(attention)glRotateYi(model_angle(attention));
  /* Rounded unified face. No second oversized jaw shell, no floating teeth. */
  soft_head(0,.54f,.045f,.61f,.615f,.45f,30,22,19);
@@ -870,7 +911,7 @@ void world_draw_nursery(const Game *s,uint32_t frame,int activity,
                         uint32_t action_age,int focus,int from,
                         uint32_t camera_age,int daylight,int lamp,
                         uint32_t prop_age,const EggCamera *camera_start,
-                        int attention_start){
+                        int attention_start,const WorldBabyMotion *motion){
  EggCamera camera=camera_start?
    world_nursery_camera_from(*camera_start,focus,camera_age):
    world_nursery_camera(focus,from,camera_age);
@@ -896,7 +937,7 @@ void world_draw_nursery(const Game *s,uint32_t frame,int activity,
  tour_lamp_on=1;
  flat_floor(-.10f,-1.124f,.31f,.84f,.255f,18,16,23);
  baby_model(s,frame,activity,0,action_age,
-            world_baby_attention_from(attention_start,focus,camera_age));
+            world_baby_attention_from(attention_start,focus,camera_age),motion);
  if(focus==2&&prop_age<40u){
   /* One *finite* teddy bow. Arms, face and plush fabric remain attached
    * beneath the exact same parent transform. */
@@ -911,7 +952,11 @@ void world_draw_nursery(const Game *s,uint32_t frame,int activity,
 }
 void world_draw_care(const Game *s,uint32_t frame,int activity,
                      uint32_t action_age){
- world_draw_nursery(s,frame,activity,action_age,-1,-1,16u,0,1,40u,0,0);
+ world_draw_care_from(s,frame,activity,action_age,0);
+}
+void world_draw_care_from(const Game *s,uint32_t frame,int activity,
+                          uint32_t action_age,const WorldBabyMotion *motion){
+ world_draw_nursery(s,frame,activity,action_age,-1,-1,16u,0,1,40u,0,0,motion);
 }
 /* Compatibility for existing host callers and noninteractive views: they
  * sample the deliberately posed hold, while live gameplay uses action age. */
@@ -952,7 +997,7 @@ void world_draw_roughhouse(const Game *s,uint32_t frame,const Roughhouse *r){
   glRotateXi(model_angle((int)r->pitch/4));
   glRotateYi(model_angle((int)r->yaw/4));
  }
- baby_model(s,frame,r&&r->moving?5:0,r,0u,0);
+ baby_model(s,frame,r&&r->moving?5:0,r,0u,0,0);
  if(r&&r->charge>=6){
   /* First fracture: the hospital-pastel chest pocket conceals a seam. */
   soft_mark(-.12f,-.27f,.565f,.029f,.20f,11,13,14);

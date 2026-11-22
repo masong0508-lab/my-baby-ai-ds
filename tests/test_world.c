@@ -33,6 +33,41 @@ void test_gl_vertex(float x,float y,float z){
 void test_gl_end(void){
  if(primitive_mode==GL_TRIANGLES)assert(primitive_vertices%3u==0u);
 }
+static void assert_baby_pose_equal(WorldBabyPose a,WorldBabyPose b){
+ assert(a.reach_left==b.reach_left&&a.reach_right==b.reach_right);
+ assert(a.forward_left==b.forward_left&&a.forward_right==b.forward_right);
+ assert(a.lean==b.lean&&a.neck==b.neck&&a.yaw==b.yaw);
+ assert(a.lid==b.lid&&a.bounce==b.bounce);
+}
+static void assert_baby_pose_bounds(WorldBabyPose p){
+ assert(p.reach_left>=-14&&p.reach_left<=59);
+ assert(p.reach_right>=-14&&p.reach_right<=59);
+ assert(p.forward_left>=0&&p.forward_left<=13);
+ assert(p.forward_right>=0&&p.forward_right<=14);
+ assert(p.lean>=-3&&p.lean<=5);
+ assert(p.neck>=-16&&p.neck<=16);
+ assert(p.yaw>=-2&&p.yaw<=3);
+ assert(p.lid>=0&&p.lid<=256);
+ assert(p.bounce>=0&&p.bounce<=4608);
+}
+static void assert_baby_channel_step(int a,int b,int limit){
+ assert(a-b<=limit&&b-a<=limit);
+}
+static void assert_baby_pose_step(WorldBabyPose a,WorldBabyPose b){
+ /* Even the widest PLAY -> sleepy NAP reversal must cross its range
+  * over the 12-tick handoff. A reset would jump roughly fifty degrees. */
+ assert_baby_channel_step(a.reach_left,b.reach_left,11);
+ assert_baby_channel_step(a.reach_right,b.reach_right,11);
+ assert_baby_channel_step(a.forward_left,b.forward_left,3);
+ assert_baby_channel_step(a.forward_right,b.forward_right,3);
+ assert_baby_channel_step(a.lean,b.lean,2);
+ assert_baby_channel_step(a.neck,b.neck,3);
+ assert_baby_channel_step(a.yaw,b.yaw,2);
+ /* The existing natural blink advances up to 64 aperture units/tick;
+  * an interrupted NAP can reopen at the same time (32 more units). */
+ assert_baby_channel_step(a.lid,b.lid,100);
+ assert_baby_channel_step(a.bounce,b.bounce,600);
+}
 int main(void){
  Game s;Roughhouse r;int i;unsigned worst_v=0,worst_p=0;
  game_init(&s);world_init();
@@ -90,14 +125,14 @@ int main(void){
     last=q.x;
    }
    world_draw_nursery(&s,130u,3,18u,i,-1,16u,
-                      i==0,i!=1,18u,0,0);
+                      i==0,i!=1,18u,0,0,0);
    assert(world_vertex_count()<=5000);
    assert(world_polygon_count()<=1850);
   }
   /* Visual-state changes must not alter any saved Game data. */
   {
    Game original=s;
-   world_draw_nursery(&s,132u,0,0u,0,-1,16u,1,0,40u,0,0);
+   world_draw_nursery(&s,132u,0,0u,0,-1,16u,1,0,40u,0,0,0);
    assert(memcmp(&original,&s,sizeof(s))==0);
    world_draw(&s,133u,0); /* normal care restores night + lamp */
    assert(world_polygon_count()<=1850);
@@ -120,7 +155,7 @@ int main(void){
   assert(first.x-interrupt.x<.08f && interrupt.x-first.x<.08f);
   assert(first.look_x-interrupt.look_x<.08f);
   assert(end.x==crib.x&&end.look_x==crib.look_x);
-  world_draw_nursery(&s,222u,0,0u,3,0,1u,0,1,40u,&midway,0);
+  world_draw_nursery(&s,222u,0,0u,3,0,1u,0,1,40u,&midway,0,0);
   assert(world_vertex_count()<=5000);
   assert(world_polygon_count()<=1850);
  }
@@ -132,7 +167,7 @@ int main(void){
   s.mood=95;
   for(age=0u;age<=56u;age++){
    world_draw_nursery(&s,173u+age,4,age,3,-1,16u,
-                      0,1,40u,0,0);
+                      0,1,40u,0,0,0);
    assert(world_vertex_count()<=5000);
    assert(world_polygon_count()<=1850);
   }
@@ -156,7 +191,7 @@ int main(void){
    assert(angle-prev<=3&&prev-angle<=3);
    prev=angle;
    world_draw_nursery(&s,350u+tick,4,18u,3,-1,16u,
-                      0,0,tick,0,0);
+                      0,0,tick,0,0,0);
    assert(world_vertex_count()<=5000);
    assert(world_polygon_count()<=1850);
   }
@@ -183,7 +218,7 @@ int main(void){
    assert(v<=0&&v>=-12);
    assert(v-old<=3 && old-v<=3);
    old=v;
-   world_draw_nursery(&s,300u+tick,0,0u,2,-1,16u,0,1,tick,0,0);
+   world_draw_nursery(&s,300u+tick,0,0u,2,-1,16u,0,1,tick,0,0,0);
    assert(world_vertex_count()<=5000);
    assert(world_polygon_count()<=1850);
   }
@@ -250,9 +285,9 @@ int main(void){
   {
    Game original=s;
    unsigned vertices,polygons;
-   world_draw_nursery(&s,128u,0,56u,3,1,6u,0,1,40u,0,0);
+   world_draw_nursery(&s,128u,0,56u,3,1,6u,0,1,40u,0,0,0);
    vertices=world_vertex_count();polygons=world_polygon_count();
-   world_draw_nursery(&s,128u,0,56u,3,1,6u,0,1,40u,0,-7);
+   world_draw_nursery(&s,128u,0,56u,3,1,6u,0,1,40u,0,-7,0);
    assert(world_vertex_count()==vertices&&world_polygon_count()==polygons);
    assert(vertices<=5000&&polygons<=1850);
    assert(memcmp(&original,&s,sizeof(s))==0);
@@ -272,6 +307,154 @@ int main(void){
  assert(world_baby_neck_tilt(2,0u)==world_baby_neck_tilt(2,80u));
  assert(world_baby_arm_reach(3)>world_baby_arm_reach(2));
  assert(world_baby_arm_reach(2)>world_baby_arm_reach(1));
+ /* Regression: held PLAY has a wide reach and raised body. Starting
+  * FEED/CHAT/NAP previously reset those channels to idle in one frame.
+  * The renderer now consumes the same compact rig we capture here. */
+ {
+  Game rested;
+  WorldBabyPose play,feed,idle;
+  WorldBabyMotion motion;
+  game_init(&rested);
+  assert(sizeof(WorldBabyPose)==18u&&sizeof(WorldBabyMotion)==36u);
+  play=world_baby_pose(&rested,128u,3,18u,0);
+  assert(play.reach_left==59&&play.reach_right==55);
+  assert(play.forward_left==10&&play.forward_right==10);
+  assert(play.lean==5&&play.neck==5&&play.yaw==-2);
+  assert(play.lid==256&&play.bounce==4608);
+  world_baby_motion_start(&motion,play,&rested,128u,1);
+  assert_baby_pose_equal(world_baby_pose(&rested,128u,1,0u,&motion),play);
+  feed=world_baby_pose(&rested,134u,1,6u,&motion);
+  assert(feed.reach_left>28&&feed.reach_left<play.reach_left);
+  assert(feed.reach_right>28&&feed.reach_right<play.reach_right);
+  assert(feed.bounce>0&&feed.bounce<play.bounce);
+  assert_baby_pose_equal(world_baby_pose(&rested,140u,1,12u,&motion),
+                         world_baby_pose(&rested,140u,1,12u,0));
+  idle=world_baby_pose(&rested,184u,0,0u,0);
+  assert_baby_pose_equal(world_baby_pose(&rested,184u,1,56u,&motion),idle);
+ }
+ /* Every care pair (including repeated taps), every old interruption
+  * age, and both sides of the sleepy arm/eye thresholds. Capturing occurs
+  * BEFORE game_care, so the start pose survives its hunger/energy changes.
+  * Frames also cross the automatic blink: masks remain within their eyes. */
+ {
+  static const uint8_t energies[]={0,18,24,30,54,55,100};
+  unsigned need,old_age,age;
+  int old_action,new_action;
+  for(need=0u;need<sizeof(energies)/sizeof(energies[0]);need++){
+   for(old_action=0;old_action<=4;old_action++){
+    for(new_action=1;new_action<=4;new_action++){
+     for(old_age=0u;old_age<=56u;old_age++){
+      Game before,after,unchanged;
+      WorldBabyMotion motion;
+      WorldBabyPose captured,previous,first;
+      uint32_t frame=164u+old_age;
+      game_init(&before);
+      before.energy=energies[need];before.hunger=92;before.chaos=96;
+      captured=world_baby_pose(&before,frame,old_action,old_age,0);
+      after=before;
+      (void)game_care(&after,(Care)(new_action-1));
+      unchanged=after;
+      world_baby_motion_start(&motion,captured,&after,frame,new_action);
+      first=world_baby_pose(&after,frame,new_action,0u,&motion);
+      assert_baby_pose_equal(first,captured);
+      /* main increments frame/pose_age after drawing. Its next input
+       * tick advances the old curve normally, then preserves THAT pose. */
+      if(old_age){
+       WorldBabyPose displayed=world_baby_pose(&before,frame-1u,
+                                                old_action,old_age-1u,0);
+       assert_baby_pose_step(displayed,first);
+      }
+      previous=first;
+      for(age=0u;age<=56u;age++){
+       WorldBabyPose sampled=world_baby_pose(&after,frame+age,
+                                             new_action,age,&motion);
+       assert_baby_pose_bounds(sampled);
+       assert_baby_pose_step(previous,sampled);
+       if(age>=12u)
+        assert_baby_pose_equal(sampled,world_baby_pose(&after,frame+age,
+                                                       new_action,age,0));
+       if(need==0u&&old_age==18u){
+        submitted_triangles=0;
+        world_draw_care_from(&after,frame+age,new_action,age,&motion);
+        assert(submitted_triangles==32u);
+        assert(world_vertex_count()<=4702u&&world_polygon_count()<=1808u);
+       }
+       previous=sampled;
+      }
+      assert_baby_pose_equal(previous,
+                             world_baby_pose(&after,frame+56u,0,0u,0));
+      assert_baby_pose_equal(world_baby_pose(&after,frame,0,UINT32_MAX,&motion),
+                             world_baby_pose(&after,frame,0,UINT32_MAX,0));
+      assert(memcmp(&after,&unchanged,sizeof(after))==0);
+     }
+    }
+   }
+  }
+ }
+ /* A start from unchanged idle must retain every existing anticipation,
+  * hold and recovery sample: applying a second ease would slow it down. */
+ {
+  Game rested;
+  int action;
+  unsigned age;
+  game_init(&rested);
+  for(action=1;action<=4;action++){
+   WorldBabyMotion motion;
+   WorldBabyPose idle=world_baby_pose(&rested,167u,0,56u,0);
+   world_baby_motion_start(&motion,idle,&rested,167u,action);
+   for(age=0u;age<=58u;age++)
+    assert_baby_pose_equal(world_baby_pose(&rested,167u+age,action,age,&motion),
+                           world_baby_pose(&rested,167u+age,action,age,0));
+  }
+ }
+ /* Re-interrupt the IN-FLIGHT blend (not its original endpoint): rapid
+  * alternating/repeated care cannot accumulate offsets or jump to idle.
+  * Include Room quiet-rest's extra needs update before final baselining. */
+ {
+  Game baby;
+  WorldBabyMotion motion={{0},{0}};
+  WorldBabyPose displayed;
+  unsigned tap,tick,age=0u;
+  uint32_t frame=128u;
+  int action=0;
+  game_init(&baby);baby.energy=5;baby.hunger=93;baby.chaos=96;
+  displayed=world_baby_pose(&baby,frame,0,0u,0);
+  for(tap=0u;tap<512u;tap++){
+   unsigned duration=1u+(tap%12u);
+   WorldBabyPose captured=world_baby_pose(&baby,frame,action,age,
+                                          action?&motion:0);
+   action=1+(int)((tap/2u)%4u); /* each action repeats before switching */
+   (void)game_care(&baby,(Care)(action-1));
+   if(action==4)(void)game_room_quiet_rest(&baby,0,0);
+   world_baby_motion_start(&motion,captured,&baby,frame,action);
+   age=0u;
+   assert_baby_pose_equal(world_baby_pose(&baby,frame,action,0u,&motion),
+                          captured);
+   for(tick=0u;tick<duration;tick++){
+    WorldBabyPose current=world_baby_pose(&baby,frame,action,age,&motion);
+    assert_baby_pose_bounds(current);
+    assert_baby_pose_step(displayed,current);
+    displayed=current;
+    frame++;age++;
+   }
+  }
+  for(;age<=56u;age++,frame++){
+   WorldBabyPose current=world_baby_pose(&baby,frame,action,age,&motion);
+   assert_baby_pose_step(displayed,current);
+   displayed=current;
+  }
+  assert_baby_pose_equal(displayed,world_baby_pose(&baby,frame-1u,0,0u,0));
+  /* Care retargeting remains a rig-only change inside the moving Room
+   * camera; the saved Game and the furniture attention sampler are pure. */
+  {
+   Game original=baby;
+   int attention=world_baby_attention_from(-7,3,6u);
+   world_draw_nursery(&baby,frame,action,6u,3,1,6u,0,0,6u,0,-7,&motion);
+   assert(world_vertex_count()<=4702u&&world_polygon_count()<=1808u);
+   assert(memcmp(&baby,&original,sizeof(baby))==0);
+   assert(world_baby_attention_from(-7,3,6u)==attention);
+  }
+ }
  /* Both rotating hands retain their complete 8-face top and bottom caps.
   * Reverting them to collapsed quad-strip poles removes these triangles
   * and can reintroduce the brown FEED scanline seen in native DeSmuME. */
