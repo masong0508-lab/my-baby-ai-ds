@@ -2,7 +2,7 @@
 
 **Platform:** original Nintendo DS / DS Lite, with DSi supported only through the standard DS-compatible build. **Presentation:** intentionally awkward, colorful 2000s baby-game aesthetics enhanced by original environments, better character acting, a fluid touchscreen UI and playful ordinary corruptions, plus the optional Toybox/alien-egg horror cinematic.
 
-This document separates implemented checkpoints from remaining acceptance work. Updated for the care-flow and recent-memory milestone following [PR #64](https://github.com/masong0508-lab/my-baby-ai-ds/pull/64): all sixteen cabinets, 60 authored dialogue lines, interactive nursery props, PSG cues, submitted-geometry diagnostics and touch-accessible saves exist. These do not establish a complete title or physical-DS release readiness.
+This document separates implemented checkpoints from remaining acceptance work. Updated for the arcade-response and starter-completion milestone following [PR #65](https://github.com/masong0508-lab/my-baby-ai-ds/pull/65): all sixteen cabinets, 60 authored dialogue lines, interactive nursery props, care/result acting, PSG feedback, submitted-geometry diagnostics and touch-accessible saves exist. These do not establish a complete title or physical-DS release readiness.
 
 ## Priority levels
 
@@ -21,7 +21,7 @@ This document separates implemented checkpoints from remaining acceptance work. 
 
 ## M1: strengthen the real nursery and baby (P1)
 
-**Implemented checkpoint:** the procedural baby has connected care gestures, gaze/blink and need-dependent fatigue/restlessness. Interrupted care now carries the actual in-flight rig into the next gesture over 12 ticks, including energy-dependent arms and eyelids. Room Tour offers window, lamp, teddy and crib touch interactions, quiet-night rest, an animated mobile and smoothly interpolated prop camera views. Native screenshots and geometry tests cover these paths. See [CARE_MOTION_CONTINUITY.md](CARE_MOTION_CONTINUITY.md), [BABY_BEHAVIOR_MILESTONE.md](BABY_BEHAVIOR_MILESTONE.md) and [ROOM_TOUR.md](ROOM_TOUR.md).
+**Implemented checkpoint:** the procedural baby has connected care gestures, gaze/blink and need-dependent fatigue/restlessness. Interrupted care carries the actual in-flight rig into the next gesture over 12 ticks, including energy-dependent arms and eyelids. Actual arcade wins and losses trigger distinct finite cheer/regroup gestures using the same rig. Room Tour offers window, lamp, teddy and crib touch interactions, quiet-night rest, an animated mobile and smoothly interpolated prop camera views. Native screenshots and geometry tests cover these paths. See [ARCADE_BABY_REACTIONS.md](ARCADE_BABY_REACTIONS.md), [CARE_MOTION_CONTINUITY.md](CARE_MOTION_CONTINUITY.md) and [ROOM_TOUR.md](ROOM_TOUR.md).
 
 **Remaining work:** refine anatomy, pose transitions and scene composition from native-resolution captures; extend authored acting and useful prop interactions where it improves play. An authored mesh/texture pipeline, hairstyle options, more rooms and a measured baseline-hardware performance target remain unfinished.
 
@@ -31,7 +31,7 @@ This document separates implemented checkpoints from remaining acceptance work. 
 
 ## M2: make the first eight arcades genuinely different (P1)
 
-**Implementation checkpoint:** all eight starter cabinets have individual mechanics, artwork and input paths, with host gameplay/hitbox coverage. Native DeSmuME checks cabinet navigation, Bottle Balance entry, complete Diaper Dash, Sock Market, Beatbox and Tax Return Teether sessions, plus selected loss/retry paths. The Teether held receipt now stays visible over its destination tray. Individual native completions for Bottle, Kart, Naptime and Rattle remain outstanding, along with original-hardware and extended human balance/playability testing. See [NATIVE_ARCADE_TESTS.md](NATIVE_ARCADE_TESTS.md).
+**Implementation checkpoint:** all eight starter cabinets have individual mechanics, artwork and input paths, with host gameplay/hitbox coverage and native DeSmuME completion scenarios. New motion/timing playthroughs cover Bottle spills, steady-progress decay and recovery, Kart collision/avoidance, Naptime early/duplicate inputs, and Rattle early/late catches. The Bottle safe band matches the actual scoring window; the Teether held receipt stays visible over its destination tray. All sixteen cabinets receive bounded progress/mistake/result feedback, with silent ignored inputs and no duplicate cues. Original-hardware and extended human balance/playability testing remain outstanding. See [NATIVE_STARTER_ARCADE_TESTS.md](NATIVE_STARTER_ARCADE_TESTS.md), [NATIVE_ARCADE_TESTS.md](NATIVE_ARCADE_TESTS.md) and [ARCADE_FEEDBACK.md](ARCADE_FEEDBACK.md).
 
 **Remaining work:** improve instruction clarity, interaction feedback and fairness under normal and high-corruption timing. Verify each win/loss path, rewards and touch/button alternatives in hands-on sessions; expand mechanics only after the existing loop is readable and responsive.
 
@@ -79,7 +79,7 @@ Make feeding/playing/sleeping more than one-button stats: short care interaction
 
 ## M5: atmosphere, corruption and story polish (P2)
 
-**Implemented checkpoint:** single-channel DS PSG cues accompany care, props, Toybox actions and the optional egg film; Room Tour/Toybox expose mute controls. Day/night and lamp states affect the nursery, and the alien-egg sequence has staged camera/creature animation, pause/advance/exit controls and scrapbook replay. These use existing rendering/audio resources.
+**Implemented checkpoint:** single-channel DS PSG cues accompany care, props, arcade progress/mistakes/results, Toybox actions and the optional egg film; Room Tour/Toybox expose global mute controls. Result melodies retain priority over ordinary arcade chirps, and dramatic egg cues remain protected. Day/night and lamp states affect the nursery, and the alien-egg sequence has staged camera/creature animation, pause/advance/exit controls and scrapbook replay. These use existing rendering/audio resources.
 
 **Remaining work:** add a richer original soundtrack and broader ending vignettes, collectable stickers and wardrobe items; keep ordinary endings playable afterward. Extend clear, recoverable corruption events and review all audio/effects controls on actual devices. Sampled voices, a multitrack soundtrack and physical-speaker balance are not yet verified features.
 

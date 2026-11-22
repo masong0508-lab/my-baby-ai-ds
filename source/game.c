@@ -651,7 +651,8 @@ static void bottle_tick(Game *s,Arcade *a){
   s->corruption=clamp(s->corruption+3);
   if(a->mistakes>=3){finish(s,a,0);return;}
  }
- if(a->balance>=-22&&a->balance<=22){
+ if(a->balance>=-MBAI_BOTTLE_SAFE_BALANCE&&
+    a->balance<=MBAI_BOTTLE_SAFE_BALANCE){
   if(a->hold_frames<150)a->hold_frames++;
  }else{
   a->hold_frames=(uint16_t)(a->hold_frames>2?a->hold_frames-2:0);

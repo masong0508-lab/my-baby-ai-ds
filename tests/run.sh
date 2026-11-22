@@ -22,6 +22,8 @@ python3 tests/test_rom_identity.py
 /tmp/my_baby_ai_world_budget
 "${MBAI_HOST_CC:-cc}" -std=c11 -Wall -Wextra -Werror -pedantic -O2 ${MBAI_HOST_FLAGS:-} -Iinclude source/game.c source/dialogue.c tests/test_minigames.c -o /tmp/my_baby_ai_minigames_test
 /tmp/my_baby_ai_minigames_test
+"${MBAI_HOST_CC:-cc}" -std=c11 -Wall -Wextra -Werror -pedantic -O2 ${MBAI_HOST_FLAGS:-} -Iinclude source/game.c source/dialogue.c source/arcade_feedback.c tests/test_arcade_feedback.c -o /tmp/my_baby_ai_arcade_feedback_test
+/tmp/my_baby_ai_arcade_feedback_test
 "${MBAI_HOST_CC:-cc}" -std=c11 -Wall -Wextra -Werror -pedantic -O2 ${MBAI_HOST_FLAGS:-} -Iinclude source/touch_input.c tests/test_touch_input.c -o /tmp/my_baby_ai_touch_test
 /tmp/my_baby_ai_touch_test
 "${MBAI_HOST_CC:-cc}" -std=c11 -Wall -Wextra -Werror -pedantic -O2 ${MBAI_HOST_FLAGS:-} -Iinclude source/virtual_stylus.c tests/test_virtual_stylus.c -o /tmp/my_baby_ai_virtual_stylus_test

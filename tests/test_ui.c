@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <string.h>
 #include "ui.h"
 #include "roughhouse.h"
 static uint16_t screen[256*256];
@@ -76,6 +77,121 @@ static uint32_t beat_pad_fingerprint(int x){
   h^=screen[dy*256+x+dx];h*=16777619u;
  }
  return h;
+}
+static void verify_save_warning_caption(void){
+ /* Read the actual 5x7 framebuffer glyphs, including spaces and the last
+  * exclamation mark: a colored footer or truncated warning is not enough. */
+ static const char alphabet[]=" SAVEFILD.PROGNM!";
+ static const uint8_t rows[][7]={
+  {0,0,0,0,0,0,0}, {15,16,16,14,1,1,30}, {14,17,17,31,17,17,17},
+  {17,17,17,17,17,10,4}, {31,16,16,30,16,16,31},
+  {31,16,16,30,16,16,16}, {31,4,4,4,4,4,31},
+  {16,16,16,16,16,16,31}, {30,17,17,17,17,17,30},
+  {0,0,0,0,0,6,6}, {30,17,17,30,16,16,16},
+  {30,17,17,30,20,18,17}, {14,17,17,17,17,17,14},
+  {14,17,16,23,17,17,14}, {17,25,21,19,17,17,17},
+  {17,27,21,21,17,17,17}, {4,4,4,4,4,0,4}
+ };
+ const char *caption="SAVE FAILED. PROGRESS IN RAM!";
+ const uint16_t pink=(uint16_t)(0x8000u|31u|(19u<<5)|(25u<<10));
+ const uint16_t night=(uint16_t)(0x8000u|8u|(9u<<5)|(18u<<10));
+ for(unsigned i=0;caption[i];i++){
+  const char *letter=strchr(alphabet,caption[i]);
+  assert(letter);
+  for(unsigned y=0;y<7u;y++)for(unsigned x=0;x<6u;x++){
+   int ink=x<5u&&(rows[letter-alphabet][y]&(1u<<(4u-x)));
+   assert(screen[(181u+y)*256u+10u+i*6u+x]==(ink?pink:night));
+  }
+ }
+}
+static void arcade_feedback_footer(void){
+ /* Host-only reference image: the DS helper allocates no framebuffer. */
+ static uint16_t before[256*192];
+ Game g;Arcade a;
+ uint32_t hashes[4];
+ unsigned id,event,i;
+ game_init(&g);g.unlocked=0xffffu;
+ for(id=0;id<MBAI_GAMES;id++){
+  game_arcade_start(&g,&a,(int)id);
+  ui_draw(&g,&a,2,(int)id,0,0,1,"FEEDBACK");
+  memcpy(before,screen,sizeof(before));
+  ui_arcade_feedback(ARCADE_FEEDBACK_NONE);
+  ui_arcade_feedback((ArcadeFeedbackEvent)99);
+  assert(memcmp(before,screen,sizeof(before))==0);
+  for(event=ARCADE_FEEDBACK_PROGRESS;event<=ARCADE_FEEDBACK_LOSS;event++){
+   uint32_t hash=2166136261u;
+   ui_arcade_feedback((ArcadeFeedbackEvent)event);
+   verify_coverage();
+   /* Exact comparison preserves headers, status/progress rows, every
+    * target/hitbox picture, and the footer's existing accent rule. */
+   assert(memcmp(before,screen,256u*178u*sizeof(screen[0]))==0);
+   assert(memcmp(before+256u*178u,screen+256u*178u,
+                 256u*14u*sizeof(screen[0]))!=0);
+   for(i=256u*178u;i<256u*192u;i++){
+    hash^=screen[i];hash*=16777619u;
+   }
+   hashes[event-1u]=hash;
+   for(i=0;i<event-1u;i++)assert(hashes[i]!=hash);
+   /* Expiry asks for an ordinary draw: every original footer/control
+    * pixel returns, without retaining a temporary feedback surface. */
+   ui_draw(&g,&a,2,(int)id,0,0,1,"FEEDBACK");
+   assert(memcmp(before,screen,sizeof(before))==0);
+  }
+  ui_arcade_feedback(ARCADE_FEEDBACK_WIN);
+  ui_save_warning(); /* A failed write takes priority over the win caption. */
+  verify_save_warning_caption();verify_coverage();
+  assert(memcmp(before,screen,256u*178u*sizeof(screen[0]))==0);
+  ui_draw(&g,&a,2,(int)id,0,0,1,"FEEDBACK");
+  assert(memcmp(before,screen,sizeof(before))==0);
+ }
+ /* Final outcomes use the same small strip after returning to the menu. */
+ ui_draw(&g,&a,1,0,0,0,1,"RESULT");
+ memcpy(before,screen,sizeof(before));
+ ui_arcade_feedback(ARCADE_FEEDBACK_WIN);
+ ui_save_warning();
+ verify_save_warning_caption();verify_coverage();
+ assert(memcmp(before,screen,256u*178u*sizeof(screen[0]))==0);
+ ui_draw(&g,&a,1,0,0,0,1,"RESULT");
+ assert(memcmp(before,screen,sizeof(before))==0);
+ /* Once the transient result has expired, the caller can keep its
+  * unresolved save warning visible without any active feedback event. */
+ ui_save_warning();
+ verify_save_warning_caption();verify_coverage();
+ assert(memcmp(before,screen,256u*178u*sizeof(screen[0]))==0);
+ ui_draw(&g,&a,1,0,0,0,1,"RESULT");
+ assert(memcmp(before,screen,sizeof(before))==0);
+}
+static void bottle_safe_band(void){
+ static const int values[]={-23,-22,-1,0,1,22,23};
+ const uint16_t mint=(uint16_t)(0x8000u|22u|(30u<<5)|(23u<<10));
+ const uint16_t marker=(uint16_t)(0x8000u|28u|(11u<<5)|(18u<<10));
+ Game g;Arcade a;
+ unsigned i,x,count=0;
+ game_init(&g);game_arcade_start(&g,&a,0);
+ a.balance=-60; /* Move the marker off the band to inspect its full width. */
+ ui_draw(&g,&a,2,0,0,0,1,"BOTTLE");
+ for(x=25;x<231u;x++){
+  int safe=x>=117u&&x<=139u;
+  assert((screen[130u*256u+x]==mint)==safe);
+  if(screen[130u*256u+x]==mint)count++;
+ }
+ assert(count==23u);
+ for(i=0;i<sizeof(values)/sizeof(values[0]);i++){
+  int value=values[i];
+  int center=128+(value<0?-((-value+1)/2):((value+1)/2));
+  game_arcade_start(&g,&a,0);
+  a.balance=(int16_t)(value-2);a.hold_frames=20;
+  game_arcade_tick(&g,&a); /* First tick adds +2 drift, reaching value. */
+  assert(a.balance==value);
+  assert(a.hold_frames==(value>=-22&&value<=22?21:18));
+  ui_draw(&g,&a,2,0,0,0,1,"BOTTLE");
+  for(int px=center-2;px<=center+2;px++)
+   assert(screen[127u*256u+(unsigned)px]==marker);
+  assert(screen[127u*256u+(unsigned)(center-3)]!=marker);
+  assert(screen[127u*256u+(unsigned)(center+3)]!=marker);
+  assert((center>=117&&center<=139)==(value>=-22&&value<=22));
+  verify_coverage();
+ }
 }
 int main(void){
  Game g;Arcade a={0};unsigned i,changed=0;
@@ -636,6 +752,8 @@ int main(void){
   ui_draw(&g,&a,0,0,0,0,0,"SAFE MODE");
   verify_coverage();
  }
- puts("PASS: illustrated 4-pad Beatbox, readable care layout, 16 unique cabinets, touchscreen bounds and full coverage");
+ arcade_feedback_footer();
+ bottle_safe_band();
+ puts("PASS: 16 unique cabinets, bounded feedback footer, accurate Bottle safe band, touchscreen bounds and full coverage");
  return 0;
 }

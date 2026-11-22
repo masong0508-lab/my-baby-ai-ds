@@ -472,12 +472,19 @@ static void teddy(void){
 int world_baby_neck_tilt(int action,uint32_t age){
  int phase=(int)(age%80u);
  int sway=phase<40?phase:80-phase;
+ if(action==WORLD_BABY_CHEER)return 4;
+ /* One small acknowledging head tilt, then return toward the player.
+  * The common 56-tick envelope brings the attached head back to rest. */
+ if(action==WORLD_BABY_REGROUP)
+  return age<=18u?-4:age>=34u?2:-4+(int)(age-18u)*6/16;
  if(action==4)return -9;
  if(action==2)return 3+(sway-20)/5;
  if(action==3)return 5+(sway-20)/7;
  return 0;
 }
 int world_baby_arm_reach(int action){
+ if(action==WORLD_BABY_CHEER)return 76;
+ if(action==WORLD_BABY_REGROUP)return 20;
  return action==3?57:action==2?45:action==1?28:
         action==4?-8:action==5?-6:7;
 }
@@ -490,6 +497,12 @@ static int smooth8(uint32_t age,uint32_t length){
  if(!length)return 256;
  t=age*256u/length;
  return (int)((t*t*(768u-2u*t)+32768u)/65536u);
+}
+/* A single shallow celebratory lift, never an endless bounce loop.
+ * Its apex is at age 18, it lands by age 40, and both feet stay attached. */
+static int baby_cheer_lift(uint32_t age){
+ if(age>=40u)return 0;
+ return age<=18u?smooth8(age,18u):smooth8(40u-age,22u);
 }
 /* Action-driven teddy bow: ease in, hold briefly, recover to rest.
  * Never run an endless loop just because TEDDY remains selected. */
@@ -583,11 +596,12 @@ static WorldBabyPose baby_pose_sample(const Game *s,uint32_t frame,
  WorldBabyPose p;
  unsigned phase=age%36u,hop=phase<18u?phase:36u-phase;
  int weight=rag?256:(action?world_baby_care_weight(age):0);
+ int result=action==WORLD_BABY_CHEER||action==WORLD_BABY_REGROUP;
  int sleepy=!rag&&s->energy<25?-4*(25-(int)s->energy)/25:0;
  int reach=7+(world_baby_arm_reach(action)-7)*weight/256+sleepy;
  /* .00145 * 160 = 29/125. Preserve the original whole-degree wave
   * without doing float work for a tiny transient integer rig. */
- int wave=((int)hop-9)*29*weight/(125*256);
+ int wave=result?0:((int)hop-9)*29*weight/(125*256);
  /* A settled Toybox shell must not retain an asymmetric impact pose. */
  int recoil=rag&&rag->moving?(rag->vr>3?5:rag->vr< -3?-5:0):0;
  int neck=world_baby_neck_tilt(action,age)*weight/256;
@@ -596,22 +610,36 @@ static WorldBabyPose baby_pose_sample(const Game *s,uint32_t frame,
           256:world_baby_lid_open(frame,action,age);
  p.reach_left=(int16_t)(reach+wave+recoil);
  p.reach_right=(int16_t)(reach-wave-recoil);
- p.forward_left=(int16_t)((action==1?13:action==2?8:
+ p.forward_left=(int16_t)((action==WORLD_BABY_CHEER?9:
+                           action==WORLD_BABY_REGROUP?12:
+                           action==1?13:action==2?8:
                            action==3?10:0)*weight/256);
  p.forward_right=(int16_t)(p.forward_left+(action==2?6*weight/256:0));
- p.lean=(int16_t)((action==1?3:action==2?-3:action==3?5:
+ p.lean=(int16_t)((action==WORLD_BABY_CHEER?3:
+                   action==WORLD_BABY_REGROUP?-2:
+                   action==1?3:action==2?-3:action==3?5:
                    action==4?-3:0)*weight/256);
  if(!rag){
   neck+=world_baby_need_fidget(s->hunger,s->chaos,frame)*(256-weight)/256;
   lid=lid*world_baby_drowsy_lid(s->energy)/256;
  }
+ if(action==WORLD_BABY_REGROUP){
+  /* A soft, reassuring look; do not make an already tired baby droop
+   * further. Natural blinking still has priority over this small cap. */
+  int soft_lid=256-48*weight/256;
+  if(lid>soft_lid)lid=soft_lid;
+ }
  if(rag&&rag->moving)neck-=rag->vr/3;
  if(neck>16)neck=16;
  if(neck< -16)neck=-16;
  p.neck=(int16_t)neck;
- p.yaw=(int16_t)((action==2?3:action==3?-2:0)*weight/256);
+ p.yaw=(int16_t)((action==WORLD_BABY_CHEER?-1:
+                  action==WORLD_BABY_REGROUP?2:
+                  action==2?3:action==3?-2:0)*weight/256);
  p.lid=(int16_t)lid;
- p.bounce=(int16_t)(action==3?(int)hop*weight:0);
+ p.bounce=(int16_t)(action==WORLD_BABY_CHEER?
+                    12*weight*baby_cheer_lift(age)/256:
+                    action==3?(int)hop*weight:0);
  return p;
 }
 static int16_t care_channel(int current,int from,int baseline,int keep){
@@ -831,17 +859,20 @@ static void baby_model(const Game *s,uint32_t frame,int action,
   float gasp=.42f+(float)rag->impact/9.f*.48f;
   ellipse(0,.252f,.451f,.094f,.085f*gasp,.020f,12,4,9);
   soft_mark(0,.212f,.476f,.095f,.025f*gasp,30,15,19);
- }else if((action==2||(happy&&action==3))&&weight>40){
+ }else if((action==2||(happy&&action==3)||
+           action==WORLD_BABY_CHEER)&&weight>40){
   /* CHAT syllables must remain visible when the baby is unhappy, too:
    * the nursery PSG voice still babbles at low mood. A smaller grim
    * aperture communicates the changed personality without losing
-   * sound/mouth synchronization. Happy PLAY retains its wide grin. */
+   * sound/mouth synchronization. Happy PLAY retains its wide grin;
+   * a completed win gets a modest smile even when needs are low. */
   float speech=action==2?(float)world_baby_speech_open(action_age)/256.f:1.f;
-  float open=action==2?
+  float open=action==WORLD_BABY_CHEER?.72f:action==2?
               .12f+(happy?.88f:.59f)*speech:1.f;
   ellipse(0,.252f,.451f,.094f,.085f*open,.020f,12,4,9);
   soft_mark(0,.212f,.476f,.095f,.025f*open,30,15,19);
- }else if(happy){
+ }else if(happy||(action==WORLD_BABY_REGROUP&&weight>40)){
+  /* A loss receives encouragement through the existing closed smile. */
   soft_mark(-.065f,.278f,.444f,.052f,.017f,18,9,11);
   soft_mark(0,.251f,.454f,.081f,.017f,18,9,11);
   soft_mark(.065f,.278f,.444f,.052f,.017f,18,9,11);

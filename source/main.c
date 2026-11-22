@@ -5,6 +5,7 @@
 #include <fat.h>
 #include <stdint.h>
 #include "game.h"
+#include "arcade_feedback.h"
 #include "dialogue.h"
 #include "save.h"
 #include "world.h"
@@ -23,6 +24,8 @@
 #define SAVE_BASE "fat:/my_baby_ai"
 static Game baby;
 static Arcade arc;
+static ArcadeFeedback arcade_feedback;
+static uint8_t save_write_failed;
 static int storage_ok,view=5,selected,album_page,reset_step,last_ending,pose;
 static uint32_t pose_age;
 /* Session-only reaction state: no new save fields or rendering buffers. */
@@ -59,15 +62,21 @@ static void reset_care_motion(void){
 }
 static void reset_care_session(void){
  dialogue_memory_reset(&memories,baby.days);
+ arcade_feedback_reset(&arcade_feedback);
+ save_write_failed=0;
  reset_care_motion();
 }
 /* Failed writes must NEVER be silent: the game remains fully playable
  * in RAM, but a real UI warning tells the player their latest care/day
  * is not yet on disk. Each later action retries the same two-slot save. */
 static int persist(void){
- if(storage_ok&&!save_write(SAVE_BASE,&baby)){
-  message="SAVE WRITE FAILED. PROGRESS IN RAM!";
-  return 0;
+ if(storage_ok){
+  if(!save_write(SAVE_BASE,&baby)){
+   save_write_failed=1;
+   message="SAVE WRITE FAILED. PROGRESS IN RAM!";
+   return 0;
+  }
+  save_write_failed=0;
  }
  return 1;
 }
@@ -80,10 +89,9 @@ static void save_live_baby(void){
   ui_draw(&baby,&arc,view,selected,last_ending,reset_step,0,message);
   storage_ok=fatInitDefault();
  }
- if(storage_ok)
-  message=save_write(SAVE_BASE,&baby)?
-          "CURRENT BABY SAVED TO STORAGE.":
-          "SAVE WRITE FAILED. PROGRESS IN RAM!";
+ if(storage_ok){
+  if(persist())message="CURRENT BABY SAVED TO STORAGE.";
+ }
  else message="NO SAVE DEVICE - RAM ONLY.";
 }
 static int care(Care action,uint32_t frame){
@@ -119,6 +127,7 @@ static void end_day(void){
 }
 static void begin_game(void){
  game_arcade_start(&baby,&arc,selected);
+ arcade_feedback_begin(&arcade_feedback,&arc);
  if(arc.active){view=2;message=arc.id==0?"STEADY THE BOTTLE.":arc.id==1?"CHANGE THAT DIAPER!":arc.id==2?"SORT BABY'S TAX BILLS!":arc.id==3?"DODGE CRIB KART CONES!":arc.id==4?"MEMORIZE THE BEAT!":arc.id==5?"MATCH THE BABY SOCKS!":arc.id==6?"TIME THE QUIET LULLABY!":arc.id==7?"CATCH SIX RATTLES!":arc.id==8?"JUMP OR DUCK AT WORK!":arc.id==9?"DRIFT THE STROLLER!":arc.id==10?"SOLVE CEREAL MATH!":arc.id==11?"STACK THOSE BLOCKS!":arc.id==12?"CHECK THE AUDIT NUMBERS!":arc.id==13?"WATER THE RIGHT FLOWER!":arc.id==14?"TRACE THE EVIDENCE!":arc.id==15?"BALANCE THE DAYCARE!":"SIX ROUNDS. THREE STRIKES.";}
  else message="LOCKED: CHECK GOALS ABOVE.";
 }
@@ -147,8 +156,31 @@ static void leave_game(void){
                          baby.days);
   message=arc.finished==1?"DIAPER DOLLARS EARNED!":"THE GLITCHES WON.";
   persist();
- }else message="BACK TO THE ARCADE.";
+ }else{
+  message="BACK TO THE ARCADE.";
+  arcade_feedback_reset(&arcade_feedback);
+ }
  arc.active=0;view=1;
+}
+/* Result acting uses the same retargetable rig as ordinary care. Keep the
+ * pre-result needs, so a loss's chaos change cannot move the captured neck
+ * before its regroup gesture. Only outcomes sample the rig; ordinary
+ * game ticks merely retain a small stack copy of the current Game. */
+static void react_to_arcade(int event,const Game *before,uint32_t frame){
+ switch(event){
+ case ARCADE_FEEDBACK_PROGRESS:sfx_play(SFX_ARCADE_PROGRESS);break;
+ case ARCADE_FEEDBACK_MISS:sfx_play(SFX_ARCADE_MISS);break;
+ case ARCADE_FEEDBACK_WIN:sfx_play(SFX_ARCADE_WIN);break;
+ case ARCADE_FEEDBACK_LOSS:sfx_play(SFX_ARCADE_LOSS);break;
+ default:return;
+ }
+ if(event==ARCADE_FEEDBACK_WIN||event==ARCADE_FEEDBACK_LOSS){
+  WorldBabyPose from=world_baby_pose(before,frame,pose,pose_age,
+                                    pose?&care_motion:0);
+  pose=event==ARCADE_FEEDBACK_WIN?WORLD_BABY_CHEER:WORLD_BABY_REGROUP;
+  pose_age=0;
+  world_baby_motion_start(&care_motion,from,&baby,frame,pose);
+ }
 }
 int main(void){
  uint32_t frame=0;
@@ -183,6 +215,9 @@ int main(void){
   swiWaitForVBlank();
   scanKeys();
   down=keysDown();held=keysHeld();
+  /* Footer feedback changes only on events and expiry, preserving the
+   * throttled bitmap refresh instead of repainting every countdown tick. */
+  if(arcade_feedback_tick(&arcade_feedback)&&(view==1||view==2))dirty=1;
   raw_touch=(held&KEY_TOUCH)!=0;
   if(raw_touch)touchRead(&touch);
   tap=touch_gate_step(&gesture,raw_touch,touch.px,touch.py);
@@ -289,6 +324,7 @@ int main(void){
    int direction=-1;
    if(down&KEY_B){leave_game();dirty=1;}
    else{
+    Game before_arcade=baby;
     unsigned old_round=arc.round,old_mistakes=arc.mistakes,old_phase=arc.phase;
     if(arc.id==0||arc.id==9){
      int steer=0;
@@ -412,7 +448,15 @@ int main(void){
      * wait up to 60 frames for their throttled timer repaint. */
     if(arc.round!=old_round||arc.mistakes!=old_mistakes||arc.phase!=old_phase)
      dirty=1;
-    if(arc.finished){leave_game();dirty=1;}
+    /* Observe once AFTER all input/timer work and BEFORE leaving a
+     * finished cabinet. Footer exits are cancellations, never results. */
+    if(view==2){
+     int event=arcade_feedback_observe(&arcade_feedback,&arc);
+     if(event!=ARCADE_FEEDBACK_NONE){
+      react_to_arcade(event,&before_arcade,frame);dirty=1;
+     }
+     if(arc.finished){leave_game();dirty=1;}
+    }
    }
   }else if(view==8){
    int hit=tap?ui_roughhouse_touch(touch.px,touch.py):0;
@@ -658,6 +702,16 @@ int main(void){
            view==10?((room_focus&3)|(room_daylight?8:0)|
                     (room_lamp?16:0)|(sfx_is_enabled()?0:32)):
            selected,last_ending,reset_step,storage_ok,message);
+   {
+    int event=arcade_feedback_current(&arcade_feedback);
+    /* Arcade pages do not otherwise display message. A failed result
+     * save must stay visible even after the brief celebration expires;
+     * only a successful save or an explicit new/load clears the flag. */
+    if((view==1||view==2)&&save_write_failed)ui_save_warning();
+    else if(view==2||(view==1&&(event==ARCADE_FEEDBACK_WIN||
+                           event==ARCADE_FEEDBACK_LOSS)))
+     ui_arcade_feedback(event);
+   }
    dirty=0;
   }
   if(view==7)ui_touch_diag_update(world_vertex_count(),

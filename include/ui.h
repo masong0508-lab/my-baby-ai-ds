@@ -2,10 +2,18 @@
 #define MBAI_UI_H
 #include <stdint.h>
 #include "game.h"
+#include "arcade_feedback.h"
 /* Bottom-screen native bitmap UI: no heap, no asset files, no extra framebuffer. */
 void ui_init(void *vram);
 void ui_draw(const Game *s,const Arcade *a,int view,int selected,
              int ending,int reset_step,int can_save,const char *message);
+/* Optional arcade footer pass AFTER ui_draw; no-op for NONE/invalid.
+ * Only y=178..191 changes, preserving puzzle, hitboxes and status rows.
+ * Redraw the normal UI when the caller's feedback timer expires. */
+void ui_arcade_feedback(ArcadeFeedbackEvent event);
+/* Higher-priority footer for a failed save; draw after arcade feedback.
+ * Caller retains failure state until a successful write/load/new baby. */
+void ui_save_warning(void);
 /* Explicit title-only SAVE/LOAD touch target. The boot-time storage probe
  * remains opt-in; touching START never initializes FAT. */
 int ui_title_save_touch(int x,int y);

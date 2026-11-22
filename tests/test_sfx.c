@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <stdio.h>
+#include <stdint.h>
 #include "sfx.h"
 /* Mock the PSG backend, proving no note can run forever. */
 static int calls,starts,stops;
@@ -23,6 +24,60 @@ static void finish(SfxCue cue,int upper){
  for(i=0;i<upper;i++)sfx_tick();
  assert(!sfx_is_playing());
  assert(last_volume==0);
+}
+static uint32_t cue_signature(SfxCue cue){
+ uint32_t hash=2166136261u;
+ sfx_stop();sfx_play(cue);
+ for(unsigned i=0;i<64u;i++){
+  sfx_tick();
+  hash^=last_hz;hash*=16777619u;
+  hash^=last_volume;hash*=16777619u;
+ }
+ assert(!sfx_is_playing()&&last_hz==0&&last_volume==0);
+ return hash;
+}
+static void cannot_interrupt(SfxCue primary,SfxCue lower){
+ unsigned hz[64],volume[64],playing[64];
+ sfx_stop();sfx_play(primary);
+ for(unsigned i=0;i<64u;i++){
+  sfx_tick();hz[i]=last_hz;volume[i]=last_volume;
+  playing[i]=(unsigned)sfx_is_playing();
+ }
+ sfx_play(primary);
+ for(unsigned i=0;i<64u;i++){
+  if(i==1u)sfx_play(lower);
+  sfx_tick();
+  assert(last_hz==hz[i]&&last_volume==volume[i]);
+  assert((unsigned)sfx_is_playing()==playing[i]);
+ }
+}
+static void arcade_cues(void){
+ static const SfxCue cues[]={SFX_ARCADE_PROGRESS,SFX_ARCADE_MISS,
+                            SFX_ARCADE_WIN,SFX_ARCADE_LOSS};
+ static const SfxCue horror[]={SFX_CRACK,SFX_UNSEAL,SFX_PULSE,SFX_SCARE};
+ uint32_t signatures[4];
+ unsigned i,j;
+ for(i=0;i<4u;i++){
+  finish(cues[i],31);
+  signatures[i]=cue_signature(cues[i]);
+  for(j=0;j<i;j++)assert(signatures[i]!=signatures[j]);
+  for(j=0;j<4u;j++)cannot_interrupt(horror[j],cues[i]);
+ }
+ for(i=0;i<2u;i++)for(j=2;j<4u;j++)cannot_interrupt(cues[j],cues[i]);
+ /* A new result or intentional care can supersede the old melody. */
+ sfx_play(SFX_ARCADE_WIN);sfx_tick();
+ sfx_play(SFX_ARCADE_LOSS);sfx_tick();assert(last_hz==392u);
+ sfx_play(SFX_FEED);sfx_tick();assert(last_hz==392u&&last_volume==20u);
+ sfx_play(SFX_ARCADE_WIN);sfx_tick();
+ sfx_play(SFX_SCARE);sfx_tick();assert(last_hz==1220u);
+ sfx_set_enabled(0);
+ int before=calls;
+ for(i=0;i<4u;i++){
+  sfx_play(cues[i]);
+  for(j=0;j<31u;j++)sfx_tick();
+ }
+ assert(calls==before&&!sfx_is_playing());
+ sfx_set_enabled(1);
 }
 int main(void){
  int n;
@@ -93,6 +148,7 @@ int main(void){
  assert(calls==n); /* mute does zero hardware operations */
  sfx_set_enabled(1);
  finish(SFX_KICK,18);
+ arcade_cues();
  assert(max_hz>700&&max_volume<=63&&starts>20&&stops>=8);
  printf("PASS: bounded one-channel PSG envelopes, silence, cue priority and mute (%d commands)\n",calls);
  return 0;
