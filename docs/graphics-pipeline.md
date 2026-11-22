@@ -18,7 +18,7 @@ The base DS has about 4 MiB of main RAM and strict polygon/texture/VRAM budgets.
 
 Tests needed: devkitARM + libnds ROM compile; melonDS rendering/touch, minigames and saves; original DS performance, DLDI/storage and stress test at maximum corruption. `tests/test_ui.c` verifies host-side drawing and touch hitboxes; `tests/test_core.c` checks simulation, endings and recovery.
 
-Still missing for full production: authored mesh/texture assets, unique minigame mechanics, sound/music, refined gameplay animation, tiny neural inference, renderer profiling, actual .nds build verification.
+Still missing for full production: an authored mesh/texture asset pipeline, richer music, broader authored acting, measured renderer profiling and original-device acceptance. Distinct minigames, PSG sound, integer neural inference, contextual conversation, ROM builds and native DeSmuME verification now exist; see the current development-status matrix for their precise scope.
 
 ## Geometry-batch correction
 

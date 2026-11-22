@@ -17,6 +17,10 @@ python3 tests/test_rom_identity.py
 /tmp/my_baby_ai_ui_test
 "${MBAI_HOST_CC:-cc}" -std=c11 -Wall -Wextra -Werror -pedantic -O2 ${MBAI_HOST_FLAGS:-} -Iinclude source/game.c source/dialogue.c tests/test_dialogue.c -o /tmp/my_baby_ai_dialogue_test
 /tmp/my_baby_ai_dialogue_test
+"${MBAI_HOST_CC:-cc}" -std=c11 -Wall -Wextra -Werror -pedantic -O2 ${MBAI_HOST_FLAGS:-} -Iinclude source/game.c source/dialogue.c source/conversation.c tests/test_conversation.c -o /tmp/my_baby_ai_conversation_test
+/tmp/my_baby_ai_conversation_test
+"${MBAI_HOST_CC:-cc}" -std=c11 -Wall -Wextra -Werror -pedantic -O2 ${MBAI_HOST_FLAGS:-} -Iinclude source/game.c source/dialogue.c source/conversation.c source/save.c source/conversation_save.c tests/test_conversation_save.c -o /tmp/my_baby_ai_conversation_save_test
+/tmp/my_baby_ai_conversation_save_test
 "${MBAI_HOST_CC:-cc}" -std=c11 -Wall -Wextra -Werror -pedantic -O2 ${MBAI_HOST_FLAGS:-} -Itests/stubs -Iinclude \
  source/world.c source/roughhouse.c source/game.c source/dialogue.c tests/test_world.c -o /tmp/my_baby_ai_world_budget
 /tmp/my_baby_ai_world_budget

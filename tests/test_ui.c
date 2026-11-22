@@ -1,10 +1,56 @@
 #include <assert.h>
+#include <limits.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include "ui.h"
 #include "roughhouse.h"
 static uint16_t screen[256*256];
+#define TEST_RGB(r,g,b) ((uint16_t)(0x8000u|(r)|((g)<<5)|((b)<<10)))
+/* Read the actual native pixels so tests catch dropped words, wrong
+ * line breaks and clipped final glyphs, not just a changing UI hash. */
+static void verify_text(int x,int y,const char *text,int columns,
+                         uint16_t ink,int scale){
+ static const uint8_t font[96][7]={
+  ['A'-32]={14,17,17,31,17,17,17}, ['B'-32]={30,17,17,30,17,17,30},
+  ['C'-32]={14,17,16,16,16,17,14}, ['D'-32]={30,17,17,17,17,17,30},
+  ['E'-32]={31,16,16,30,16,16,31}, ['F'-32]={31,16,16,30,16,16,16},
+  ['G'-32]={14,17,16,23,17,17,14}, ['H'-32]={17,17,17,31,17,17,17},
+  ['I'-32]={31,4,4,4,4,4,31}, ['J'-32]={7,2,2,2,18,18,12},
+  ['K'-32]={17,18,20,24,20,18,17}, ['L'-32]={16,16,16,16,16,16,31},
+  ['M'-32]={17,27,21,21,17,17,17}, ['N'-32]={17,25,21,19,17,17,17},
+  ['O'-32]={14,17,17,17,17,17,14}, ['P'-32]={30,17,17,30,16,16,16},
+  ['Q'-32]={14,17,17,17,21,18,13}, ['R'-32]={30,17,17,30,20,18,17},
+  ['S'-32]={15,16,16,14,1,1,30}, ['T'-32]={31,4,4,4,4,4,4},
+  ['U'-32]={17,17,17,17,17,17,14}, ['V'-32]={17,17,17,17,17,10,4},
+  ['W'-32]={17,17,17,21,21,21,10}, ['X'-32]={17,17,10,4,10,17,17},
+  ['Y'-32]={17,17,10,4,4,4,4}, ['Z'-32]={31,1,2,4,8,16,31},
+  ['0'-32]={14,19,21,21,21,25,14}, ['1'-32]={4,12,4,4,4,4,14},
+  ['2'-32]={14,17,1,2,4,8,31}, ['3'-32]={30,1,1,14,1,1,30},
+  ['4'-32]={2,6,10,18,31,2,2}, ['5'-32]={31,16,30,1,1,17,14},
+  ['6'-32]={6,8,16,30,17,17,14}, ['7'-32]={31,1,2,4,8,8,8},
+  ['8'-32]={14,17,17,14,17,17,14}, ['9'-32]={14,17,17,15,1,2,12},
+  ['!'-32]={4,4,4,4,4,0,4}, ['?'-32]={14,17,1,2,4,0,4},
+  ['.'-32]={0,0,0,0,0,6,6}, [','-32]={0,0,0,0,6,4,8},
+  [':'-32]={0,4,4,0,4,4,0}, ['-'-32]={0,0,0,31,0,0,0},
+  ['\''-32]={4,4,8,0,0,0,0}
+ };
+ int i,px,py;
+ size_t length=strlen(text);
+ assert(x>=0&&y>=0&&x+columns*6*scale<=256&&y+7*scale<=192);
+ for(i=0;i<columns;i++){
+  unsigned c=(size_t)i<length?(unsigned char)text[i]:' ';
+  if(c>='a'&&c<='z')c-=32;
+  assert(c>=32&&c<128);
+  for(py=0;py<7*scale;py++)for(px=0;px<6*scale;px++){
+   int expected=px<5*scale&&
+                 (font[c-32][py/scale]&(1u<<(4-px/scale)))!=0;
+   if((screen[(y+py)*256+x+i*6*scale+px]==ink)!=expected)
+    fprintf(stderr,"Text mismatch at (%d,%d), character %d of '%s'\n",x,y,i,text);
+   assert((screen[(y+py)*256+x+i*6*scale+px]==ink)==expected);
+  }
+ }
+}
 /* All rendering must remain inside the 256x192 visible bitmap. Each screen
  * now draws its own complete three-band surface without a blanket clear. */
 static void verify_coverage(void){
@@ -34,7 +80,7 @@ static uint32_t arcade_goal_fingerprint(void){
 static uint32_t care_hint_fingerprint(void){
  uint32_t hash=2166136261u;
  int x,y;
- /* Header location never crosses ROOM capsule or BABY SAYS. */
+ /* Header location never crosses ROOM capsule or TOUCH TO TALK. */
  for(y=35;y<43;y++)for(x=126;x<189;x++){
   hash^=screen[y*256+x];hash*=16777619u;
  }
@@ -193,10 +239,148 @@ static void bottle_safe_band(void){
   verify_coverage();
  }
 }
+static void conversation_touch_bounds(void){
+ int x,y;
+ for(y=-1;y<=192;y++)for(x=-1;x<=256;x++){
+  int expected=-1,entry=x>=8&&x<192&&y>=31&&y<66;
+  if(x>=0&&x<256&&y>=0&&y<192){
+   if(y>=176)expected=x<80?6:x>=176?7:-1;
+   else for(int row=0;row<3;row++){
+    int top=92+27*row;
+    if(y>=top&&y<top+24){
+     if(x>=8&&x<124)expected=2*row;
+     else if(x>=132&&x<248)expected=2*row+1;
+    }
+   }
+  }
+  assert(ui_conversation_touch(x,y)==expected);
+  assert(ui_conversation_entry_touch(x,y)==entry);
+  if(entry){
+   assert(!ui_room_entry_touch(x,y));
+   assert(ui_nursery_touch(x,y)==-1);
+   assert(!ui_prank_entry_touch(x,y));
+   assert(!ui_home_navigation(x,y));
+  }
+ }
+ assert(ui_conversation_touch(INT_MIN,INT_MAX)==-1);
+ assert(ui_conversation_touch(INT_MAX,INT_MIN)==-1);
+ assert(!ui_conversation_entry_touch(INT_MAX,INT_MIN));
+}
+static void conversation_layout(void){
+ static const char *const prompts[6]={
+  "HOW ARE YOU?","NEED ANYTHING?","REMEMBER?",
+  "TELL ME MORE","I LIKE THAT","NEW SUBJECT"
+ };
+ const uint16_t ink=TEST_RGB(8,7,12),purple=TEST_RGB(18,11,23);
+ const uint16_t white=TEST_RGB(31,31,31),mint=TEST_RGB(22,30,23);
+ const uint16_t green=TEST_RGB(12,25,15);
+ Game g,original;Arcade a={0},original_arcade;
+ uint32_t first;
+ game_init(&g);original=g;original_arcade=a;
+ for(int selected=0;selected<6;selected++){
+  char question[40];
+  ui_draw(&g,&a,11,selected,0,0,1,"HELLO.\nI'M STILL HERE.\nLET'S TALK.");
+  verify_coverage();
+  verify_text(12,7,"TALK",4,white,2);
+  snprintf(question,sizeof(question),"ASK: %s",prompts[selected]);
+  verify_text(17,36,question,36,purple,1);
+  verify_text(17,48,"HELLO.",36,ink,1);
+  verify_text(17,59,"I'M STILL HERE.",36,ink,1);
+  verify_text(17,70,"LET'S TALK.",36,ink,1);
+  for(int card=0;card<6;card++){
+   int x=card%2?132:8,y=92+27*(card/2);
+   verify_text(x+10,y+8,prompts[card],17,ink,1);
+   assert(screen[(y+4)*256+x+7]==(card==selected?mint:white));
+   assert(screen[y*256+x]==(card==selected?green:purple));
+  }
+  verify_text(12,181,"B BACK",6,white,1);
+  verify_text(89,181,"D-PAD CHOOSE",12,mint,1);
+  verify_text(202,181,"A ASK",5,white,1);
+  assert(memcmp(&g,&original,sizeof(g))==0);
+  assert(memcmp(&a,&original_arcade,sizeof(a))==0);
+ }
+ ui_draw(&g,&a,11,0,0,0,1,"SELECTION");first=fingerprint();
+ ui_draw(&g,&a,11,-1,0,0,1,"SELECTION");assert(fingerprint()==first);
+ ui_draw(&g,&a,11,6,0,0,1,"SELECTION");assert(fingerprint()==first);
+ ui_draw(&g,&a,11,INT_MAX,0,0,1,"SELECTION");assert(fingerprint()==first);
+ /* The entry hint fits beside the existing needs hint and ROOM control. */
+ ui_draw(&g,&a,0,0,0,0,1,"HELLO.");
+ verify_text(42,35,"TOUCH TO TALK",13,purple,1);
+ verify_text(126,35,"ALL GOOD",8,TEST_RGB(12,24,26),1);
+ verify_text(203,38,"ROOM",4,ink,1);
+ verify_coverage();
+}
+static void conversation_wrapping(void){
+ static const struct {
+  const char *message,*line[3];
+ } cases[]={
+  {0,{"","",""}}, {"",{"","",""}},
+  {"I REMEMBER OUR NAP. THE ROOM WAS QUIET, AND I LIKED THAT VERY MUCH.",
+   {"I REMEMBER OUR NAP. THE ROOM WAS","QUIET, AND I LIKED THAT VERY MUCH.",""}},
+  {"ABCDEFGHIJKLMNOPQRS TUVWXYZ0123456789ABC DEFGHIJKLMNOPQRSTUV",
+   {"ABCDEFGHIJKLMNOPQRS","TUVWXYZ0123456789ABC","DEFGHIJKLMNOPQRSTUV"}},
+  {"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ABCDEFGHIJKLMNOPQRSTUVWXYZ012345678",
+   {"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789","ABCDEFGHIJKLMNOPQRSTUVWXYZ012345678",""}},
+  {"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+   {"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789","ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",""}},
+  {"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789\n9876543210ZYXWVUTSRQPONMLKJIHGFEDCBA\n"
+   "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+   {"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789","9876543210ZYXWVUTSRQPONMLKJIHGFEDCBA",
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"}},
+  {"ONE\nTWO\nTHREE",{"ONE","TWO","THREE"}},
+  {"ONE\r\nTWO\r\nTHREE",{"ONE","TWO","THREE"}},
+  {"\nSECOND\nTHIRD",{"","SECOND","THIRD"}},
+  {"ONE\n\nTHREE",{"ONE","","THREE"}},
+  {"  HELLO  WORLD. \t\nNEXT ROW.",{"HELLO  WORLD.","NEXT ROW.",""}},
+  {"lowercase becomes uppercase.",{"LOWERCASE BECOMES UPPERCASE.","",""}}
+ };
+ Game g;Arcade a={0};
+ const uint16_t ink=TEST_RGB(8,7,12);
+ game_init(&g);
+ for(unsigned i=0;i<sizeof(cases)/sizeof(cases[0]);i++){
+  ui_draw(&g,&a,11,0,0,0,1,cases[i].message);
+  for(int row=0;row<3;row++)verify_text(17,48+11*row,cases[i].line[row],36,ink,1);
+  verify_coverage();
+ }
+ /* Two explicit 36-character care lines use the old nursery positions,
+  * preserving the final glyph and keeping newlines out of the text grid. */
+ ui_draw(&g,&a,0,0,0,0,1,
+         "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789\n9876543210ZYXWVUTSRQPONMLKJIHGFEDCBA");
+ verify_text(17,47,"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",36,ink,1);
+ verify_text(17,56,"9876543210ZYXWVUTSRQPONMLKJIHGFEDCBA",36,ink,1);
+ ui_draw(&g,&a,0,0,0,0,1,"WE CAN TALK AFTER THE BOTTLE. I REMEMBER YOUR KIND WORDS TODAY.");
+ verify_text(17,47,"WE CAN TALK AFTER THE BOTTLE. I",36,ink,1);
+ verify_text(17,56,"REMEMBER YOUR KIND WORDS TODAY.",36,ink,1);
+ verify_coverage();
+}
+static void learning_save_warning_footer(void){
+ static uint16_t before[256*192]; /* host-only reference; never in DS code */
+ static const int views[]={0,10,11};
+ Game g;Arcade a={0};
+ game_init(&g);
+ for(unsigned i=0;i<sizeof(views)/sizeof(views[0]);i++){
+  ui_draw(&g,&a,views[i],0,0,0,1,"I'M LISTENING.");
+  memcpy(before,screen,sizeof(before));
+  ui_learning_save_warning();
+  verify_text(10,181,"LEARNING NOT SAVED. KEPT IN RAM!",39,TEST_RGB(31,19,25),1);
+  verify_coverage();
+  assert(memcmp(before,screen,256u*178u*sizeof(screen[0]))==0);
+  assert(memcmp(before+256u*178u,screen+256u*178u,256u*14u*sizeof(screen[0]))!=0);
+  ui_save_warning(); /* Root gives game-save failure the highest priority. */
+  verify_save_warning_caption();
+  assert(memcmp(before,screen,256u*178u*sizeof(screen[0]))==0);
+  ui_draw(&g,&a,views[i],0,0,0,1,"I'M LISTENING.");
+  assert(memcmp(before,screen,sizeof(before))==0);
+ }
+}
 int main(void){
  Game g;Arcade a={0};unsigned i,changed=0;
  game_init(&g);ui_init(screen);
  for(i=256u*192u;i<256u*256u;i++)screen[i]=0x5a5au;
+ conversation_touch_bounds();
+ conversation_layout();
+ conversation_wrapping();
+ learning_save_warning_footer();
  ui_draw(&g,&a,0,0,0,0,1,"TELL HR I'M TEETHING.");
  for(i=0;i<256u*192u;i++)if(screen[i])changed++;
  assert(changed>30000);

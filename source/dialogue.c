@@ -71,17 +71,24 @@ static void features(const Game *s,Care action,int8_t x[INPUTS]){
  x[4]=(int8_t)(((int)s->corruption-50)/5);
  x[5]=(int8_t)(action==CHAT?10:action==PLAY?5:action==FEED?-4:-6);
 }
-int dialogue_intent(const Game *s,Care action){
- int8_t input[INPUTS];int16_t hidden[HIDDEN];
- int i,j,best=0,score=-32767;
+void dialogue_encode(const Game *s,Care action,int8_t hidden[DIALOGUE_HIDDEN_COUNT]){
+ int8_t input[INPUTS];
+ int i,j;
+ if(!hidden)return;
+ if(!s){memset(hidden,0,HIDDEN);return;}
  features(s,action,input);
  for(i=0;i<HIDDEN;i++){
   int sum=hidden_bias[i]*4;
   for(j=0;j<INPUTS;j++)sum+=first[i][j]*input[j];
   if(sum<0)sum=0;
   if(sum>127)sum=127;
-  hidden[i]=(int16_t)sum;
+  hidden[i]=(int8_t)sum;
  }
+}
+int dialogue_intent(const Game *s,Care action){
+ int8_t hidden[HIDDEN];
+ int i,j,best=0,score=-32767;
+ dialogue_encode(s,action,hidden);
  for(i=0;i<OUTPUTS;i++){
   int value=final_bias[i];
   for(j=0;j<HIDDEN;j++)value+=second[i][j]*hidden[j];
