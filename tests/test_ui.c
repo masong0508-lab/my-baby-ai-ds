@@ -84,6 +84,30 @@ int main(void){
  ui_draw(&g,&a,0,0,0,0,1,"TELL HR I'M TEETHING.");
  for(i=0;i<256u*192u;i++)if(screen[i])changed++;
  assert(changed>30000);
+ /* Touch-only users must see and activate a distinct SAVE/LOAD
+  * option without accidentally starting the game or initializing FAT. */
+ {
+  int x,y;
+  uint16_t left,right;
+  assert(ui_title_save_touch(159,140));
+  assert(ui_title_save_touch(236,167));
+  assert(ui_title_save_touch(199,154));
+  assert(!ui_title_save_touch(158,154));
+  assert(!ui_title_save_touch(237,154));
+  assert(!ui_title_save_touch(199,139));
+  assert(!ui_title_save_touch(199,168));
+  assert(!ui_title_save_touch(128,115)); /* existing START touch */
+  assert(!ui_title_save_touch(60,154));  /* yellow START card */
+  for(y=0;y<192;y++)for(x=0;x<256;x++){
+   int expected=x>=159&&x<237&&y>=140&&y<168;
+   assert(ui_title_save_touch(x,y)==expected);
+  }
+  ui_draw(&g,&a,5,0,0,0,0,"WELCOME!");
+  verify_coverage();
+  left=screen[155u*256u+30u];
+  right=screen[155u*256u+163u];
+  assert(left!=right); /* yellow START and mint SAVE cards */
+ }
  /* Polished care screen retains readable numbers and action hitboxes.
   * A changed hunger value must update the real rendered meter/number. */
  {
@@ -159,6 +183,13 @@ int main(void){
  assert(!ui_room_entry_touch(220,55));
  assert(!ui_room_entry_touch(120,40));
  assert(!ui_room_entry_touch(243,40));
+ assert(ui_room_touch(220,54)==7); /* explicit in-room SAVE */
+ assert(ui_room_touch(198,49)==7);
+ assert(ui_room_touch(243,62)==7);
+ assert(ui_room_touch(197,55)==-1);
+ assert(ui_room_touch(244,55)==-1);
+ assert(ui_room_touch(220,48)==-1);
+ assert(ui_room_touch(220,63)==-1);
  assert(ui_room_touch(28,90)==0); /* window */
  assert(ui_room_touch(180,90)==1); /* lamp */
  assert(ui_room_touch(28,139)==2); /* teddy */

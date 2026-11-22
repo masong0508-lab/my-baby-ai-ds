@@ -48,6 +48,21 @@ static int persist(void){
  }
  return 1;
 }
+/* Save the CURRENT in-progress baby on an explicit Room Tour request.
+ * Unlike title SAVE/LOAD, never load an older file over unsaved progress.
+ * Boot remains in RAM mode until the player intentionally opts in. */
+static void save_live_baby(void){
+ if(!storage_ok){
+  message="CHECKING SAVE STORAGE...";
+  ui_draw(&baby,&arc,view,selected,last_ending,reset_step,0,message);
+  storage_ok=fatInitDefault();
+ }
+ if(storage_ok)
+  message=save_write(SAVE_BASE,&baby)?
+          "CURRENT BABY SAVED TO STORAGE.":
+          "SAVE WRITE FAILED. PROGRESS IN RAM!";
+ else message="NO SAVE DEVICE - RAM ONLY.";
+}
 static int care(Care action){
  message=game_care(&baby,action);
  pose=(int)action+1;
@@ -446,7 +461,10 @@ int main(void){
    }
   }else if(view==5){
    if(down&KEY_SELECT){view=7;dirty=1;}
-   else if(down&KEY_X){
+   else if((down&KEY_X)||
+           (tap&&ui_title_save_touch(touch.px,touch.py))){
+    /* Touch-only play can now opt into the SAME proven X-key save load.
+     * Never initialize FAT automatically at boot or when touching START. */
     message="CHECKING SAVE STORAGE...";
     ui_draw(&baby,&arc,view,selected,last_ending,reset_step,0,message);
     storage_ok=fatInitDefault();
@@ -493,7 +511,9 @@ int main(void){
    if(down&(KEY_B|KEY_SELECT|KEY_START)){view=5;dirty=1;}
   }else if(view==10){
    int picked=-1;
-   if(down&KEY_Y){
+   if(down&KEY_X){
+    save_live_baby();dirty=1;
+   }else if(down&KEY_Y){
     /* Same global mute as Toybox, now accessible without entering the
      * horror mode. Does not spend a tap or change baby care stats. */
     sfx_set_enabled(!sfx_is_enabled());
@@ -516,7 +536,9 @@ int main(void){
     }
     /* The sound toggle and USE labels are also true stylus hitboxes. */
     if(picked==6)picked=room_focus;
-    if(picked==5){
+    if(picked==7){
+     save_live_baby();dirty=1;
+    }else if(picked==5){
      sfx_set_enabled(!sfx_is_enabled());
      message=sfx_is_enabled()?"ROOM AUDIO ON.":"ROOM AUDIO MUTED.";
      dirty=1;

@@ -67,7 +67,7 @@ All sixteen cabinets reuse the established win/loss economy and **do not change 
 
 The runtime now paints the lower-screen title interface immediately after video setup, **before optional file storage initialization and before the complex nursery render**. The title's upper-screen image uses a lightweight scene. Normal gameplay remains accessible in RAM-only mode by pressing **A** or **START**.
 
-**Important storage behavior:** Press **X on the title screen** to attempt to enable DLDI/FAT saves and load a saved game. This is intentionally opt-in until boot problems on older emulators have been traced. If storage is unavailable, simply restart and enter via START/A to play without persistent saving. Do not press X if the save probe itself causes a hang. The old two-slot save format has not changed.
+**Important storage behavior:** Press **X** or tap the mint **SAVE/LOAD** card on the title screen to explicitly check DLDI/FAT saves and restore an existing baby. If you already started in RAM-only mode, open **ROOM**, then press **X** or tap the new **SAVE** badge to save the *current* baby without loading over your unsaved work. No storage probe runs automatically on boot or when tapping START. If your emulator's storage probe hangs, choose START/A and remain in RAM-only mode; persistent saving depends on a compatible FAT/DLDI backend. The original two-slot save format is unchanged.
 
 GitHub Actions now uploads **two ROMs** in each artifact:
 
@@ -87,7 +87,7 @@ This compatibility branch introduces **two independent mitigations**:
 1. The startup shows the title on the DS **2D display engines first**, without initializing the full 3D nursery or FAT storage. A purple top screen and a colorful bottom title confirm that the program reached its first graphics frame. Press **A/START/touch** to initialize the 3D engine and enter the nursery.
 2. GitHub Actions also packages a validated **DS-only** compatibility ROM (`my-baby-ai-ds-only.nds`) alongside the standard `my-baby-ai.nds`. This adjusts cartridge header unit code 0x12 and recalculates header CRC16 without changing the game binaries.
 
-**Important temporary save change:** at the title screen, press **X** to attempt loading/enabling DLDI/FAT saves. The game otherwise starts in RAM-only mode, deliberately avoiding potentially blocking emulator storage init. Do not assume progress persists unless the title shows that saving is enabled. Try the DS-only binary in DraStic using **Start Game**, not an emulator save state from the broken ROM.
+**Save accessibility:** at the title screen, press **X** or tap **SAVE/LOAD** to check or restore external storage. Once inside the nursery, you can open **ROOM** and use the visible **SAVE** badge (or X) to write current progress without returning to the title. These are both explicit actions, so the game can still boot directly into RAM-only play without blocking on emulator filesystem initialization. Do not assume progress persists unless saving has actually succeeded. Try the DS-only binary in DraStic using **Start Game**, not an emulator save state from the broken ROM.
 
 For a diagnostic report, record whether (a) the purple/colorful title appears, (b) pressing START enters the nursery, and (c) pressing X at title freezes or reports no save device. A white screen *before* the title in both ROM variants suggests a deeper emulator/runtime incompatibility and needs an emulator-level reproduction; it is not proof of a 3D scene bug.
 

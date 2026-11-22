@@ -123,6 +123,41 @@ def test_actual_game(path: Path, output: Path) -> dict:
     # Title screen should be painted by game's own bitmap UI, not white.
     center = title.getpixel((128, 192 + 75))
     assert center != (255, 255, 255), "Game remained all white at title."
+    # Preserve original touch-to-START at (128,115), but present a second
+    # distinct right-hand SAVE/LOAD card. Its hitbox and native screenshot
+    # must agree with the host C test (x=159..236, y=140..167).
+    save_card = title.crop((159, 192 + 140, 237, 192 + 168))
+    # This deliberately flat card uses FOUR colors (mint fill, teal edge,
+    # dark caption, white corners). A palette-size threshold rejected the
+    # correctly rendered ROM; verify the visible button parts instead.
+    save_pixels = list(save_card.get_flattened_data())
+    mint_fill = sum(1 for r, g, b in save_pixels
+                    if r > 140 and g > 200 and b > 140 and g > r + 30)
+    teal_edge = sum(1 for r, g, b in save_pixels
+                    if r < 130 and g > 150 and b > 160 and g > r + 60)
+    label_ink = sum(1 for r, g, b in save_pixels
+                    if r < 100 and g < 100 and b < 130)
+    assert mint_fill > 1200 and teal_edge > 120 and label_ink > 75, (
+        "Title SAVE/LOAD card lacks its fill, border or readable caption "
+        f"(mint={mint_fill}, edge={teal_edge}, text={label_ink})"
+    )
+    emu.input.touch_set_pos(201, 154)
+    frames(emu, 15)
+    emu.input.touch_release()
+    frames(emu, 24)
+    title_after_save_touch = picture(
+        emu, output, "game_title_after_touch_save_load"
+    )
+    save_touch_status_change = difference(
+        title, title_after_save_touch,
+        (18, 192 + 127, 239, 192 + 140)
+    )
+    assert save_touch_status_change > 20, (
+        "SAVE/LOAD touch failed to trigger the visible storage status "
+        f"({save_touch_status_change} changed pixels)"
+    )
+    # The touch action must keep the user on TITLE, not start the nursery.
+    # The SELECT diagnostic is still reachable afterward.
     emu.input.keypad_add_key(keymask(Keys.KEY_SELECT))
     frames(emu, 6)
     emu.input.keypad_rm_key(keymask(Keys.KEY_SELECT))
@@ -287,6 +322,17 @@ def test_actual_game(path: Path, output: Path) -> dict:
     )
     assert room_opened > 500, (
         f"Room button did not open an interactive prop screen ({room_opened})"
+    )
+    # The in-room SAVE button persists the CURRENT baby rather than
+    # loading an earlier save or leaving this nursery scene.
+    stylus_tap(emu, 220, 55)
+    room_saved = picture(emu, output, "game_room_after_touch_save")
+    room_save_change = difference(
+        room_night, room_saved, (18, 192 + 62, 238, 192 + 73)
+    )
+    assert room_save_change > 20, (
+        "Room Tour SAVE failed to show the storage result "
+        f"({room_save_change} changed pixels)"
     )
     # The original global mute lived only in Toybox. Room Tour now has a
     # clearly visible Y SOUND option. Test the *physical* DS Y key, and
@@ -1097,6 +1143,8 @@ def test_actual_game(path: Path, output: Path) -> dict:
         "diaper_start_illustration_colors": diaper_start_colors,
         "diaper_after_wipe_illustration_colors": diaper_next_colors,
         "title_to_diagnostic_changed_pixels": new_screen,
+        "title_touch_save_status_changed_pixels": save_touch_status_change,
+        "room_touch_save_status_changed_pixels": room_save_change,
         "live_geometry_vertex_label_pixels": visible_vertices,
         "live_geometry_polygon_label_pixels": visible_polygons,
         "KEY_TOUCH_status_changed_pixels": status,

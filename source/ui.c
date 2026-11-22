@@ -390,7 +390,11 @@ static void room_screen(const Game *s,int state,const char *message){
  fit(85,50,selected==0?(day?"DAYLIGHT":"MOONLIGHT"):
               selected==1?(lamp?"LAMP: ON":"LAMP: OFF"):
               selected==2?"TEDDY SAYS HELLO":"NURSERY NAP",TEAL,22);
- fit(18,61,message?message:"TOUCH A FURNITURE CARD.",MUTED,36);
+ /* Explicit in-game SAVE; remains available after a RAM-only START.
+  * Card is above prop hitboxes and inside the existing 256x192 panel. */
+ capsule(198,49,46,14,MINT,TEAL);
+ fit(209,53,"SAVE",INK,5);
+ fit(18,63,message?message:"TOUCH A FURNITURE CARD.",MUTED,36);
  for(i=0;i<4;i++){
   x=i%2?132:8;
   y=i/2?122:77;
@@ -1734,11 +1738,21 @@ static void title_screen(const Game *s,int storage_ok,const char *status){
  capsule(85,70,86,57,MINT,TEAL);
  sprite(98,72,3,spr_baby,18);
  fit(18,129,status?status:"WELCOME!",TEAL,36);
- capsule(19,140,218,28,LEMON,GOLD);
- label(99,147,"START",INK,2,5);
+ /* Two real, high-contrast title actions, matched to their touch bounds.
+  * The START button remains separate from save-device probing, which
+  * intentionally occurs only on an explicit user request. */
+ capsule(19,140,132,28,LEMON,GOLD);
+ label(58,147,"START",INK,2,5);
+ capsule(159,140,78,28,MINT,TEAL);
+ fit(171,150,"SAVE/LOAD",INK,11);
  foot(PURPLE);
  fit(10,181,"A START   X SAVE   SELECT TEST",WHITE,39);
  (void)storage_ok;
+}
+/* Match the visible 78x28 right-hand title card, with no accidental
+ * touches on the baby portrait, START card or off-screen coordinates. */
+int ui_title_save_touch(int x,int y){
+ return x>=159&&x<237&&y>=140&&y<168;
 }
 /* Collection stamps carry ONE readable label apiece instead of two
  * crowded microtext lines. Color indicates discovered good/bad endings. */
@@ -1912,6 +1926,7 @@ int ui_roughhouse_touch(int x,int y){
  * whitespace. All hitboxes are visibly filled in room_screen(). */
 int ui_room_touch(int x,int y){
  if(x<0||x>=256||y<0||y>=192)return -1;
+ if(x>=198&&x<244&&y>=49&&y<63)return 7; /* SAVE */
  if(y>=176){
   /* Footer labels are ACTUAL touch buttons (not invisible instructions).
    * Center retains the historic BACK area to preserve existing tests. */

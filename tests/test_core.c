@@ -297,6 +297,62 @@ static void forge_bad_stat(const char *filename,int field){
  assert(fwrite(&r,1,sizeof(r),f)==sizeof(r));
  assert(fclose(f)==0);
 }
+/* A RAM-only START deliberately does not load the old baby. Enabling
+ * storage later must nevertheless make the CURRENT baby the next load,
+ * with the previous saved baby retained as the two-slot crash fallback. */
+static void test_save_live_baby(void){
+ const char *base="/tmp/my_baby_ai_live_save";
+ const struct {
+  uint32_t disk_sequence,ram_sequence;
+  unsigned writes,remove_first;
+ } cases[]={
+  {99u,0u,1u,0u}, /* only slot zero exists */
+  {99u,0u,2u,0u}, /* slot one is newest */
+  {99u,0u,3u,0u}, /* slot zero is newest */
+  {99u,0u,2u,1u}, /* only slot one survives */
+  {UINT32_MAX-2u,0u,2u,0u}, /* write wraps disk MAX -> zero */
+  {UINT32_MAX-1u,0u,2u,0u}, /* disk already wrapped to zero */
+  {0x80000000u,0u,2u,0u}, /* not comparable with fresh RAM zero */
+  {99u,0x40000000u,2u,0u} /* stale RAM counter must not supersede disk */
+ };
+ unsigned i,j;
+ for(i=0;i<sizeof(cases)/sizeof(cases[0]);i++){
+  Game old_baby,live_baby,expected,loaded;
+  char fn[192];FILE *f;
+  assert(save_erase(base));
+  game_init(&old_baby);
+  old_baby.days=40;old_baby.dollars=321;
+  old_baby.sequence=cases[i].disk_sequence;
+  for(j=0;j<cases[i].writes;j++)assert(save_write(base,&old_baby));
+  if(cases[i].remove_first)assert(remove("/tmp/my_baby_ai_live_save.0")==0);
+  game_init(&live_baby);
+  live_baby.days=7;live_baby.dollars=11;
+  live_baby.sequence=cases[i].ram_sequence;
+  expected=live_baby;
+  expected.sequence=old_baby.sequence+1u;
+  assert(save_write(base,&live_baby));
+  assert(memcmp(&live_baby,&expected,sizeof(expected))==0);
+  assert(save_load(base,&loaded));
+  assert(memcmp(&loaded,&live_baby,sizeof(loaded))==0);
+  /* Damage the just-written slot. The previous disk state remains fully
+   * recoverable even though the new baby's counter began elsewhere. */
+  assert(snprintf(fn,sizeof(fn),"%s.%u",base,cases[i].writes%2u)>0);
+  f=fopen(fn,"wb");assert(f);
+  assert(fputs("interrupted",f)>=0);assert(fclose(f)==0);
+  assert(save_load(base,&loaded));
+  assert(memcmp(&loaded,&old_baby,sizeof(loaded))==0);
+  /* Retrying repairs the damaged slot; ordinary later care persists. */
+  live_baby.days=8;
+  assert(save_write(base,&live_baby));
+  assert(save_load(base,&loaded)&&loaded.days==8u);
+  live_baby.days=9;
+  assert(save_write(base,&live_baby));
+  assert(save_load(base,&loaded)&&loaded.days==9u);
+  assert(loaded.sequence==old_baby.sequence+2u);
+  assert(save_erase(base));
+ }
+ puts("PASS: enabling saves mid-game retains current baby and backup across sequence rollover");
+}
 static void test_save_integrity(void){
  const char *base="/tmp/my_baby_ai_integrity";
  Game s,loaded;FILE *f;
@@ -351,6 +407,7 @@ int main(void){
  test_good_endings();
  test_arcade_economy_recovery();
  test_save_integrity();
+ test_save_live_baby();
  save_erase(base);game_init(&g);
  assert(g.unlocked==255&&!game_reset_unlocked(&g));
  assert(game_unlocked(&g,0)&&game_unlocked(&g,7));
