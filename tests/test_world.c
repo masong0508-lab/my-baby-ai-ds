@@ -125,6 +125,10 @@ int main(void){
   world_observer_status(0u,100u,0);
  }
  world_draw_title(0);
+ /* The boot hero must have visible shoulders, mittens and shoes while
+  * keeping its fast DS title-startup geometry ceiling. */
+ assert(world_vertex_count()>=850);
+ assert(world_polygon_count()>=300);
  assert(world_vertex_count()<=1024);
  assert(world_polygon_count()<=350);
  /* The boot portrait must remain light enough for instant DS startup. */
