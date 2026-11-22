@@ -312,6 +312,17 @@ def test_actual_game(path: Path, output: Path) -> dict:
     assert room_opened > 500, (
         f"Room button did not open an interactive prop screen ({room_opened})"
     )
+    # The in-room SAVE button persists the CURRENT baby rather than
+    # loading an earlier save or leaving this nursery scene.
+    stylus_tap(emu, 220, 55)
+    room_saved = picture(emu, output, "game_room_after_touch_save")
+    room_save_change = difference(
+        room_night, room_saved, (18, 192 + 62, 238, 192 + 73)
+    )
+    assert room_save_change > 20, (
+        "Room Tour SAVE failed to show the storage result "
+        f"({room_save_change} changed pixels)"
+    )
     # The original global mute lived only in Toybox. Room Tour now has a
     # clearly visible Y SOUND option. Test the *physical* DS Y key, and
     # ensure a second press restores the normal state without leaving ROOM.
@@ -1122,6 +1133,7 @@ def test_actual_game(path: Path, output: Path) -> dict:
         "diaper_after_wipe_illustration_colors": diaper_next_colors,
         "title_to_diagnostic_changed_pixels": new_screen,
         "title_touch_save_status_changed_pixels": save_touch_status_change,
+        "room_touch_save_status_changed_pixels": room_save_change,
         "live_geometry_vertex_label_pixels": visible_vertices,
         "live_geometry_polygon_label_pixels": visible_polygons,
         "KEY_TOUCH_status_changed_pixels": status,
