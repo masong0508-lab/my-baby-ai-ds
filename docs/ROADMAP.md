@@ -61,6 +61,13 @@ voice transcription or a trained large language model. Physical DS mic
 accuracy, multiple speakers, noise, DraStic mic forwarding and latency
 remain separate validation priorities.
 
+**Voice refinement (2026-11-22):** the same 24x2 learned templates now
+use a bounded 12x12 constrained dynamic-time-warp comparison to tolerate
+uneven speech timing, with unchanged save/profile layout and no per-frame
+processing. Tests reject ambiguous near-duplicate labels, novel shapes
+and out-of-range feature records, while a native emulator silence test
+requires zero phantom lessons after an expired capture. Real-device
+accuracy and noise benchmarks still precede claims of reliable speech.
 
 **Implemented checkpoint:** the fixed-weight 6-input/8-hidden/6-output integer classifier selects from **48 authored lines** in six eight-line pools, with **12 additional contextual replies** for six kinds of recent care/arcade events. A 20-byte session memory keeps four distinct events, recalls each once on healthy CHAT, prevents immediate repeated lines and expires old events. Urgent needs take precedence. Care and arcade RNG progression and the version-1 save remain unchanged. Host tests cover recall, priority, aging and RNG preservation; native DeSmuME reads the actual rendered bottle-memory reply after FEED then CHAT. See [RECENT_INTERACTION_MEMORY.md](RECENT_INTERACTION_MEMORY.md), [DIALOGUE_REACTIVITY_MILESTONE.md](DIALOGUE_REACTIVITY_MILESTONE.md) and [DAY_CYCLE_MILESTONE.md](DAY_CYCLE_MILESTONE.md).
 

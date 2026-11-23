@@ -27,6 +27,15 @@ int voice_profile_valid(const VoiceProfile *p){
  for(i=0;i<VOICE_SLOTS;i++){
   const VoiceEntry *e=&p->entries[i];
   if(e->samples>2u||e->next_sample>1u)return 0;
+  /* Check acoustic features even when loading an independently
+   * checksummed sidecar. Each stored model bin is quantized to 0..63. */
+  {
+   unsigned sample,bin,feature;
+   for(sample=0u;sample<2u;sample++)
+    for(bin=0u;bin<VOICE_BINS;bin++)
+     for(feature=0u;feature<VOICE_FEATURES;feature++)
+      if(e->models[sample][bin][feature]>63u)return 0;
+  }
   if(!e->samples){if(e->label[0])return 0;continue;}
   if(!memchr(e->label,0,sizeof(e->label)))return 0;
   if(!label_normalize(normalized,e->label)||strcmp(normalized,e->label))return 0;
@@ -126,14 +135,58 @@ int voice_train(VoiceProfile *p,const char *label,const VoiceCapture *c){
  entry->next_sample=(uint8_t)((k+1u)%2u);
  return result;
 }
-static unsigned distance(const uint8_t *a,const uint8_t *b){
- unsigned i,j,sum=0;
- for(i=0;i<VOICE_BINS;i++)for(j=0;j<VOICE_FEATURES;j++){
-  unsigned k=i*VOICE_FEATURES+j;
+/* Bounded dynamic time warping improves tolerance for nonuniform
+ * syllable lengths. The 12x12 band is only +/-3 bins, so it cannot
+ * reorder phonemes or stretch a tiny noise burst into an entire word.
+ * No allocations, trained-template changes or per-frame work. */
+static unsigned voice_frame_cost(const uint8_t *a,const uint8_t *b){
+ unsigned k,sum=0;
+ for(k=0;k<VOICE_FEATURES;k++){
   unsigned d=a[k]>b[k]?a[k]-b[k]:b[k]-a[k];
-  sum+=d*(j==0u?2u:1u);
+  sum+=d*(k==0u?2u:1u);
  }
- return sum/VOICE_BINS;
+ return sum;
+}
+static unsigned distance(const uint8_t *a,const uint8_t *b){
+ enum {WARP_BAND=3u,WARP_PENALTY=9u};
+ uint16_t costs[2][VOICE_BINS+1u];
+ uint8_t steps[2][VOICE_BINS+1u];
+ unsigned i,j;
+ for(j=0u;j<=VOICE_BINS;j++){costs[0][j]=UINT16_MAX;steps[0][j]=0u;}
+ costs[0][0]=0u;
+ for(i=1u;i<=VOICE_BINS;i++){
+  unsigned now=i&1u,prev=(i-1u)&1u;
+  costs[now][0]=UINT16_MAX;steps[now][0]=0u;
+  for(j=1u;j<=VOICE_BINS;j++){
+   unsigned best,count,alternate,frame_cost;
+   if(i>j+WARP_BAND||j>i+WARP_BAND){
+    costs[now][j]=UINT16_MAX;steps[now][j]=0u;
+    continue;
+   }
+   best=costs[prev][j-1u];count=steps[prev][j-1u];
+   alternate=costs[prev][j];
+   if(alternate!=UINT16_MAX&&alternate+WARP_PENALTY<best){
+    best=alternate+WARP_PENALTY;count=steps[prev][j];
+   }
+   alternate=costs[now][j-1u];
+   if(alternate!=UINT16_MAX&&alternate+WARP_PENALTY<best){
+    best=alternate+WARP_PENALTY;count=steps[now][j-1u];
+   }
+   if(best==UINT16_MAX){
+    costs[now][j]=UINT16_MAX;steps[now][j]=0u;
+    continue;
+   }
+   frame_cost=voice_frame_cost(a+(i-1u)*VOICE_FEATURES,
+                               b+(j-1u)*VOICE_FEATURES);
+   costs[now][j]=(uint16_t)(best+frame_cost);
+   steps[now][j]=(uint8_t)(count+1u);
+  }
+ }
+ /* Path-normalized units remain identical to the old threshold scale;
+  * matching the same identical recording still scores exactly zero. */
+ return steps[VOICE_BINS&1u][VOICE_BINS]?
+  (unsigned)costs[VOICE_BINS&1u][VOICE_BINS]/
+             steps[VOICE_BINS&1u][VOICE_BINS]:UINT16_MAX;
 }
 int voice_recognize(const VoiceProfile *p,const VoiceCapture *c,unsigned *score){
  unsigned i,j,best=UINT16_MAX,second=UINT16_MAX;int winner=-1;

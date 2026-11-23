@@ -1,6 +1,7 @@
 #define _POSIX_C_SOURCE 200809L
 #include <assert.h>
 #include <stdio.h>
+#include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -8,6 +9,13 @@
 #include "voice_save.h"
 #include "save.h"
 static char directory[100],base[128];
+static void rehash_record(unsigned char *data,size_t size){
+ uint32_t hash=2166136261u;
+ size_t i;
+ assert(size>=4u);
+ for(i=0u;i<size-4u;i++){hash^=data[i];hash*=16777619u;}
+ memcpy(data+size-4u,&hash,sizeof(hash));
+}
 static void name(char *out,const Game *g){
  assert(snprintf(out,192,"%s.voice.%u",base,g->sequence&1u)>0);
 }
@@ -37,6 +45,24 @@ int main(void){
  assert(voice_save_write(base,&g,&p));
  f=fopen(fn,"rb+");assert(f);assert(fputc('x',f)!=EOF&&fclose(f)==0);rejects(&g);
  assert(voice_save_write(base,&g,&p));
+ /* A crafted, checksummed profile with out-of-range acoustic bins must
+  * also be rejected. Its Game and normal learned voice record survive. */
+ {
+  unsigned char binary[3600];
+  size_t size,at=16u+offsetof(VoiceProfile,entries)+
+                      offsetof(VoiceEntry,models);
+  f=fopen(fn,"rb");assert(f);
+  size=fread(binary,1,sizeof(binary),f);
+  assert(!ferror(f)&&fclose(f)==0&&size>at+4u);
+  assert(binary[at]<64u);
+  binary[at]=64u;rehash_record(binary,size);
+  f=fopen(fn,"wb");assert(f);
+  assert(fwrite(binary,1,size,f)==size&&fclose(f)==0);
+  rejects(&g);
+  assert(voice_save_write(base,&g,&p));
+  assert(voice_save_load(base,&g,&out));
+  assert(memcmp(&p,&out,sizeof(p))==0);
+ }
  (void)game_care(&g,FEED);assert(save_write(base,&g));
  strcpy(p.entries[1].label,"WORLD");p.entries[1].samples=1;p.used=2;
  assert(voice_save_write(base,&g,&p));
