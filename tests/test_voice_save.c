@@ -75,6 +75,22 @@ int main(void){
   assert(unlink(fn)==0);
  }
  assert(voice_save_write(base,&g,&p));
+ /* An explicitly forgotten spoken word survives disk round-trip as
+  * absent, while unrelated words and Game progress stay untouched. */
+ {
+  VoiceProfile erased=p;
+  assert(voice_forget(&erased,0u));
+  assert(erased.used==1u&&voice_find(&erased,"HELLO")==-1);
+  assert(voice_save_write(base,&g,&erased));
+  assert(voice_save_load(base,&g,&out));
+  assert(memcmp(&erased,&out,sizeof(out))==0);
+  assert(voice_find(&out,"WORLD")==1);
+  assert(voice_forget(&erased,1u));
+  assert(erased.used==0u&&voice_profile_valid(&erased));
+  assert(voice_save_write(base,&g,&erased));
+  assert(voice_save_load(base,&g,&out));
+  assert(out.used==0u&&voice_cycle(&out,-1,1)==-1);
+ }
  assert(voice_save_erase(base));rejects(&g);rejects(&older);
  assert(save_load(base,&loaded));
  assert(!voice_save_write(0,&g,&p));assert(!voice_save_load(0,&g,&p));

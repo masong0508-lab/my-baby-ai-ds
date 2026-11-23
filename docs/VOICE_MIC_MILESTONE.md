@@ -47,8 +47,12 @@ shelter repair, attack, save erase or conversation command.
 - Two user recordings of each short label build two independent
   12-bin x 4-feature models. Training replaces the older of the
   two samples when the same label is taught repeatedly. A 24-slot
-  ring replaces the oldest distinct label once full. Each slot
-  retains at most 24 ASCII label characters.
+  library now **refuses a 25th distinct label** rather than silently
+  replacing someone's trained words. The MIC LAB offers PREV/NEXT
+  browsing over occupied slots and an explicitly confirmed DEL action
+  that frees one selected slot for reuse. Repeating an existing label
+  still refreshes one of its two examples, even when all 24 slots
+  are occupied. Each slot retains at most 24 ASCII label characters.
 - The nearest-template matcher now uses constrained **dynamic time
   warping (DTW)** over the existing 12-bin traces, with four fixed-point
   features per bin, a maximum three-bin alignment shift and a penalty
@@ -90,7 +94,13 @@ two voice companions alongside its existing files.
 6. Press X or tap LISTEN, then speak. A confident match appears.
 7. Press Y or tap USE. This explicitly submits the matched label to
    the current WARDEN/BABY role. B returns to the typed keyboard.
-8. If the microphone is unsupported in your emulator, use the keyboard.
+8. To manage the lessons, press **L/R or LEFT/RIGHT** or tap PREV/NEXT.
+   The current saved word and its example count (EX 1/2 or 2/2) are
+   visible. Tap DEL, then DEL again to forget **only the selected word**;
+   SELECT works as the same two-step delete control. Choosing another
+   word or leaving MIC LAB cancels an armed deletion. The next newly
+   trained label reuses that free slot; none are automatically evicted.
+9. If the microphone is unsupported in your emulator, use the keyboard.
    All original controls remain usable.
 
 ## Tests and remaining accuracy work
@@ -99,7 +109,9 @@ Strict host tests exercise 24 training slots, duplicate teaching,
 two-example matching, silence/no-speech, malformed labels, temporal
 stretch/compression of synthetic phoneme patterns, matched-versus-
 unfamiliar recognition, two distinct labels taught with identical
-sounds (must return UNSURE), and acoustic-bin validation.
+sounds (must return UNSURE), acoustic-bin validation, full-library
+refusal, non-destructive browse cycling, targeted deletion, freed-slot
+reuse and last-lesson reset.
 A correctly checksummed sidecar containing a quantized value outside
 0..63 is now rejected instead of loading an invalid template. Separate real-file tests cover exact-Game binding,
 optional save recovery, older slots, truncation, extra trailing bytes,

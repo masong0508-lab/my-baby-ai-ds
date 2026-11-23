@@ -57,9 +57,13 @@ It stores features, not raw recordings, in a separate optional checksummed
 save companion. Unknown input is explicitly rejected, and spoken labels are
 only submitted to existing typed conversations upon an explicit USE command.
 This is limited, speaker-trained word/short-phrase matching, not unrestricted
-voice transcription or a trained large language model. Physical DS mic
-accuracy, multiple speakers, noise, DraStic mic forwarding and latency
-remain separate validation priorities.
+voice transcription or a trained large language model. A new bounded
+lesson-manager milestone adds PREV/NEXT browsing, an example count,
+two-step DEL confirmation and explicit empty-slot reuse. Filling all
+24 slots never silently evicts another learned word. These controls
+reuse the existing VoiceProfile and unchanged saved lesson formats.
+Physical DS mic accuracy, multiple speakers, noise, DraStic mic forwarding
+and latency remain separate validation priorities.
 
 **Voice refinement (2026-11-22):** the same 24x2 learned templates now
 use a bounded 12x12 constrained dynamic-time-warp comparison to tolerate

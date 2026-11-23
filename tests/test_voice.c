@@ -121,9 +121,22 @@ int main(void){
  assert(c.state==VOICE_READY&&c.frames==18u);
  record(&c,2,75,0);assert(voice_recognize(&p,&c,&score)<0);
  assert(voice_train(&p,"hello",&c)==1);
+ assert(voice_find(&p,"HELLO")==0);
+ assert(voice_find(&p,"  hello  ")==0);
+ assert(voice_find(&p,"WORLD")==-1);
+ assert(voice_find(NULL,"HELLO")==-1);
+ assert(voice_cycle(&p,-1,1)==0);
+ assert(voice_cycle(&p,-1,-1)==0);
+ assert(voice_cycle(&p,0,-1)==0);
  record(&c,2,78,1);assert(voice_train(&p,"hello",&c)==2);
  record(&c,4,70,0);assert(voice_train(&p,"WORLD",&c)==1);
  record(&c,4,78,1);assert(voice_train(&p,"WORLD",&c)==2);
+ assert(voice_cycle(&p,0,1)==1&&voice_cycle(&p,1,1)==0);
+ assert(voice_cycle(&p,0,-1)==1&&voice_cycle(&p,1,-1)==0);
+ assert(voice_cycle(&p,-1,0)==-1);
+ assert(!voice_forget(&p,VOICE_SLOTS));
+ assert(!voice_forget(&p,4u));
+ assert(!voice_forget(NULL,0u));
  record(&c,2,78,2);match=voice_recognize(&p,&c,&score);
  assert(match==0&&score<55u);
  record(&c,4,75,2);match=voice_recognize(&p,&c,&score);
@@ -171,8 +184,48 @@ int main(void){
  }
  assert(p.used==24&&voice_profile_valid(&p));
  assert(strcmp(voice_label(&p,0),"HELLO")==0);
- record(&c,22,70,1);assert(voice_train(&p,"NEW COMMAND",&c)==1);
- assert(p.used==24&&strcmp(voice_label(&p,0),"NEW COMMAND")==0);
+ record(&c,22,70,1);
+ /* No silent eviction: all 24 lessons remain identical after a
+  * full-memory training request, including the oldest trained word. */
+ {
+  VoiceProfile full=p;
+  assert(voice_train(&p,"NEW COMMAND",&c)==3);
+  assert(memcmp(&p,&full,sizeof(p))==0);
+ }
+ assert(voice_forget(&p,0u)==1);
+ assert(p.used==23u&&p.next==0u&&voice_profile_valid(&p));
+ assert(voice_find(&p,"HELLO")==-1&&voice_label(&p,0u)[0]=='\0');
+ assert(voice_cycle(&p,23,1)==1);
+ /* Reuse the newly empty slot; none of the other lessons is lost. */
+ assert(voice_train(&p,"NEW COMMAND",&c)==1);
+ assert(p.used==24u&&voice_find(&p,"new command")==0);
+ assert(strcmp(voice_label(&p,1),"WORLD")==0);
+ /* Deleting an interior occupied slot creates a hole which the next
+  * new lesson must reuse before destroying another word. */
+ {
+  char kept[VOICE_TEXT+1u];
+  strcpy(kept,voice_label(&p,5u));
+  assert(voice_forget(&p,5u)==1);
+  assert(p.used==23u&&voice_profile_valid(&p));
+  assert(voice_cycle(&p,4,1)==6);
+  assert(voice_cycle(&p,6,-1)==4);
+  assert(voice_train(&p,"NEW SONG",&c)==1);
+  assert(voice_find(&p,"NEW SONG")==5);
+  assert(voice_find(&p,kept)==-1);
+  assert(p.used==24u&&voice_profile_valid(&p));
+ }
+ /* One remaining lesson cycles to itself; forgetting the last one
+  * clears the profile's count and resets its free-slot cursor. */
+ {
+  VoiceProfile only;
+  voice_profile_reset(&only);
+  assert(voice_train(&only,"TEST",&c)==1);
+  assert(voice_cycle(&only,0,1)==0);
+  assert(voice_forget(&only,0u)==1);
+  assert(only.used==0u&&only.next==0u);
+  assert(voice_cycle(&only,-1,1)==-1);
+  assert(!voice_forget(&only,0u));
+ }
  assert(!voice_train(&p,"\nINVALID",&c));
  assert(!voice_train(&p,"abcdefghijklmnopqrstuvwxyz",&c));
  assert(voice_profile_valid(&p));
@@ -191,6 +244,6 @@ int main(void){
   assert(c.state==VOICE_NO_SPEECH&&c.frames==0u&&c.level==0u);
   assert(voice_recognize(&p,&c,&score)<0);
  }
- puts("PASS: voice capture, steady-noise calibration, transient-pop rejection, onset retention, 24 labels, DTW, ambiguity and bounds");
+ puts("PASS: mic capture and DTW, 24 retained labels, browse/forget/reuse, full-library refusal, noise and profile bounds");
  return 0;
 }

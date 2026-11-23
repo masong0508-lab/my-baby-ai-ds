@@ -35,8 +35,17 @@ void voice_profile_reset(VoiceProfile *profile);
 int voice_profile_valid(const VoiceProfile *profile);
 void voice_capture_reset(VoiceCapture *capture);
 void voice_capture_pcm16(VoiceCapture *capture,const int16_t *pcm,unsigned samples);
-/* Returns 0 for rejected input, 1 new lesson/slot, 2 reinforced. */
+/* 0 invalid sample/label, 1 new lesson, 2 existing lesson updated,
+ * 3 memory full (never silently erase an older taught word). */
 int voice_train(VoiceProfile *profile,const char *label,const VoiceCapture *capture);
+/* Explicitly managed 24-label memory; all functions operate on the
+ * existing unchanged profile/save layout, never raw audio or Game state.
+ * voice_find: -1 if absent. voice_cycle: -1 if empty, otherwise next
+ * trained slot (wrapping and skipping holes), forward=+1 or backward=-1.
+ * voice_forget: 1 only when a valid occupied slot was cleared. */
+int voice_find(const VoiceProfile *profile,const char *label);
+int voice_cycle(const VoiceProfile *profile,int current,int direction);
+int voice_forget(VoiceProfile *profile,unsigned slot);
 /* Returns -1 on uncertainty/no trained match. No automatic gameplay action. */
 int voice_recognize(const VoiceProfile *profile,const VoiceCapture *capture,unsigned *score);
 const char *voice_label(const VoiceProfile *profile,unsigned slot);

@@ -578,12 +578,18 @@ void ui_observer_draw(const Game *s,int can_save,unsigned speaker,
 int ui_mic_touch(int x,int y){
  if(x<0||x>=256||y<0||y>=192)return 0;
  if(y>=176)return 4;
+ if(y>=113&&y<128){
+  if(x>=8&&x<44)return 5;
+  if(x>=48&&x<84)return 6;
+  if(x>=205&&x<248)return 7;
+ }
  if(y>=129&&y<163&&x>=8&&x<248)return x<84?1:x<170?2:3;
  return 0;
 }
 void ui_mic_draw(const Game *s,int can_save,const char *label,
                  const char *status,const char *match,unsigned level,
-                 unsigned learned,int listening){
+                 unsigned learned,int listening,const char *selected_label,
+                 unsigned examples,int forget_armed){
  unsigned width;
  if(!pixels||!s)return;
  cursor_visible=0;screen_accent=AQUA;
@@ -601,6 +607,18 @@ void ui_mic_draw(const Game *s,int can_save,const char *label,
  fit(17,88,status?status:"MIC OFF. A TRAIN / X LISTEN.",INK,36);
  fit(17,104,"MATCH:",PURPLE,6);
  fit(61,104,match&&*match?match:"NONE / AWAITING SAMPLE",INK,27);
+ /* Browse stored words without retraining them or touching any care
+  * action. An explicitly confirmed DEL is the only way to free a slot. */
+ solid(0,113,256,15,RGB(13,20,23));
+ capsule(8,113,36,15,MINT,TEAL);
+ fit(13,117,"PREV",INK,4);
+ capsule(48,113,36,15,MINT,TEAL);
+ fit(53,117,"NEXT",INK,4);
+ capsule(88,113,114,15,IVORY,TEAL);
+ fit(94,117,selected_label&&*selected_label?selected_label:"NO LESSONS",INK,17);
+ capsule(205,113,43,15,forget_armed?PINK:LEMON,ROSE);
+ fit(forget_armed?209:217,117,forget_armed?"SURE?":"DEL",INK,
+     forget_armed?5:3);
  capsule(8,131,76,30,MINT,GREEN);
  fit(25,139,"A TRAIN",INK,7);
  capsule(90,131,76,30,SKY,BLUE);
@@ -608,12 +626,14 @@ void ui_mic_draw(const Game *s,int can_save,const char *label,
  capsule(172,131,76,30,LEMON,GOLD);
  fit(192,139,"Y USE",INK,5);
  {
-  char count[32];
+  char count[32],trained[20];
   snprintf(count,sizeof(count),"SAVED LABELS %u / 24",learned>24u?24u:learned);
   fit(17,166,count,WHITE,25);
+  snprintf(trained,sizeof(trained),"EX %u/2",examples>2u?2u:examples);
+  fit(183,166,trained,WHITE,7);
  }
  foot(TEAL);
- fit(13,182,"B BACK   TYPE LABEL IN WARDEN FIRST",WHITE,39);
+ fit(13,182,"B BACK   L/R BROWSE   DEL TWICE",WHITE,39);
 }
 /* Save failure takes precedence over mic status, preserving live RAM model. */
 void ui_voice_save_warning(void){

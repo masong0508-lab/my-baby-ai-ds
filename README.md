@@ -64,6 +64,11 @@ LAB press **A/TRAIN**, speak after the quiet calibration, then repeat TRAIN
 to store a second example. Press **X/LISTEN** to attempt recognition.
 If a label matches confidently, press **Y/USE** to send that text to the
 currently selected BABY or WARDEN terminal. **B/BACK** cancels.
+MIC LAB also has **PREV/NEXT** (L/R or D-pad left/right) for browsing
+previously taught words, showing their EX 1/2 or 2/2 training status.
+**DEL or SELECT twice** forgets only the selected phrase. The learner
+does not discard an old lesson when all 24 slots are full: free a slot
+explicitly before teaching a new one.
 
 The DS microphone uses a finite ARM7 8,192 Hz capture session, with a
 1 KiB aligned double buffer and cache-safe PCM16 processing on ARM9.

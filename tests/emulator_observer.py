@@ -231,6 +231,24 @@ def typing_scenario(player, initial):
                          text_at(im, 12, 7, 7, 2, "white") == "MIC LAB",
                          limit=120)
     player.capture("microphone_lab_keyboard_fallback", screen)
+    # The brand-new learner starts empty. Its browser and delete controls
+    # must be visible and not delete anything until an explicit lesson
+    # is selected AND DEL is confirmed a second time.
+    assert text_at(screen, 13, 117, 4, ink="ink") == "PREV"
+    assert text_at(screen, 53, 117, 4, ink="ink") == "NEXT"
+    assert text_at(screen, 217, 117, 3, ink="ink") == "DEL"
+    assert text_at(screen, 94, 117, 17, ink="ink").startswith("NO LESSONS")
+    player.tap(22, 120)
+    browse = player.wait("empty voice browser is harmless", lambda im:
+                         text_at(im, 17, 88, 36, ink="ink").startswith(
+                             "NO SAVED WORDS."), limit=120)
+    player.capture("microphone_empty_library_browse", browse)
+    player.tap(222, 120)
+    empty = player.wait("empty delete cannot erase other progress", lambda im:
+                        text_at(im, 17, 88, 36, ink="ink").startswith(
+                            "NO SAVED WORDS TO FORGET."), limit=120)
+    assert text_at(empty, 17, 166, 25, ink="white") == "SAVED LABELS 0 / 24"
+    player.capture("microphone_empty_library_delete_inert", empty)
     player.key(Keys.KEY_X)
     player.step(25)
     player.capture("microphone_listening_without_injected_audio", player.screen())
