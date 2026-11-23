@@ -75,17 +75,43 @@ void voice_capture_pcm16(VoiceCapture *c,const int16_t *pcm,unsigned samples){
  c->level=row[0];
  if(c->blocks<UINT16_MAX)c->blocks++;
  if(c->state==VOICE_CALIBRATE){
-  c->noise=(uint8_t)((unsigned)c->noise+energy>255u?255u:c->noise+energy);
-  if(++c->calibration==4u){c->noise=(uint8_t)(c->noise/4u);c->state=VOICE_WAIT;}
+  /* Average rather than accumulate into an 8-bit sum: four blocks of
+   * moderate fan/hiss can exceed 255 despite a completely steady room.
+   * The old saturated mean under-reported noise and falsely heard words. */
+  unsigned heard=(unsigned)c->calibration;
+  c->noise=(uint8_t)(((unsigned)c->noise*heard+energy+
+                       heard/2u)/(heard+1u));
+  if(++c->calibration==4u)c->state=VOICE_WAIT;
   return;
  }
+ /* Display activity ABOVE the calibrated room floor, not the raw AC
+  * level: a loud steady fan is not a full-screen "voice" meter. */
+ c->level=(uint8_t)(energy>(unsigned)c->noise?
+                       energy-(unsigned)c->noise:0u);
  hit=energy>=9u && energy>(unsigned)c->noise+6u;
  if(c->state==VOICE_WAIT){
   if(!hit){
+   /* Follow slow room-noise changes without teaching the classifier
+    * that a sudden voice burst is the new baseline. Integer low-pass,
+    * applied ONLY to sub-threshold samples, with no extra session data. */
+   c->noise=(uint8_t)(((unsigned)c->noise*7u+energy+4u)/8u);
+   c->tail=0u;
    if(c->blocks>=VOICE_MAX_WAIT)c->state=VOICE_NO_SPEECH;
    return;
   }
+  /* One loud 31ms frame can be a mic pop or a dropped cartridge touch.
+   * Keep the first frame in the existing scratch buffer, require a
+   * consecutive second frame, then enter CAPTURING with both frames
+   * included. No extra PCM storage or loss of the word's first syllable. */
+  if(!c->tail){
+   memcpy(c->measurements[0],row,sizeof(row));
+   c->tail=1u;
+   return;
+  }
+  memcpy(c->measurements[1],row,sizeof(row));
+  c->frames=2u;c->tail=0u;
   c->state=VOICE_CAPTURING;
+  return;
  }
  if(c->state!=VOICE_CAPTURING)return;
  if(c->frames>=VOICE_RAW_FRAMES){c->state=c->frames>=4u?VOICE_READY:VOICE_TOO_SHORT;return;}

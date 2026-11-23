@@ -67,6 +67,10 @@ currently selected BABY or WARDEN terminal. **B/BACK** cancels.
 
 The DS microphone uses a finite ARM7 8,192 Hz capture session, with a
 1 KiB aligned double buffer and cache-safe PCM16 processing on ARM9.
+Voice detection first calibrates ambient sound, tracks slow background
+noise changes, and requires a sustained two-block speech onset. The
+displayed level is relative to that ambient baseline, rather than
+treating a constant fan or microphone pop as a spoken command.
 The user-trainable matcher supports **24 distinct labeled words or short
 phrases**, two compact feature examples each, under 3.5 KiB of profile
 RAM; raw audio is not stored. This is a speaker-dependent template

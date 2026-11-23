@@ -69,6 +69,15 @@ and out-of-range feature records, while a native emulator silence test
 requires zero phantom lessons after an expired capture. Real-device
 accuracy and noise benchmarks still precede claims of reliable speech.
 
+**Noise-floor refinement:** microphone calibration now averages all four
+noise samples without the old 8-bit sum clipping in a loud room. Waiting
+samples smoothly follow slow changes in background noise, and speech
+begins only after two consecutive qualifying blocks (retaining the
+first block's features). The visible MIC meter is relative to the room
+floor; a stable loud fan or isolated click should not falsely trigger
+the short-phrase learner. The tests use synthetic noisy PCM; actual
+original-DS microphone accuracy and sensitivity still need measurement.
+
 **Implemented checkpoint:** the fixed-weight 6-input/8-hidden/6-output integer classifier selects from **48 authored lines** in six eight-line pools, with **12 additional contextual replies** for six kinds of recent care/arcade events. A 20-byte session memory keeps four distinct events, recalls each once on healthy CHAT, prevents immediate repeated lines and expires old events. Urgent needs take precedence. Care and arcade RNG progression and the version-1 save remain unchanged. Host tests cover recall, priority, aging and RNG preservation; native DeSmuME reads the actual rendered bottle-memory reply after FEED then CHAT. See [RECENT_INTERACTION_MEMORY.md](RECENT_INTERACTION_MEMORY.md), [DIALOGUE_REACTIVITY_MILESTONE.md](DIALOGUE_REACTIVITY_MILESTONE.md) and [DAY_CYCLE_MILESTONE.md](DAY_CYCLE_MILESTONE.md).
 
 **Neural conversation checkpoint:** a six-prompt TALK view adds questions, topical continuations and explicit feedback. A small learned output adapter uses the existing neural hidden activations plus conversation context to choose warm/playful/corporate wording. Actual care outcomes and recorded events constrain the eligible responses; urgent needs cannot be trained away. Learned preferences persist in a 40-byte, checksummed companion profile bound to the exact saved Game, without changing v1 progress bytes. FEED/PLAY/NAP replies distinguish useful, redundant and tiring care. See [NEURAL_CONVERSATION.md](NEURAL_CONVERSATION.md), [LEARNING_SAVE_COMPATIBILITY.md](LEARNING_SAVE_COMPATIBILITY.md), and [NATIVE_CONVERSATION_TESTS.md](NATIVE_CONVERSATION_TESTS.md).
