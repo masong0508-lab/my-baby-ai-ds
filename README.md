@@ -70,8 +70,10 @@ The DS microphone uses a finite ARM7 8,192 Hz capture session, with a
 The user-trainable matcher supports **24 distinct labeled words or short
 phrases**, two compact feature examples each, under 3.5 KiB of profile
 RAM; raw audio is not stored. This is a speaker-dependent template
-classifier, **not full speech-to-text, arbitrary conversation recognition,
-or an always-listening neural language model**. Each recognized command
+classifier with bounded time-warp alignment for different syllable
+lengths, **not full speech-to-text, arbitrary conversation recognition,
+or an always-listening neural language model**. It still rejects
+ambiguous labels or unfamiliar sounds. Each recognized command
 requires an explicit USE confirmation; no automatic care action is taken.
 
 Optional lessons persist in a separate checksummed Game-bound voice

@@ -40,9 +40,16 @@ shelter repair, attack, save erase or conversation command.
   two samples when the same label is taught repeatedly. A 24-slot
   ring replaces the oldest distinct label once full. Each slot
   retains at most 24 ASCII label characters.
-- The nearest-template matcher uses bounded integer distances,
-  explicit thresholds and a runner-up margin. A noisy, silent or
-  ambiguous attempt does not automatically pick a word.
+- The nearest-template matcher now uses constrained **dynamic time
+  warping (DTW)** over the existing 12-bin traces, with four fixed-point
+  features per bin, a maximum three-bin alignment shift and a penalty
+  for repeated/skipped positions. It normalizes the resulting cost by
+  the path length and keeps the absolute score threshold plus the
+  runner-up margin. An unfamiliar, silent, or ambiguous sound returns
+  UNSURE rather than executing a guessed command. The 12x12 calculation
+  runs only at the end of an explicit LISTEN request; no large
+  buffers, additional stored model bytes, or per-frame recognition
+  were introduced.
 - The microphone is off during normal CARE, TALK, WARDEN, arcade,
   Room Tour, Toybox, films and idle play. PSG sounds are stopped
   before every microphone session to avoid self-triggered signals.
@@ -80,20 +87,28 @@ two voice companions alongside its existing files.
 ## Tests and remaining accuracy work
 
 Strict host tests exercise 24 training slots, duplicate teaching,
-two-example matching, silence/no-speech, malformed labels and
-profile corruption. Separate real-file tests cover exact-Game binding,
+two-example matching, silence/no-speech, malformed labels, temporal
+stretch/compression of synthetic phoneme patterns, matched-versus-
+unfamiliar recognition, two distinct labels taught with identical
+sounds (must return UNSURE), and acoustic-bin validation.
+A correctly checksummed sidecar containing a quantized value outside
+0..63 is now rejected instead of loading an invalid template. Separate real-file tests cover exact-Game binding,
 optional save recovery, older slots, truncation, extra trailing bytes,
 checksum damage and write failures. Both ROM toolchains must compile
 the ARM7 callback and linked model. The DeSmuME native WARDEN route
-checks reaching MIC LAB, starting a bounded capture and exiting cleanly.
+checks reaching MIC LAB, starting a bounded capture, allowing silence
+to expire without any learned labels, and exiting cleanly.
 
 **Not yet verified:** live microphone signals on a physical DS/DS Lite,
 actual word error rates, environmental noise, voice-to-voice variation,
 DraStic microphone passthrough, hardware frame pacing while capturing,
 and power-cycle storage on a real flashcart. A passing emulator UI test
 does not prove real speech recognition. More robust acoustic embeddings,
-MFCC/DTW alignment, confidence calibration and more languages belong
-in subsequent milestones after actual microphone examples are collected.
+MFCC-style acoustic features, confidence calibration against real
+utterances, longer phrases, multi-speaker robustness and more languages
+remain future work after recording legal test examples and benchmarking
+original DS input. The bounded DTW tested here does not establish a
+particular real-world word error rate.
 
 ## Research references
 

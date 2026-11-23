@@ -234,6 +234,18 @@ def typing_scenario(player, initial):
     player.key(Keys.KEY_X)
     player.step(25)
     player.capture("microphone_listening_without_injected_audio", player.screen())
+    # A silent hardware/emulator source must complete without inventing a
+    # voice training example or leaving an endless mic session running.
+    # This also exercises the fallback when no mic service exists.
+    silent = player.wait("silent MIC capture ends without training", lambda im:
+                         text_at(im, 17, 88, 36, ink="ink").startswith(
+                             ("NO CLEAR SPEECH.", "MIC UNAVAILABLE.")),
+                         limit=260, stride=4)
+    count = text_at(silent, 17, 166, 25, ink="white")
+    assert count == "SAVED LABELS 0 / 24", count
+    player.capture("microphone_silence_timeout_no_phantom_word", silent,
+                   learned_labels=0,
+                   status=text_at(silent, 17, 88, 36, ink="ink"))
     player.key(Keys.KEY_B)
     _, returned = player.terminal("MIC B returns to WARDEN", input_text="")
     assert parse_status(returned) == parse_status(entry), returned

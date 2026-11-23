@@ -39,6 +39,31 @@ static void record_biased(VoiceCapture *c,int period,int amplitude,int mod,int b
  }
  assert(c->state==VOICE_READY);
 }
+/* A controlled phoneme-pattern fixture. These are quantized feature
+ * traces, not a claim of accuracy on unrecorded human speech. */
+static const uint8_t voice_shape_a[VOICE_BINS][VOICE_FEATURES]={
+ {50,18,10,12},{50,18,10,12},{56,21,13,14},{65,24,16,17},
+ {84,75,32,32},{88,75,34,32},{80,69,30,30},{60,51,20,20},
+ {45,33,10,14},{42,18,9,12},{38,15,8,10},{38,15,8,10}
+};
+static const uint8_t voice_shape_b[VOICE_BINS][VOICE_FEATURES]={
+ {50,24,15,18},{57,24,15,18},{67,57,18,21},{74,60,26,24},
+ {76,60,28,25},{60,42,22,20},{50,30,19,19},{83,84,35,33},
+ {88,87,35,35},{65,63,22,25},{45,30,15,15},{37,21,10,10}
+};
+static void shaped_capture(VoiceCapture *c,int alternate,
+                           const uint8_t positions[VOICE_BINS]){
+ const uint8_t (*source)[VOICE_FEATURES]=alternate?
+                                    voice_shape_b:voice_shape_a;
+ unsigned i;
+ voice_capture_reset(c);
+ c->state=VOICE_READY;c->frames=VOICE_BINS;
+ for(i=0u;i<VOICE_BINS;i++){
+  unsigned at=positions?positions[i]:i;
+  assert(at<VOICE_BINS);
+  memcpy(c->measurements[i],source[at],VOICE_FEATURES);
+ }
+}
 int main(void){
  VoiceProfile p;VoiceCapture c;unsigned score;int match;
  voice_profile_reset(&p);assert(voice_profile_valid(&p));
@@ -54,6 +79,40 @@ int main(void){
  record_biased(&c,2,75,1,6000);
  match=voice_recognize(&p,&c,&score);
  assert(match==0&&score<55u);
+ /* Natural speaking rates change different syllables by different
+  * amounts. Constrained 12-bin time warping should align either version
+  * while preserving the clear margin against a distinct trained phrase. */
+ {
+  static const uint8_t quicker[VOICE_BINS]={0,1,3,4,4,5,6,7,7,9,10,11};
+  static const uint8_t slower[VOICE_BINS]={0,1,1,2,3,4,5,6,7,8,10,11};
+  VoiceProfile p2,invalid;
+  voice_profile_reset(&p2);
+  shaped_capture(&c,0,0);assert(voice_train(&p2,"COME HERE",&c)==1);
+  shaped_capture(&c,1,0);assert(voice_train(&p2,"GO AWAY",&c)==1);
+  shaped_capture(&c,0,quicker);
+  assert(voice_recognize(&p2,&c,&score)==0&&score<=8u);
+  shaped_capture(&c,0,slower);
+  assert(voice_recognize(&p2,&c,&score)==0&&score<=8u);
+  shaped_capture(&c,1,0);
+  assert(voice_recognize(&p2,&c,&score)==1&&score<=8u);
+  /* A wildly different acoustic shape is neither known label. */
+  voice_capture_reset(&c);c.state=VOICE_READY;c.frames=VOICE_BINS;
+  for(unsigned t=0;t<VOICE_BINS;t++){
+   c.measurements[t][0]=40u;c.measurements[t][1]=252u;
+   c.measurements[t][2]=200u;c.measurements[t][3]=200u;
+  }
+  assert(voice_recognize(&p2,&c,&score)==-1&&score>55u);
+  /* A wrong-but-checksummed 0..63 feature profile is rejected on load. */
+  invalid=p2;invalid.entries[0].models[0][0][0]=64u;
+  assert(!voice_profile_valid(&invalid));
+  /* Different labels taught with identical sounds are ambiguous.
+   * Explicit USE must remain unavailable instead of guessing. */
+  voice_profile_reset(&p2);
+  shaped_capture(&c,0,0);
+  assert(voice_train(&p2,"MUM",&c)==1);
+  assert(voice_train(&p2,"MOM",&c)==1);
+  assert(voice_recognize(&p2,&c,&score)==-1&&score==0u);
+ }
  for(int n=0;n<22;n++){
   char label[25];snprintf(label,sizeof(label),"PHRASE %d",n);
   record(&c,n+5,65,n);assert(voice_train(&p,label,&c)==1);
@@ -80,6 +139,6 @@ int main(void){
   assert(c.state==VOICE_NO_SPEECH&&c.frames==0u&&c.level==0u);
   assert(voice_recognize(&p,&c,&score)<0);
  }
- puts("PASS: offline mic frontend, 24 taught phrases, two-example matching, noise rejection and bounds");
+ puts("PASS: voice capture, 24 labels, timed syllable warping, near-word ambiguity, noise rejection and bounds");
  return 0;
 }
