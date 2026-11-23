@@ -31,6 +31,15 @@ shelter repair, attack, save erase or conversation command.
   before measuring voice level, zero-crossings, short differences and
   longer-lag differences. A quiet nonzero PCM offset must not register
   as speech or fill the input meter; signed 32-bit accumulation is bounded.
+  The four-block background noise calibration uses an incremental average
+  rather than an 8-bit sum that would saturate in noisy environments.
+  While waiting, it slowly tracks sub-threshold changes in the room's
+  background hum; meter level after calibration displays only energy
+  above that ambient floor. Capturing a word requires two consecutive
+  speech-positive ~31 ms blocks, retaining the first in the existing
+  feature scratch buffer. One abrupt click or a loud, steady fan is not
+  automatically accepted as a speech sample. The room-noise model
+  remains volatile and is not saved.
   Recording calibrates the noise floor for four chunks, waits for speech,
   then keeps at most 32 feature frames. Up to 80 chunks can elapse
   before a no-speech rejection. The UI has an additional finite

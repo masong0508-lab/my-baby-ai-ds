@@ -64,9 +64,61 @@ static void shaped_capture(VoiceCapture *c,int alternate,
   memcpy(c->measurements[i],source[at],VOICE_FEATURES);
  }
 }
+/* Audible-energy stationary noise should not be confused with a word.
+ * These buffers intentionally have zero DC offset but HIGH fixed AC
+ * amplitude: old 8-bit calibration saturation underestimates its floor. */
+static void steady_noise(VoiceCapture *c,int amplitude){
+ int16_t samples[VOICE_FRAME_SAMPLES];
+ unsigned i;
+ for(i=0u;i<VOICE_FRAME_SAMPLES;i++)
+  samples[i]=(int16_t)((i&1u)?amplitude:-amplitude);
+ voice_capture_pcm16(c,samples,VOICE_FRAME_SAMPLES);
+}
+static void assert_stationary_noise_ignored(int amplitude,unsigned floor){
+ VoiceCapture c;
+ unsigned n;
+ voice_capture_reset(&c);
+ for(n=0u;n<4u;n++)steady_noise(&c,amplitude);
+ assert(c.state==VOICE_WAIT&&c.calibration==4u);
+ assert(c.noise>=floor);
+ for(n=4u;n<VOICE_MAX_WAIT;n++){
+  steady_noise(&c,amplitude);
+  assert(c.frames==0u&&c.tail==0u);
+ }
+ assert(c.state==VOICE_NO_SPEECH);
+ /* Once calibrated, the visual MIC level is relative to ambient noise;
+  * a continuously noisy room must not appear to be spoken commands. */
+ assert(c.level==0u);
+}
+static void assert_pop_is_not_speech(void){
+ VoiceCapture c;
+ unsigned n;
+ voice_capture_reset(&c);
+ for(n=0u;n<4u;n++)steady_noise(&c,0);
+ steady_noise(&c,24000);
+ assert(c.state==VOICE_WAIT&&c.frames==0u&&c.tail==1u);
+ steady_noise(&c,0);
+ assert(c.state==VOICE_WAIT&&c.frames==0u&&c.tail==0u);
+ for(n=6u;n<VOICE_MAX_WAIT;n++)steady_noise(&c,0);
+ assert(c.state==VOICE_NO_SPEECH&&c.frames==0u);
+}
 int main(void){
  VoiceProfile p;VoiceCapture c;unsigned score;int match;
  voice_profile_reset(&p);assert(voice_profile_valid(&p));
+ assert_stationary_noise_ignored(25000,90u);
+ assert_stationary_noise_ignored(13000,45u);
+ assert_pop_is_not_speech();
+ /* A real word starts with two consecutive above-floor frames: unlike a
+  * click, this has its first 31ms block preserved for template training. */
+ voice_capture_reset(&c);
+ for(unsigned n=0u;n<4u;n++)steady_noise(&c,0);
+ chunk(&c,2,75,0);
+ assert(c.state==VOICE_WAIT&&c.tail==1u&&c.frames==0u);
+ chunk(&c,2,75,1);
+ assert(c.state==VOICE_CAPTURING&&c.frames==2u&&c.tail==0u);
+ for(unsigned n=2u;n<18u;n++)chunk(&c,2,75,n);
+ for(unsigned n=0u;n<4u;n++)steady_noise(&c,0);
+ assert(c.state==VOICE_READY&&c.frames==18u);
  record(&c,2,75,0);assert(voice_recognize(&p,&c,&score)<0);
  assert(voice_train(&p,"hello",&c)==1);
  record(&c,2,78,1);assert(voice_train(&p,"hello",&c)==2);
@@ -139,6 +191,6 @@ int main(void){
   assert(c.state==VOICE_NO_SPEECH&&c.frames==0u&&c.level==0u);
   assert(voice_recognize(&p,&c,&score)<0);
  }
- puts("PASS: voice capture, 24 labels, timed syllable warping, near-word ambiguity, noise rejection and bounds");
+ puts("PASS: voice capture, steady-noise calibration, transient-pop rejection, onset retention, 24 labels, DTW, ambiguity and bounds");
  return 0;
 }
