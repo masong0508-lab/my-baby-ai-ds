@@ -436,7 +436,11 @@ static void observer_touch_and_keys(void){
  for(int y=-2;y<194;y++)for(int x=-2;x<258;x++){
   int expected=0;
   if(x>=0&&x<256&&y>=176&&y<192)expected=4;
-  else if(x>=8&&x<248&&y>=129&&y<163)
+  else if(x>=0&&x<256&&y>=113&&y<128){
+   if(x>=8&&x<44)expected=5;
+   else if(x>=48&&x<84)expected=6;
+   else if(x>=205&&x<248)expected=7;
+  }else if(x>=8&&x<248&&y>=129&&y<163)
    expected=x<84?1:x<170?2:3;
   assert(ui_mic_touch(x,y)==expected);
  }
@@ -463,12 +467,30 @@ static void observer_layout(void){
  verify_text(137,34,"...",3,TEST_RGB(31,28,13),1);
  /* The microphone lab has a complete offline/bounded fallback layout,
   * independent of whether an emulator actually supports microphone input. */
- ui_mic_draw(&g,1,"HELLO","NO MIC INPUT. USE KEYBOARD.","",60u,4u,0);
+ ui_mic_draw(&g,1,"HELLO","NO MIC INPUT. USE KEYBOARD.","",60u,4u,0,
+             "HELLO",2u,0);
  verify_coverage();
  verify_text(12,7,"MIC LAB",7,white,2);
+ verify_text(13,117,"PREV",4,ink,1);
+ verify_text(53,117,"NEXT",4,ink,1);
+ verify_text(94,117,"HELLO",17,ink,1);
+ verify_text(217,117,"DEL",3,ink,1);
+ verify_text(183,166,"EX 2/2",7,white,1);
  verify_text(25,139,"A TRAIN",7,ink,1);
  verify_text(106,139,"X LISTEN",8,ink,1);
  verify_text(192,139,"Y USE",5,ink,1);
+ /* The confirmation changes its visible label, not the other controls;
+  * a fully empty library must display NO LESSONS, not stale labels. */
+ {
+  uint32_t ordinary=fingerprint();
+  ui_mic_draw(&g,1,"HELLO","PRESS DEL AGAIN","",0u,0u,0,
+              "",0u,1);
+  verify_coverage();
+  verify_text(94,117,"NO LESSONS",17,ink,1);
+  verify_text(209,117,"SURE?",5,ink,1);
+  verify_text(183,166,"EX 0/2",7,white,1);
+  assert(fingerprint()!=ordinary);
+ }
  ui_voice_save_warning();
  verify_text(10,181,"VOICE LESSONS NOT SAVED. IN RAM!",39,
              TEST_RGB(31,19,25),1);

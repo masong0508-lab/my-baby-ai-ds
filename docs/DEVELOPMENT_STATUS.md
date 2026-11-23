@@ -15,7 +15,11 @@ The nursery graphics use shallow rounded facial surfaces, bounded speech/impact 
 A new MIC LAB uses both libnds ARM7 microphone APIs behind a bounded
 1,024-byte PCM16 buffer, 8,192 Hz capture and ARM9 cache invalidation.
 A 24-slot, two-example-per-label adaptive feature-template matcher
-can suggest typed WARDEN/BABY queries. Explicit USE confirmation is required;
+can suggest typed WARDEN/BABY queries. MIC LAB now displays the selected
+learned word and its sample count, browses existing lessons by
+touch/controller, and uses a two-step confirmation before deletion.
+The 25th distinct lesson is refused until a user frees a slot; no
+existing model is silently overwritten. Explicit USE confirmation is required;
 the baby does not execute voice commands autonomously. A separate
 exact-Game-bound voice companion persists under 3.5 KiB of learned features
 when FAT/DLDI is enabled, without modifying v1 progress, conversation

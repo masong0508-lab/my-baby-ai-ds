@@ -53,7 +53,8 @@ static VoiceCapture voice_capture;
 static char voice_word[33]="HELLO",voice_status[96]="TYPE A WORD IN WARDEN, THEN OPEN MIC.";
 static unsigned voice_mode; /* 0 idle, 1 train, 2 listen */
 static uint32_t voice_started;
-static int voice_match=-1;
+static int voice_match=-1,voice_slot=-1;
+static uint8_t voice_forget_armed;
 /* No full-time mic use, training PCM files or changes to v1 Game. */
 static char terminal_input[33];
 static unsigned terminal_speaker,terminal_key;
@@ -89,7 +90,8 @@ static void reset_care_motion(void){
  care_motion=(WorldBabyMotion){0};
 }
 static void reset_care_session(void){
- mic_input_stop();voice_mode=0;voice_match=-1;
+ mic_input_stop();voice_mode=0;voice_match=-1;voice_slot=-1;
+ voice_forget_armed=0;
  voice_profile_reset(&voice_profile);voice_capture_reset(&voice_capture);
  strcpy(voice_word,"HELLO");
  strcpy(voice_status,"TYPE A WORD IN WARDEN, THEN OPEN MIC.");
@@ -231,17 +233,67 @@ static void terminal_send(uint32_t frame){
  * pressing USE forwards it to the already guarded typed terminal. */
 static void open_microphone(void){
  size_t n=strlen(terminal_input);
- mic_input_stop();voice_mode=0;voice_match=-1;
+ mic_input_stop();voice_mode=0;voice_match=-1;voice_forget_armed=0;
  if(!n)strcpy(voice_word,"HELLO");
  else memcpy(voice_word,terminal_input,n+1u);
- strcpy(voice_status,"A TRAIN TWICE. X LISTEN. Y USE A MATCH.");
+ voice_slot=voice_find(&voice_profile,voice_word);
+ if(voice_slot<0)voice_slot=voice_cycle(&voice_profile,-1,1);
+ strcpy(voice_status,"A TRAIN, X LISTEN. L/R BROWSE. DEL TWICE.");
  view=13;
+}
+/* Mic lesson browser is read-only: moving a selection never touches the
+ * game RNG, baby's needs, learner weights or the currently typed message. */
+static void browse_microphone(int direction){
+ int next;
+ if(voice_mode)return;
+ voice_forget_armed=0;voice_match=-1;
+ next=voice_cycle(&voice_profile,voice_slot,direction);
+ if(next<0){
+  strcpy(voice_status,"NO SAVED WORDS. TYPE A LABEL TO TRAIN.");
+  return;
+ }
+ voice_slot=next;
+ strcpy(voice_word,voice_label(&voice_profile,(unsigned)next));
+ strcpy(voice_status,"SAVED WORD SELECTED. TRAIN OR LISTEN.");
+}
+static void forget_microphone(void){
+ unsigned erased;
+ int next;
+ if(voice_mode)return;
+ if(voice_slot<0||!voice_label(&voice_profile,(unsigned)voice_slot)[0]){
+  voice_forget_armed=0;
+  strcpy(voice_status,"NO SAVED WORDS TO FORGET.");
+  return;
+ }
+ if(!voice_forget_armed){
+  voice_forget_armed=1;
+  strcpy(voice_status,"PRESS DEL AGAIN TO FORGET THIS WORD.");
+  return;
+ }
+ erased=(unsigned)voice_slot;
+ voice_forget_armed=0;
+ if(!voice_forget(&voice_profile,erased)){
+  strcpy(voice_status,"COULD NOT FORGET THE SELECTED WORD.");
+  return;
+ }
+ voice_match=-1;
+ next=voice_cycle(&voice_profile,(int)erased-1,1);
+ voice_slot=next;
+ if(next>=0)strcpy(voice_word,voice_label(&voice_profile,(unsigned)next));
+ else strcpy(voice_word,"HELLO");
+ strcpy(voice_status,"LESSON FORGOTTEN. MEMORY SPACE FREED.");
+ if(storage_ok)(void)persist();
 }
 static void start_microphone(unsigned mode,uint32_t frame){
  if(voice_mode){mic_input_stop();voice_mode=0;}
- voice_match=-1;
+ voice_match=-1;voice_forget_armed=0;
  if(mode==1u&&(!voice_word[0]||strlen(voice_word)>VOICE_TEXT)){
   strcpy(voice_status,"TYPE A LABEL OF 1-24 CHARACTERS IN WARDEN.");return;
+ }
+ if(mode==1u&&voice_profile.used==VOICE_SLOTS&&
+    voice_find(&voice_profile,voice_word)<0){
+  strcpy(voice_status,"24 WORDS FULL. SELECT ONE AND DEL TWICE.");
+  return;
  }
  /* Don't classify the game's own PSG chimes as the player's voice. */
  sfx_stop();
@@ -261,12 +313,15 @@ static int microphone_tick(uint32_t frame){
          "TOO SHORT. TRY A LONGER WORD.":"NO CLEAR SPEECH. TRY AGAIN.");
  }else if(voice_mode==1u){
   result=voice_train(&voice_profile,voice_word,&voice_capture);
-  if(result){
+  if(result==1||result==2){
+   voice_slot=voice_find(&voice_profile,voice_word);
    strcpy(voice_status,result==1?
     "FIRST EXAMPLE SAVED. TRAIN THE SAME WORD AGAIN.":
     "ANOTHER EXAMPLE SAVED. READY TO LISTEN.");
    if(storage_ok)(void)persist();
-  }else strcpy(voice_status,"LABEL INVALID OR CAPTURE TOO SHORT.");
+  }else if(result==3)
+   strcpy(voice_status,"24 WORDS FULL. DEL TWICE TO FREE A SLOT.");
+  else strcpy(voice_status,"LABEL INVALID OR CAPTURE TOO SHORT.");
  }else{
   voice_match=voice_recognize(&voice_profile,&voice_capture,&score);
   if(voice_match<0)strcpy(voice_status,"UNSURE. TRAIN MORE OR SPEAK MORE CLEARLY.");
@@ -534,7 +589,13 @@ int main(void){
   }else if(view==13){
    int picked=tap?ui_mic_touch(touch.px,touch.py):0;
    if((down&KEY_B)||picked==4){
-    mic_input_stop();voice_mode=0;view=12;dirty=1;
+    mic_input_stop();voice_mode=0;voice_forget_armed=0;view=12;dirty=1;
+   }else if((down&(KEY_LEFT|KEY_L))||picked==5){
+    browse_microphone(-1);dirty=1;
+   }else if((down&(KEY_RIGHT|KEY_R))||picked==6){
+    browse_microphone(1);dirty=1;
+   }else if((down&KEY_SELECT)||picked==7){
+    forget_microphone();dirty=1;
    }else if((down&KEY_A)||picked==1){
     start_microphone(1u,frame);dirty=1;
    }else if((down&KEY_X)||picked==2){
@@ -1009,7 +1070,10 @@ int main(void){
          "MEASURING ROOM NOISE...":voice_capture.state==VOICE_WAIT?
          "LISTENING. SAY YOUR WORD NOW.":"HEARD YOU. FINISH THE WORD.":voice_status,
        voice_match<0?"":voice_label(&voice_profile,(unsigned)voice_match),
-       voice_capture.level,voice_profile.used,voice_mode!=0u);
+       voice_capture.level,voice_profile.used,voice_mode!=0u,
+       voice_slot<0?"":voice_label(&voice_profile,(unsigned)voice_slot),
+       voice_slot<0?0u:voice_profile.entries[voice_slot].samples,
+       voice_forget_armed);
    else if(view==12)ui_observer_draw(&baby,storage_ok,terminal_speaker,
            terminal_input,observer.reply,terminal_key,observer_stage(&shelter),
            shelter.integrity);

@@ -139,18 +139,64 @@ static int pattern(const VoiceCapture *c,uint8_t out[VOICE_BINS][VOICE_FEATURES]
  }
  return 1;
 }
+int voice_find(const VoiceProfile *p,const char *label){
+ unsigned i;
+ char normalized[VOICE_TEXT+1u];
+ if(!p||!label_normalize(normalized,label))return -1;
+ for(i=0u;i<VOICE_SLOTS;i++)
+  if(p->entries[i].samples&&strcmp(p->entries[i].label,normalized)==0)
+   return (int)i;
+ return -1;
+}
+int voice_cycle(const VoiceProfile *p,int current,int direction){
+ unsigned i,at;
+ if(!p||!p->used||!voice_profile_valid(p)||!direction)return -1;
+ /* Invalid selection starts at the first/last occupied slot. The
+  * ordinary next/previous cycle includes the current slot when it is
+  * the only remaining lesson. */
+ at=current>=0&&current<(int)VOICE_SLOTS?(unsigned)current:
+    direction>0?VOICE_SLOTS-1u:0u;
+ for(i=0u;i<VOICE_SLOTS;i++){
+  at=direction>0?(at+1u)%VOICE_SLOTS:
+                 (at+VOICE_SLOTS-1u)%VOICE_SLOTS;
+  if(p->entries[at].samples)return (int)at;
+ }
+ return -1;
+}
+int voice_forget(VoiceProfile *p,unsigned slot){
+ if(!p||slot>=VOICE_SLOTS||!voice_profile_valid(p)||
+    !p->entries[slot].samples)return 0;
+ memset(&p->entries[slot],0,sizeof(p->entries[slot]));
+ p->used--;
+ /* Reuse an explicitly vacated slot before touching another lesson.
+  * Leave all other labels and their templates byte-for-byte intact. */
+ p->next=p->used?(uint8_t)slot:0u;
+ return 1;
+}
 int voice_train(VoiceProfile *p,const char *label,const VoiceCapture *c){
- unsigned i,k;
+ unsigned i,k,seek;
  char text[VOICE_TEXT+1u];
  uint8_t sample[VOICE_BINS][VOICE_FEATURES];
  VoiceEntry *entry;
  int result=1;
  if(!p||!voice_profile_valid(p)||!label_normalize(text,label)||!pattern(c,sample))return 0;
- for(i=0;i<VOICE_SLOTS;i++)if(p->entries[i].samples&&strcmp(p->entries[i].label,text)==0)break;
+ i=VOICE_SLOTS;
+ for(seek=0u;seek<VOICE_SLOTS;seek++)
+  if(p->entries[seek].samples&&strcmp(p->entries[seek].label,text)==0){
+   i=seek;break;
+  }
  if(i<VOICE_SLOTS)result=2;
  else{
-  i=p->next;
-  if(!p->entries[i].samples)p->used++;
+  /* Explicit retention: a full library cannot silently destroy the
+   * oldest voice memory. The player can forget a chosen label in MIC LAB
+   * and train a new phrase in the resulting free slot. */
+  if(p->used==VOICE_SLOTS)return 3;
+  for(seek=0u;seek<VOICE_SLOTS;seek++){
+   unsigned candidate=(p->next+seek)%VOICE_SLOTS;
+   if(!p->entries[candidate].samples){i=candidate;break;}
+  }
+  if(i==VOICE_SLOTS)return 0;
+  p->used++;
   memset(&p->entries[i],0,sizeof(p->entries[i]));
   memcpy(p->entries[i].label,text,strlen(text)+1u);
   p->next=(uint8_t)((i+1u)%VOICE_SLOTS);
