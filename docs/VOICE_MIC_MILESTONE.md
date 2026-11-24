@@ -128,10 +128,38 @@ The same held-out clips are also evaluated at half volume. Digits
 0, 1 and 2 are learned; digit 3 is deliberately unknown. Results record
 capture, correct, incorrect, rejected and unknown-accepted outcomes,
 without packaging any recordings or claiming general speech-to-text
-accuracy. The new CI gate requires non-regressing original known-word
-capture and a gain in quieter capture; the report separately exposes
-recognition errors and false accepts. This limited benchmark is not a
-test of DS hardware pickup, DraStic passthrough or arbitrary speech.
+accuracy. The CI gate requires non-regressing known-word capture,
+better quiet capture, no reduction in correct matches, and no increase
+in incorrect known matches or accepted unknown words, separately for
+each volume. This limited benchmark is not a test of DS hardware
+pickup, DraStic passthrough or arbitrary speech.
+
+### Measured result (2026-11-24, candidate 9116fc8)
+
+The initial capture-only gate passed but the recognition outcome did
+not. The candidate is experimental and must not be merged on the
+strength of capture sensitivity alone.
+
+| Measure | Baseline | Candidate |
+|---|---:|---:|
+| Usable training recordings (12) | 3 | 6 |
+| Original-volume known words captured (18) | 3 | 9 |
+| Original-volume known words correct (18) | 3 | 2 |
+| Original-volume wrong known matches | 0 | 1 |
+| Original-volume unknowns accepted (6) | 0 | 2 |
+| Half-volume known words captured (18) | 1 | 8 |
+| Half-volume known words correct (18) | 1 | 2 |
+| Half-volume wrong known matches | 0 | 0 |
+| Half-volume unknowns accepted (6) | 0 | 3 |
+
+Only the Jackson profile was trainable with this candidate; the Theo
+profile still rejected every recording at capture. This is a small
+development corpus, not an independent generalization benchmark.
+The next recognizer revision must improve spectral/phonetic
+discrimination and separately assess quieter recordings; tuning a
+single distance cutoff cannot distinguish the overlapping observed
+correct and incorrect match scores. Do not ship the quiet threshold
+change until the strengthened benchmark passes.
 
 ## Tests and remaining accuracy work
 

@@ -172,14 +172,30 @@ def main():
               "protocol": "two speaker-dependent 3-label profiles, disjoint train 5/6, test 0/1/2; digit 3 unknown; half-volume test derived from same held-out clips",
               "unique_recordings": len(recordings), "baseline_commit": args.baseline,
               "baseline": before, "candidate": after}
-    args.output.write_text(json.dumps(report, indent=2) + "\n")
-    print(json.dumps({"baseline": before["summary"], "candidate": after["summary"]}, indent=2))
-    # Gate capture, not a cherry-picked recognition accuracy threshold.
-    # Wrong accepted and rejected words remain explicitly reported.
+    # An accepted capture is not the same thing as a correct word.
+    # Release must preserve correct matches AND avoid increasing false
+    # accepts in either volume condition. Aggregate all failures before
+    # raising so the artifact identifies every blocker, not just the first.
     b, a = before["summary"], after["summary"]
-    assert a["train"]["trained"] >= b["train"]["trained"], "Lost usable training recordings"
-    assert a["original"]["known_captured"] >= b["original"]["known_captured"], "Lost original speech capture"
-    assert a["quiet"]["known_captured"] > b["quiet"]["known_captured"], "No gain in quiet speech capture"
+    failures = []
+    if a["train"]["trained"] < b["train"]["trained"]:
+        failures.append("Lost usable training recordings")
+    if a["original"]["known_captured"] < b["original"]["known_captured"]:
+        failures.append("Lost original speech capture")
+    if a["quiet"]["known_captured"] <= b["quiet"]["known_captured"]:
+        failures.append("No gain in quiet speech capture")
+    for split in ("original", "quiet"):
+        if a[split]["correct"] < b[split]["correct"]:
+            failures.append(f"{split}: fewer correctly recognized known words")
+        if a[split]["incorrect"] > b[split]["incorrect"]:
+            failures.append(f"{split}: more incorrectly recognized known words")
+        if a[split]["unknown_accepted"] > b[split]["unknown_accepted"]:
+            failures.append(f"{split}: more accepted unknown words")
+    report["release_gate"] = {"passed": not failures, "failures": failures}
+    args.output.write_text(json.dumps(report, indent=2) + "\n")
+    print(json.dumps({"baseline": b, "candidate": a, "release_gate": report["release_gate"]}, indent=2))
+    if failures:
+        raise SystemExit("Recorded-speech release blocked: " + "; ".join(failures))
 
 
 if __name__ == "__main__":
