@@ -103,6 +103,64 @@ two voice companions alongside its existing files.
 9. If the microphone is unsupported in your emulator, use the keyboard.
    All original controls remain usable.
 
+## Recorded-speech sensitivity checkpoint
+
+Quiet speech from real recorded digits can fall below the previous
+minimum capture energy of 9. The capture frontend now requires energy
+of at least 4 and a margin of 3 above the quiet room floor, increasing
+the margin with background noise. After onset, the minimum drops to 3
+with a smaller release margin so softer endings survive. Two consecutive
+onset blocks and four trailing quiet blocks remain required. The feature
+representation, DTW, thresholds for accepting a recognized label, 24x2
+template storage and saved model layout are unchanged. Existing lessons
+still load; a word may benefit from retraining with the fuller capture.
+
+Run the independent recorded-speech check on a host with Python 3, a C
+compiler and network access:
+```sh
+python3 tests/benchmark_voice_corpus.py --baseline 1fd85a328e6ed39c9d74c423b9a2ba84efa61ef4
+```
+It downloads 36 WAV files from the Free Spoken Digit Dataset v1.0.10
+(CC BY-SA 4.0, https://github.com/Jakobovski/free-spoken-digit-dataset),
+uses separate training and held-out clips for two speaker-dependent
+profiles, and compares the actual baseline and candidate C engine.
+The same held-out clips are also evaluated at half volume. Digits
+0, 1 and 2 are learned; digit 3 is deliberately unknown. Results record
+capture, correct, incorrect, rejected and unknown-accepted outcomes,
+without packaging any recordings or claiming general speech-to-text
+accuracy. The CI gate requires non-regressing known-word capture,
+better quiet capture, no reduction in correct matches, and no increase
+in incorrect known matches or accepted unknown words, separately for
+each volume. This limited benchmark is not a test of DS hardware
+pickup, DraStic passthrough or arbitrary speech.
+
+### Measured result (2026-11-24, candidate 9116fc8)
+
+The initial capture-only gate passed but the recognition outcome did
+not. The candidate is experimental and must not be merged on the
+strength of capture sensitivity alone.
+
+| Measure | Baseline | Candidate |
+|---|---:|---:|
+| Usable training recordings (12) | 3 | 6 |
+| Original-volume known words captured (18) | 3 | 9 |
+| Original-volume known words correct (18) | 3 | 2 |
+| Original-volume wrong known matches | 0 | 1 |
+| Original-volume unknowns accepted (6) | 0 | 2 |
+| Half-volume known words captured (18) | 1 | 8 |
+| Half-volume known words correct (18) | 1 | 2 |
+| Half-volume wrong known matches | 0 | 0 |
+| Half-volume unknowns accepted (6) | 0 | 3 |
+
+Only the Jackson profile was trainable with this candidate; the Theo
+profile still rejected every recording at capture. This is a small
+development corpus, not an independent generalization benchmark.
+The next recognizer revision must improve spectral/phonetic
+discrimination and separately assess quieter recordings; tuning a
+single distance cutoff cannot distinguish the overlapping observed
+correct and incorrect match scores. Do not ship the quiet threshold
+change until the strengthened benchmark passes.
+
 ## Tests and remaining accuracy work
 
 Strict host tests exercise 24 training slots, duplicate teaching,
