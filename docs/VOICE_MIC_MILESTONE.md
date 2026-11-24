@@ -103,6 +103,36 @@ two voice companions alongside its existing files.
 9. If the microphone is unsupported in your emulator, use the keyboard.
    All original controls remain usable.
 
+## Recorded-speech sensitivity checkpoint
+
+Quiet speech from real recorded digits can fall below the previous
+minimum capture energy of 9. The capture frontend now requires energy
+of at least 4 and a margin of 3 above the quiet room floor, increasing
+the margin with background noise. After onset, the minimum drops to 3
+with a smaller release margin so softer endings survive. Two consecutive
+onset blocks and four trailing quiet blocks remain required. The feature
+representation, DTW, thresholds for accepting a recognized label, 24x2
+template storage and saved model layout are unchanged. Existing lessons
+still load; a word may benefit from retraining with the fuller capture.
+
+Run the independent recorded-speech check on a host with Python 3, a C
+compiler and network access:
+```sh
+python3 tests/benchmark_voice_corpus.py --baseline 1fd85a328e6ed39c9d74c423b9a2ba84efa61ef4
+```
+It downloads 36 WAV files from the Free Spoken Digit Dataset v1.0.10
+(CC BY-SA 4.0, https://github.com/Jakobovski/free-spoken-digit-dataset),
+uses separate training and held-out clips for two speaker-dependent
+profiles, and compares the actual baseline and candidate C engine.
+The same held-out clips are also evaluated at half volume. Digits
+0, 1 and 2 are learned; digit 3 is deliberately unknown. Results record
+capture, correct, incorrect, rejected and unknown-accepted outcomes,
+without packaging any recordings or claiming general speech-to-text
+accuracy. The new CI gate requires non-regressing original known-word
+capture and a gain in quieter capture; the report separately exposes
+recognition errors and false accepts. This limited benchmark is not a
+test of DS hardware pickup, DraStic passthrough or arbitrary speech.
+
 ## Tests and remaining accuracy work
 
 Strict host tests exercise 24 training slots, duplicate teaching,

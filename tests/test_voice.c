@@ -102,12 +102,33 @@ static void assert_pop_is_not_speech(void){
  for(n=6u;n<VOICE_MAX_WAIT;n++)steady_noise(&c,0);
  assert(c.state==VOICE_NO_SPEECH&&c.frames==0u);
 }
+static void assert_quiet_voice_and_release(void){
+ VoiceCapture c;
+ VoiceProfile p;
+ unsigned score,n;
+ /* Quiet but voiced signal: onset energy ~6; lower-amplitude tail ~3.
+  * Old minimum 9 discarded both. Two positive blocks still required. */
+ voice_capture_reset(&c);
+ for(n=0u;n<4u;n++)steady_noise(&c,0);
+ for(n=0u;n<8u;n++)steady_noise(&c,1800);
+ assert(c.state==VOICE_CAPTURING&&c.frames==8u);
+ for(n=0u;n<4u;n++)steady_noise(&c,850);
+ assert(c.state==VOICE_CAPTURING&&c.frames==12u&&c.tail==0u);
+ for(n=0u;n<4u;n++)steady_noise(&c,0);
+ assert(c.state==VOICE_READY&&c.frames==12u);
+ voice_profile_reset(&p);
+ assert(voice_train(&p,"QUIET",&c)==1);
+ assert(voice_recognize(&p,&c,&score)==0&&score==0u);
+ /* Steady low-energy room sound does not satisfy the onset margin. */
+ assert_stationary_noise_ignored(1600,6u);
+}
 int main(void){
  VoiceProfile p;VoiceCapture c;unsigned score;int match;
  voice_profile_reset(&p);assert(voice_profile_valid(&p));
  assert_stationary_noise_ignored(25000,90u);
  assert_stationary_noise_ignored(13000,45u);
  assert_pop_is_not_speech();
+ assert_quiet_voice_and_release();
  /* A real word starts with two consecutive above-floor frames: unlike a
   * click, this has its first 31ms block preserved for template training. */
  voice_capture_reset(&c);

@@ -88,7 +88,17 @@ void voice_capture_pcm16(VoiceCapture *c,const int16_t *pcm,unsigned samples){
   * level: a loud steady fan is not a full-screen "voice" meter. */
  c->level=(uint8_t)(energy>(unsigned)c->noise?
                        energy-(unsigned)c->noise:0u);
- hit=energy>=9u && energy>(unsigned)c->noise+6u;
+ /* A quietly spoken vowel can have mean energy below 9 even in a
+  * quiet room. Use separate onset/release thresholds, relative to
+  * ambient noise, to retain its softer trailing syllables. The
+  * two-consecutive-block onset and four-block release remain intact.
+  * In a loud room the relative margin grows with the noise floor. */
+ {
+  unsigned floor=(unsigned)c->noise;
+  unsigned margin=c->state==VOICE_CAPTURING?1u:3u;
+  unsigned minimum=c->state==VOICE_CAPTURING?3u:4u;
+  hit=energy>=minimum&&energy>=floor+margin+floor/8u;
+ }
  if(c->state==VOICE_WAIT){
   if(!hit){
    /* Follow slow room-noise changes without teaching the classifier
@@ -127,7 +137,7 @@ static int pattern(const VoiceCapture *c,uint8_t out[VOICE_BINS][VOICE_FEATURES]
  unsigned i,j,maximum=0;
  if(!c||c->state!=VOICE_READY||c->frames<4u||c->frames>VOICE_RAW_FRAMES)return 0;
  for(i=0;i<c->frames;i++)if(c->measurements[i][0]>maximum)maximum=c->measurements[i][0];
- if(maximum<9u)return 0;
+ if(maximum<4u)return 0;
  for(i=0;i<VOICE_BINS;i++){
   unsigned frame=(i*(c->frames-1u)+(VOICE_BINS-1u)/2u)/(VOICE_BINS-1u);
   const uint8_t *src=c->measurements[frame];
