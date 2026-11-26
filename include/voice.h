@@ -8,13 +8,13 @@
 #define VOICE_TEXT 24u
 #define VOICE_BINS 12u
 #define VOICE_FEATURES 4u
-#define VOICE_RAW_FRAMES 32u
+#define VOICE_RAW_FRAMES 56u /* 1.75 s, feature frames only */
 #define VOICE_FRAME_SAMPLES 256u
 #define VOICE_SAMPLE_RATE 8192u
 #define VOICE_MAX_WAIT 80u
 
 enum {VOICE_CALIBRATE=0,VOICE_WAIT,VOICE_CAPTURING,
-      VOICE_READY,VOICE_NO_SPEECH,VOICE_TOO_SHORT};
+      VOICE_READY,VOICE_NO_SPEECH,VOICE_TOO_SHORT,VOICE_TOO_LONG};
 typedef struct {
  char label[VOICE_TEXT+1u];
  uint8_t samples,next_sample;
@@ -47,6 +47,14 @@ int voice_find(const VoiceProfile *profile,const char *label);
 int voice_cycle(const VoiceProfile *profile,int current,int direction);
 int voice_forget(VoiceProfile *profile,unsigned slot);
 /* Returns -1 on uncertainty/no trained match. No automatic gameplay action. */
+/* A more useful rejection reason for the player; neither function
+ * returns a usable label for an ambiguous or distant match. */
+typedef enum {
+ VOICE_MATCH_INVALID=0,VOICE_MATCH_EMPTY,VOICE_MATCH_DISTANT,
+ VOICE_MATCH_AMBIGUOUS,VOICE_MATCH_CONFIRMED
+} VoiceMatchStatus;
+int voice_recognize_detailed(const VoiceProfile *profile,const VoiceCapture *capture,
+                             unsigned *score,VoiceMatchStatus *status);
 int voice_recognize(const VoiceProfile *profile,const VoiceCapture *capture,unsigned *score);
 const char *voice_label(const VoiceProfile *profile,unsigned slot);
 #endif

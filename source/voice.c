@@ -114,13 +114,18 @@ void voice_capture_pcm16(VoiceCapture *c,const int16_t *pcm,unsigned samples){
   return;
  }
  if(c->state!=VOICE_CAPTURING)return;
- if(c->frames>=VOICE_RAW_FRAMES){c->state=c->frames>=4u?VOICE_READY:VOICE_TOO_SHORT;return;}
+ if(c->frames>=VOICE_RAW_FRAMES){c->state=VOICE_TOO_LONG;return;}
  memcpy(c->measurements[c->frames],row,sizeof(row));c->frames++;
  if(hit)c->tail=0;
  else c->tail++;
- if(c->tail>=4u||c->frames==VOICE_RAW_FRAMES){
+ if(c->tail>=4u){
   c->frames=(uint8_t)(c->frames-c->tail);
   c->state=c->frames>=4u?VOICE_READY:VOICE_TOO_SHORT;
+ }else if(c->frames==VOICE_RAW_FRAMES){
+  /* Never train on the first half of a longer utterance. A recording
+   * which exhausts the feature budget without a confirmed ending is
+   * explicitly too long, not a valid shorter word. */
+  c->state=VOICE_TOO_LONG;
  }
 }
 static int pattern(const VoiceCapture *c,uint8_t out[VOICE_BINS][VOICE_FEATURES]){
@@ -260,11 +265,14 @@ static unsigned distance(const uint8_t *a,const uint8_t *b){
   (unsigned)costs[VOICE_BINS&1u][VOICE_BINS]/
              steps[VOICE_BINS&1u][VOICE_BINS]:UINT16_MAX;
 }
-int voice_recognize(const VoiceProfile *p,const VoiceCapture *c,unsigned *score){
+int voice_recognize_detailed(const VoiceProfile *p,const VoiceCapture *c,
+                             unsigned *score,VoiceMatchStatus *status){
  unsigned i,j,best=UINT16_MAX,second=UINT16_MAX;int winner=-1;
  uint8_t test[VOICE_BINS][VOICE_FEATURES];
  if(score)*score=UINT16_MAX;
+ if(status)*status=VOICE_MATCH_INVALID;
  if(!p||!voice_profile_valid(p)||!pattern(c,test))return -1;
+ if(!p->used){if(status)*status=VOICE_MATCH_EMPTY;return -1;}
  for(i=0;i<VOICE_SLOTS;i++)if(p->entries[i].samples){
   unsigned d=UINT16_MAX;
   for(j=0;j<p->entries[i].samples;j++){
@@ -277,8 +285,19 @@ int voice_recognize(const VoiceProfile *p,const VoiceCapture *c,unsigned *score)
  if(score)*score=best;
  /* Unknown speakers/noise must not silently issue typed commands.
   * Recognized labels always require an explicit USE confirmation. */
- if(winner<0||best>55u||(second!=UINT16_MAX&&second-best<9u))return -1;
+ if(winner<0||best>55u){
+  if(status)*status=VOICE_MATCH_DISTANT;
+  return -1;
+ }
+ if(second!=UINT16_MAX&&second-best<9u){
+  if(status)*status=VOICE_MATCH_AMBIGUOUS;
+  return -1;
+ }
+ if(status)*status=VOICE_MATCH_CONFIRMED;
  return winner;
+}
+int voice_recognize(const VoiceProfile *p,const VoiceCapture *c,unsigned *score){
+ return voice_recognize_detailed(p,c,score,0);
 }
 const char *voice_label(const VoiceProfile *p,unsigned slot){
  return p&&slot<VOICE_SLOTS&&p->entries[slot].samples?p->entries[slot].label:"";

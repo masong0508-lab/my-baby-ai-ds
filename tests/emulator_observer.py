@@ -219,11 +219,34 @@ class ObserverPlayer(Player):
 
 
 def typing_scenario(player, initial):
+    # Enter MIC in a single nursery tap, without invoking a care action
+    # or starting the microphone. Return to the baby keyboard, then CARE.
+    player.tap(102, 39)
+    direct = player.wait("direct nursery MIC", lambda im:
+                         text_at(im, 12, 7, 7, 2, "white") == "MIC LAB" and
+                         text_at(im, 187, 36, 4, ink="ink") == "BABY", limit=160)
+    player.capture("nursery_direct_mic_baby_target", direct)
+    player.key(Keys.KEY_B)
+    player.terminal("direct MIC returns to BABY", speaker="BABY", input_text="")
+    player.key(Keys.KEY_B)
+    _, returned_care = player.care("direct MIC leaves care unchanged")
+    assert returned_care == initial, (returned_care, initial)
     entry = player.enter("touch", "monitor_CPU_touch_entry")
     assert parse_status(entry) == {"stage": "FOUND", "day": 1, "feeds": 0,
                                    "chats": 0, "plays": 0, "naps": 0,
                                    "integrity": 100, "hits": 0}
     original_reply = entry["reply"]
+    # Suggested prompts fill an editable draft without sending anything.
+    player.tap(35, 170)
+    _, draft = player.terminal("STATUS quick draft", input_text="STATUS")
+    assert draft["reply"] == original_reply
+    player.input_shadow = "STATUS"
+    player.tap(95, 170)
+    _, draft = player.terminal("NEEDS quick draft", input_text="NEEDS")
+    assert draft["reply"] == original_reply
+    player.input_shadow = "NEEDS"
+    while player.input_shadow:
+        player.erase()
     # Microphone features are opt-in; DeSmuME can test the real UI and
     # cancellation even when the host provides no microphone waveform.
     player.tap(150, 94)
@@ -249,6 +272,19 @@ def typing_scenario(player, initial):
                             "NO SAVED WORDS TO FORGET."), limit=120)
     assert text_at(empty, 17, 166, 25, ink="white") == "SAVED LABELS 0 / 24"
     player.capture("microphone_empty_library_delete_inert", empty)
+    # Starting and stopping a recording must not leave a stale match or
+    # navigate to a different screen. A second X cancels, it does not restart.
+    player.key(Keys.KEY_X)
+    active = player.wait("visible listening or no microphone", lambda im:
+                         text_at(im, 110, 139, 6, ink="ink") == "X STOP" or
+                         text_at(im, 17, 88, 36, ink="ink").startswith("MIC UNAVAILABLE."),
+                         limit=120)
+    if text_at(active, 110, 139, 6, ink="ink") == "X STOP":
+        player.key(Keys.KEY_X)
+        stopped = player.wait("explicit microphone cancellation", lambda im:
+                              text_at(im, 17, 88, 36, ink="ink").startswith("CANCELLED."),
+                              limit=120)
+        player.capture("microphone_cancelled_without_training", stopped)
     player.key(Keys.KEY_X)
     player.step(25)
     player.capture("microphone_listening_without_injected_audio", player.screen())
@@ -258,7 +294,7 @@ def typing_scenario(player, initial):
     silent = player.wait("silent MIC capture ends without training", lambda im:
                          text_at(im, 17, 88, 36, ink="ink").startswith(
                              ("NO CLEAR SPEECH.", "MIC UNAVAILABLE.")),
-                         limit=260, stride=4)
+                         limit=360, stride=4)
     count = text_at(silent, 17, 166, 25, ink="white")
     assert count == "SAVED LABELS 0 / 24", count
     player.capture("microphone_silence_timeout_no_phantom_word", silent,

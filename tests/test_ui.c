@@ -247,7 +247,10 @@ static void bottle_safe_band(void){
 static void conversation_touch_bounds(void){
  int x,y;
  for(y=-1;y<=192;y++)for(x=-1;x<=256;x++){
-  int expected=-1,entry=x>=8&&x<192&&y>=31&&y<66;
+  int mic=x>=84&&x<123&&y>=33&&y<46;
+  int expected=-1,entry=x>=8&&x<192&&y>=31&&y<66&&!mic;
+  assert(ui_mic_entry_touch(x,y)==mic);
+  if(mic)assert(ui_nursery_touch(x,y)==-1&&!ui_room_entry_touch(x,y));
   if(x>=0&&x<256&&y>=0&&y<192){
    if(y>=176)expected=x<80?6:x>=176?7:-1;
    else for(int row=0;row<3;row++){
@@ -310,7 +313,8 @@ static void conversation_layout(void){
  ui_draw(&g,&a,11,INT_MAX,0,0,1,"SELECTION");assert(fingerprint()==first);
  /* The entry hint fits beside the existing needs hint and ROOM control. */
  ui_draw(&g,&a,0,0,0,0,1,"HELLO.");
- verify_text(42,35,"TOUCH TO TALK",13,purple,1);
+ verify_text(45,36,"TALK",4,ink,1);
+ verify_text(94,36,"MIC",3,ink,1);
  verify_text(126,35,"ALL GOOD",8,TEST_RGB(12,24,26),1);
  verify_text(203,38,"ROOM",4,ink,1);
  verify_coverage();
@@ -421,6 +425,8 @@ static void observer_touch_and_keys(void){
  for(int y=-2;y<194;y++)for(int x=-2;x<258;x++){
   int expected=-1;
   if(x>=0&&x<256&&y>=176&&y<192)expected=30+x/64;
+  else if(x>=8&&x<248&&y>=165&&y<176&&(x-8)%60<56)
+   expected=36+(x-8)/60;
   else if(x>=130&&x<181&&y>=88&&y<100)expected=35;
   else if(x>=216&&x<248&&y>=100&&y<115)expected=34;
   else for(int key=0;key<30;key++){
@@ -440,8 +446,11 @@ static void observer_touch_and_keys(void){
    if(x>=8&&x<44)expected=5;
    else if(x>=48&&x<84)expected=6;
    else if(x>=205&&x<248)expected=7;
-  }else if(x>=8&&x<248&&y>=129&&y<163)
-   expected=x<84?1:x<170?2:3;
+  }else if(y>=131&&y<161){
+   if(x>=8&&x<84)expected=1;
+   if(x>=90&&x<166)expected=2;
+   if(x>=172&&x<248)expected=3;
+  }
   assert(ui_mic_touch(x,y)==expected);
  }
 }
@@ -460,6 +469,13 @@ static void observer_layout(void){
  verify_text(12,7,"MONITOR",7,white,2);
  verify_text(17,34,"WARDEN",6,phosphor,1);
  verify_text(144,91,"MIC",3,ink,1);
+ verify_text(18,167,"STATUS",6,ink,1);
+ verify_text(81,167,"NEEDS",5,ink,1);
+ verify_text(144,167,"BOND",4,ink,1);
+ verify_text(204,167,"HELP",4,ink,1);
+ assert(strcmp(ui_observer_quick_prompt(0u,0u),"STATUS")==0);
+ assert(strcmp(ui_observer_quick_prompt(1u,0u),"HELLO")==0);
+ assert(!*ui_observer_quick_prompt(0u,4u));
  verify_text(167,34,"BRACER 100%",11,phosphor,1);
  verify_text(190,92,"FOUND",9,phosphor,1);
  verify_text(17,104,"ABCDEFGHIJKLMNOPQRSTUVWXYZ012345",32,ink,1);
@@ -468,9 +484,10 @@ static void observer_layout(void){
  /* The microphone lab has a complete offline/bounded fallback layout,
   * independent of whether an emulator actually supports microphone input. */
  ui_mic_draw(&g,1,"HELLO","NO MIC INPUT. USE KEYBOARD.","",60u,4u,0,
-             "HELLO",2u,0);
+             "HELLO",2u,0,0u,0u,0u);
  verify_coverage();
  verify_text(12,7,"MIC LAB",7,white,2);
+ verify_text(187,36,"WARDEN",6,ink,1);
  verify_text(13,117,"PREV",4,ink,1);
  verify_text(53,117,"NEXT",4,ink,1);
  verify_text(94,117,"HELLO",17,ink,1);
@@ -484,12 +501,18 @@ static void observer_layout(void){
  {
   uint32_t ordinary=fingerprint();
   ui_mic_draw(&g,1,"HELLO","PRESS DEL AGAIN","",0u,0u,0,
-              "",0u,1);
+              "",0u,1,1u,0u,0u);
   verify_coverage();
   verify_text(94,117,"NO LESSONS",17,ink,1);
   verify_text(209,117,"SURE?",5,ink,1);
   verify_text(183,166,"EX 0/2",7,white,1);
   assert(fingerprint()!=ordinary);
+  ui_mic_draw(&g,1,"HELLO","WAIT FOR QUIET CALIBRATION.","",60u,4u,1,
+              "HELLO",1u,0,1u,1u,0u);
+  verify_coverage();
+  verify_text(187,36,"BABY",4,ink,1);
+  verify_text(28,139,"A STOP",6,ink,1);
+  verify_text(110,139,"X STOP",6,ink,1);
  }
  ui_voice_save_warning();
  verify_text(10,181,"VOICE LESSONS NOT SAVED. IN RAM!",39,
@@ -504,6 +527,9 @@ static void observer_layout(void){
   assert(fingerprint()!=monitor);
   verify_text(12,7,"BABY",4,white,2);
   verify_text(17,34,"NURSERY VOICE",13,phosphor,1);
+  verify_text(21,167,"HELLO",5,ink,1);
+  verify_text(144-3,167,"DREAM",5,ink,1);
+  verify_text(204,167,"MORE",4,ink,1);
   verify_text(167,34,"BRACER 9%",11,phosphor,1);
   verify_text(190,92,"HOSTILE",9,phosphor,1);
   verify_text(17,104,"WHY?",32,ink,1);

@@ -253,7 +253,7 @@ def conversation_scenario(player, contract):
     require_reply(immediate_feed, contract["feed_care"], "immediate FEED outcome")
     player.capture("care_feed_outcome", image, reply=immediate_feed, **fed)
 
-    player.tap(100, 38)
+    player.tap(59, 38)
     image, entry = player.talk("TALK through nursery speech panel", 0,
                                contract["fed_how"])
     assert (entry["day"], entry["dollars"]) == (fed["day"], fed["dollars"])

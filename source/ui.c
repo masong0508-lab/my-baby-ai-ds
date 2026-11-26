@@ -386,7 +386,10 @@ static void home(const Game *s,int can_save,const char *message){
  solid(18,36,14,10,PINK);
  solid(20,38,3,3,PURPLE);
  solid(27,38,3,3,PURPLE);
- fit(42,35,"TOUCH TO TALK",PURPLE,15);
+ capsule(39,33,42,13,IVORY,PURPLE);
+ fit(45,36,"TALK",INK,4);
+ capsule(84,33,39,13,MINT,TEAL);
+ fit(94,36,"MIC",INK,3);
  /* Actionable priorities fit the original header's spare pixels:
   * no overlaid speech, clipped label, new card or changed hitbox. */
  {
@@ -395,7 +398,7 @@ static void home(const Game *s,int can_save,const char *message){
   fit(126,35,hint<0?"ALL GOOD":names[hint],
       hint<0?TEAL:ROSE,10);
  }
- solid(42,43,145,1,PINK);
+ solid(126,43,61,1,PINK);
  /* Real nursery inspection controls; deliberately outside all existing
   * four care action hitboxes and the bottom Toybox navigation strip. */
  capsule(194,34,49,13,SKY,BLUE);
@@ -490,12 +493,21 @@ int ui_observer_touch(int x,int y){
  int row,col;
  if(x<0||x>=256||y<0||y>=192)return -1;
  if(y>=176)return 30+x/64;
+ if(y>=165&&y<176&&x>=8&&x<248){
+  int slot=(x-8)/60;
+  if((x-8)%60<56)return 36+slot;
+ }
  if(x>=130&&x<181&&y>=88&&y<100)return 35; /* MIC */
  if(x>=216&&x<248&&y>=100&&y<115)return 34;
  if(x<8||x>=246||y<118||y>=164)return -1;
  col=(x-8)/24;row=(y-118)/16;
  if(col>=10||row>=3||(x-8)%24>=22||(y-118)%16>=14)return -1;
  return row*10+col;
+}
+const char *ui_observer_quick_prompt(unsigned speaker,unsigned index){
+ static const char *const monitor[4]={"STATUS","NEEDS","BOND","HELP"};
+ static const char *const infant[4]={"HELLO","NEEDS","DREAM","MORE"};
+ return index<4u?(speaker?infant[index]:monitor[index]):"";
 }
 void ui_observer_alert(const char *text){
  char line[40];
@@ -564,7 +576,14 @@ void ui_observer_draw(const Game *s,int can_save,unsigned speaker,
   if(keys[i]==' ')fit(x+5,y+3,"SP",INK,2);
   else char_at(x+8,y+3,keys[i],INK,1);
  }
- fit(10,167,"A TYPE   L ERASE   R SPACE",phosphor,39);
+ /* Suggested messages are drafts, never immediate care/terminal
+  * commands. The real SEND and MIC controls remain separate. */
+ for(i=0;i<4u;i++){
+  const char *prompt=ui_observer_quick_prompt(speaker,i);
+  int x=8+(int)i*60;
+  capsule(x,165,56,11,speaker?BLUSH:MINT,TEAL);
+  fit(x+(56-(int)strlen(prompt)*6)/2,167,prompt,INK,8);
+ }
  foot(TEAL);
  solid(64,179,1,11,TEAL);solid(128,179,1,11,TEAL);
  solid(192,179,1,11,TEAL);
@@ -583,28 +602,39 @@ int ui_mic_touch(int x,int y){
   if(x>=48&&x<84)return 6;
   if(x>=205&&x<248)return 7;
  }
- if(y>=129&&y<163&&x>=8&&x<248)return x<84?1:x<170?2:3;
+ if(y>=131&&y<161){
+  if(x>=8&&x<84)return 1;
+  if(x>=90&&x<166)return 2;
+  if(x>=172&&x<248)return 3;
+ }
  return 0;
 }
 void ui_mic_draw(const Game *s,int can_save,const char *label,
                  const char *status,const char *match,unsigned level,
                  unsigned learned,int listening,const char *selected_label,
-                 unsigned examples,int forget_armed){
+                 unsigned examples,int forget_armed,unsigned speaker,
+                 unsigned mode,unsigned phase){
  unsigned width;
  if(!pixels||!s)return;
  cursor_visible=0;screen_accent=AQUA;
  header("MIC LAB",s,can_save);
  solid(0,27,256,149,RGB(13,20,23));
  panel(8,31,240,48,WHITE,TEAL);
- fit(17,36,"OFFLINE VOICE LESSONS",PURPLE,25);
+ fit(17,36,mode?(mode==1u?"TRAINING":"LISTENING"):"MIC OFF / READY",
+     mode?TEAL:PURPLE,23);
+ capsule(181,33,60,13,speaker?BLUSH:MINT,TEAL);
+ fit(187,36,speaker?"BABY":"WARDEN",INK,8);
  fit(17,49,"LABEL:",PURPLE,6);
  fit(62,49,label&&*label?label:"HELLO",INK,24);
  fit(17,64,"INPUT",PURPLE,6);
  solid(64,64,172,9,GRAY);
- width=level>100u?172u:level*172u/100u;
- solid(64,64,(int)width,9,listening?GREEN:AQUA);
+ /* Ignore the last capture's stale level when the microphone is OFF.
+  * Calibration, waiting and actual recording have distinct colors. */
+ width=!listening?0u:level>100u?172u:level*172u/100u;
+ solid(64,64,(int)width,9,phase==2u?ROSE:phase==0u?GOLD:GREEN);
+ for(int i=1;i<8;i++)solid(64+i*21,64,1,9,IVORY);
  panel(8,83,240,40,IVORY,TEAL);
- fit(17,88,status?status:"MIC OFF. A TRAIN / X LISTEN.",INK,36);
+ speech_rows(status?status:"MIC OFF. A TRAIN / X LISTEN.",88,8,2,72u,INK);
  fit(17,104,"MATCH:",PURPLE,6);
  fit(61,104,match&&*match?match:"NONE / AWAITING SAMPLE",INK,27);
  /* Browse stored words without retraining them or touching any care
@@ -619,11 +649,12 @@ void ui_mic_draw(const Game *s,int can_save,const char *label,
  capsule(205,113,43,15,forget_armed?PINK:LEMON,ROSE);
  fit(forget_armed?209:217,117,forget_armed?"SURE?":"DEL",INK,
      forget_armed?5:3);
- capsule(8,131,76,30,MINT,GREEN);
- fit(25,139,"A TRAIN",INK,7);
- capsule(90,131,76,30,SKY,BLUE);
- fit(106,139,"X LISTEN",INK,8);
- capsule(172,131,76,30,LEMON,GOLD);
+ capsule(8,131,76,30,mode?PINK:MINT,mode?ROSE:GREEN);
+ fit(mode?28:25,139,mode?"A STOP":"A TRAIN",INK,7);
+ capsule(90,131,76,30,mode?PINK:SKY,mode?ROSE:BLUE);
+ fit(mode?110:106,139,mode?"X STOP":"X LISTEN",INK,8);
+ capsule(172,131,76,30,(!mode&&match&&*match)?LEMON:GRAY,
+         (!mode&&match&&*match)?GOLD:TEAL);
  fit(192,139,"Y USE",INK,5);
  {
   char count[32],trained[20];
@@ -633,7 +664,8 @@ void ui_mic_draw(const Game *s,int can_save,const char *label,
   fit(183,166,trained,WHITE,7);
  }
  foot(TEAL);
- fit(13,182,"B BACK   L/R BROWSE   DEL TWICE",WHITE,39);
+ fit(13,182,mode?"A/X STOP   B BACK / CANCEL":
+     "B BACK   L/R BROWSE   DEL TWICE",WHITE,39);
 }
 /* Save failure takes precedence over mic status, preserving live RAM model. */
 void ui_voice_save_warning(void){
@@ -2235,8 +2267,11 @@ int ui_room_touch(int x,int y){
 int ui_room_entry_touch(int x,int y){
  return x>=194&&x<243&&y>=34&&y<47;
 }
+int ui_mic_entry_touch(int x,int y){
+ return x>=84&&x<123&&y>=33&&y<46;
+}
 int ui_conversation_entry_touch(int x,int y){
- return x>=8&&x<192&&y>=31&&y<66;
+ return x>=8&&x<192&&y>=31&&y<66&&!ui_mic_entry_touch(x,y);
 }
 int ui_conversation_touch(int x,int y){
  int column,row;

@@ -102,8 +102,42 @@ static void assert_pop_is_not_speech(void){
  for(n=6u;n<VOICE_MAX_WAIT;n++)steady_noise(&c,0);
  assert(c.state==VOICE_NO_SPEECH&&c.frames==0u);
 }
+static void assert_long_phrase_and_limit(void){
+ VoiceCapture c;
+ VoiceProfile p,original;
+ VoiceMatchStatus status;
+ unsigned score,n;
+ voice_profile_reset(&p);
+ voice_capture_reset(&c);
+ for(n=0u;n<4u;n++)steady_noise(&c,0);
+ /* A real 1.375-second capture used to be truncated at 32 blocks. */
+ for(n=0u;n<44u;n++)chunk(&c,2,65,n);
+ assert(c.state==VOICE_CAPTURING&&c.frames==44u);
+ for(n=0u;n<4u;n++)steady_noise(&c,0);
+ assert(c.state==VOICE_READY&&c.frames==44u);
+ assert(voice_recognize_detailed(&p,&c,&score,&status)==-1&&status==VOICE_MATCH_EMPTY);
+ assert(voice_train(&p,"LONG PHRASE",&c)==1);
+ assert(voice_recognize_detailed(&p,&c,&score,&status)==0&&status==VOICE_MATCH_CONFIRMED);
+ original=p;
+ voice_capture_reset(&c);
+ for(n=0u;n<4u;n++)steady_noise(&c,0);
+ for(n=0u;n<VOICE_RAW_FRAMES;n++)chunk(&c,2,65,n);
+ assert(c.state==VOICE_TOO_LONG);
+ assert(!voice_train(&p,"TRUNCATED",&c));
+ assert(voice_recognize_detailed(&p,&c,&score,&status)==-1&&status==VOICE_MATCH_INVALID);
+ assert(memcmp(&p,&original,sizeof(p))==0);
+ /* Exact boundary: 52 active blocks plus four quiet release blocks. */
+ voice_capture_reset(&c);
+ for(n=0u;n<4u;n++)steady_noise(&c,0);
+ for(n=0u;n<VOICE_RAW_FRAMES-4u;n++)chunk(&c,2,65,n);
+ for(n=0u;n<4u;n++)steady_noise(&c,0);
+ assert(c.state==VOICE_READY&&c.frames==VOICE_RAW_FRAMES-4u);
+ assert(sizeof(VoiceProfile)==2954u);
+ assert(sizeof(VoiceCapture)<256u);
+}
 int main(void){
  VoiceProfile p;VoiceCapture c;unsigned score;int match;
+ assert_long_phrase_and_limit();
  voice_profile_reset(&p);assert(voice_profile_valid(&p));
  assert_stationary_noise_ignored(25000,90u);
  assert_stationary_noise_ignored(13000,45u);
@@ -166,7 +200,10 @@ int main(void){
    c.measurements[t][0]=40u;c.measurements[t][1]=252u;
    c.measurements[t][2]=200u;c.measurements[t][3]=200u;
   }
-  assert(voice_recognize(&p2,&c,&score)==-1&&score>55u);
+  {VoiceMatchStatus reason;
+   assert(voice_recognize_detailed(&p2,&c,&score,&reason)==-1&&
+          score>55u&&reason==VOICE_MATCH_DISTANT);
+  }
   /* A wrong-but-checksummed 0..63 feature profile is rejected on load. */
   invalid=p2;invalid.entries[0].models[0][0][0]=64u;
   assert(!voice_profile_valid(&invalid));
@@ -176,7 +213,10 @@ int main(void){
   shaped_capture(&c,0,0);
   assert(voice_train(&p2,"MUM",&c)==1);
   assert(voice_train(&p2,"MOM",&c)==1);
-  assert(voice_recognize(&p2,&c,&score)==-1&&score==0u);
+  {VoiceMatchStatus reason;
+   assert(voice_recognize_detailed(&p2,&c,&score,&reason)==-1&&
+          score==0u&&reason==VOICE_MATCH_AMBIGUOUS);
+  }
  }
  for(int n=0;n<22;n++){
   char label[25];snprintf(label,sizeof(label),"PHRASE %d",n);
