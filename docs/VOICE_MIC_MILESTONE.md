@@ -41,7 +41,9 @@ shelter repair, attack, save erase or conversation command.
   automatically accepted as a speech sample. The room-noise model
   remains volatile and is not saved.
   Recording calibrates the noise floor for four chunks, waits for speech,
-  then keeps at most 32 feature frames. Up to 80 chunks can elapse
+  then keeps at most 56 feature frames (1.75 seconds including release).
+  A continuous utterance that hits the limit is rejected, not silently
+  truncated into a trainable word. Up to 80 chunks can elapse
   before a no-speech rejection. The UI has an additional finite
   timeout when no callbacks arrive (e.g. unsupported emulator).
 - Two user recordings of each short label build two independent
@@ -88,8 +90,16 @@ two voice companions alongside its existing files.
 
 1. In CARE, press UP or tap CPU for WARDEN.
 2. Type HELLO, BOND, WORLD or another short label (1-24 characters).
-3. Touch MIC above the terminal keyboard. The microphone starts **off**.
+3. Touch MIC above the terminal keyboard (or L+R). The microphone starts
+   **off**. From CARE, the new MIC button or L+X opens BABY's mic lab
+   directly. The current recipient is always visible in the lab.
+   Suggested questions below the terminal keyboard insert drafts; SEND
+   remains separate, and the draft can also become the next training label.
 4. Press A or tap TRAIN; wait for quiet calibration, then speak once.
+   During recording, A/TRAIN or X/LISTEN cancels; B leaves safely.
+   The input meter goes empty when off, while the state and recipient
+   remain visible. A distinct rejection reason explains when two trained
+   sounds are too similar or no learned label exists.
 5. Repeat TRAIN with the same word. Two examples improve reliability.
 6. Press X or tap LISTEN, then speak. A confident match appears.
 7. Press Y or tap USE. This explicitly submits the matched label to
@@ -102,6 +112,24 @@ two voice companions alongside its existing files.
    trained label reuses that free slot; none are automatically evicted.
 9. If the microphone is unsupported in your emulator, use the keyboard.
    All original controls remain usable.
+
+## Recorded human speech release guard
+
+The earlier quiet-speech experiment (PR #77) captured more recordings
+but reduced normal-volume correct matches and accepted five unknown
+words across both volume conditions. The lower thresholds remain
+experimental and are NOT included in this presentation milestone.
+The stable recognition algorithm and acceptance limits are unchanged.
+
+The new CI check compares 36 publicly available Free Spoken Digit
+Dataset v1.0.10 recordings (CC BY-SA 4.0) against the previous stable
+revision. Training digits 0–2 use clips 5/6; held-out clips 0/1/2 from
+each speaker are tested at original and half volume. Digit 3 is
+unknown. Each revision is compiled with its own voice.h. A capture
+gain alone cannot excuse fewer correct matches or more incorrect or
+unknown accepted matches. The check requires no regression in either
+volume condition. The corpus is small, with no claim of general ASR
+accuracy or real DS microphone performance.
 
 ## Tests and remaining accuracy work
 

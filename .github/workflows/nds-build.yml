@@ -40,6 +40,27 @@ jobs:
           set -euxo pipefail
           sh tests/run.sh
 
+  voice-recorded-corpus:
+    name: Benchmark recorded speech using the original C voice engine
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Compare held-out human recordings against the previous recognizer
+        run: |
+          set -euxo pipefail
+          python3 tests/benchmark_voice_corpus.py --baseline 1fd85a328e6ed39c9d74c423b9a2ba84efa61ef4 --output voice-corpus-report.json
+      - name: Archive capture, recognition and unknown-input outcomes
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: recorded-voice-corpus-report
+          path: voice-corpus-report.json
+          if-no-files-found: warn
+          retention-days: 30
+
   test-and-build:
     name: Compile My Baby A.I. (.nds)
     runs-on: ubuntu-latest

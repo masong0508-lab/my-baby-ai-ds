@@ -23,6 +23,8 @@ int ui_title_save_touch(int x,int y);
 int ui_nursery_touch(int x,int y);
 /* Nursery speech panel, separate from ROOM and the four care cards. */
 int ui_conversation_entry_touch(int x,int y);
+/* Separate nursery microphone entry; does not consume a care action. */
+int ui_mic_entry_touch(int x,int y);
 /* TALK view 11: 0..5 ask a prompt, 6 BACK, 7 ASK selected; -1 inert.
  * ui_draw's selected argument identifies the highlighted prompt 0..5. */
 int ui_conversation_touch(int x,int y);
@@ -37,8 +39,10 @@ void ui_observer_draw(const Game *s,int can_save,unsigned speaker,
 /* Two 30-key pages; space is literal, '<' erases, invalid index is NUL. */
 char ui_observer_key(unsigned key);
 /* 0..29 keyboard; 30 BACK, 31 TARGET, 32 TEACH, 33 SEND,
- * 34 123/ABC page switch; -1 inert. Caller supplies key page bit. */
+ * 34 123/ABC page switch, 35 MIC, 36..39 insert suggested query;
+ * -1 inert. Caller supplies key page bit. */
 int ui_observer_touch(int x,int y);
+const char *ui_observer_quick_prompt(unsigned speaker,unsigned index);
 /* CARE/TALK-only visible CPU badge, separate from status readouts. */
 int ui_observer_entry_touch(int x,int y);
 /* Footer-only WARDEN notice. Caller applies save warnings afterward. */
@@ -53,7 +57,8 @@ int ui_mic_touch(int x,int y);
 void ui_mic_draw(const Game *s,int can_save,const char *label,
                  const char *status,const char *match,unsigned level,
                  unsigned learned,int listening,const char *selected_label,
-                 unsigned examples,int forget_armed);
+                 unsigned examples,int forget_armed,unsigned speaker,
+                 unsigned mode,unsigned phase);
 int ui_room_entry_touch(int x,int y);
 int ui_room_touch(int x,int y); /* 0 window, 1 lamp, 2 teddy, 3 crib, 4 back, 5 sound, 6 use */
 int ui_prank_entry_touch(int x,int y);

@@ -64,6 +64,12 @@ LAB press **A/TRAIN**, speak after the quiet calibration, then repeat TRAIN
 to store a second example. Press **X/LISTEN** to attempt recognition.
 If a label matches confidently, press **Y/USE** to send that text to the
 currently selected BABY or WARDEN terminal. **B/BACK** cancels.
+Tap **MIC in CARE** (or hold L and press X) to speak to BABY directly;
+the MIC LAB shows the recipient, recording phase, and live level.
+In the terminal, the four suggestion buttons fill the message box
+without sending. L+R opens MIC by controller. While capturing, A or X
+cancels instead of restarting. Captures accept up to 56 feature frames
+(1.75 seconds including the silence release); longer input is rejected.
 MIC LAB also has **PREV/NEXT** (L/R or D-pad left/right) for browsing
 previously taught words, showing their EX 1/2 or 2/2 training status.
 **DEL or SELECT twice** forgets only the selected phrase. The learner
