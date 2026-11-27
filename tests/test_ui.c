@@ -754,6 +754,18 @@ int main(void){
   peek.phase=PEEK_OPEN;ui_peek_draw(&g,&peek,1);verify_coverage();open=fingerprint();
   peek.phase=PEEK_WON;peek.round=3;ui_peek_draw(&g,&peek,1);verify_coverage();win=fingerprint();
   assert(wait!=open&&open!=win&&wait!=win);
+  {
+   Game before=g;
+   uint32_t scare,corrupt,locked;
+   peek.phase=PEEK_SCARE;ui_peek_draw(&g,&peek,1);
+   verify_coverage();scare=fingerprint();
+   peek.phase=PEEK_CORRUPT;ui_peek_draw(&g,&peek,1);
+   verify_coverage();corrupt=fingerprint();
+   peek.phase=PEEK_LOCKED;ui_peek_draw(&g,&peek,1);
+   verify_coverage();locked=fingerprint();
+   assert(scare!=corrupt&&corrupt!=locked&&scare!=locked&&locked!=open);
+   assert(memcmp(&g,&before,sizeof(g))==0);
+  }
  }
  {
   uint32_t night,day,lamp_off,light_on,teddy;
