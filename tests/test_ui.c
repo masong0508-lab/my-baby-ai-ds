@@ -953,6 +953,12 @@ int main(void){
   verify_text(95,91,"-",1,TEST_RGB(18,11,23),1);
   verify_coverage();
   ui_arcade_guide_draw(&live,15u,1,1,1);verify_coverage();pause=fingerprint();
+  {
+   ArcadeRecord record={5,3,2,120};
+   ui_arcade_record_draw(&record);
+   verify_text(10,167,"CLEARS 3/5 BEST 120T CLEAN 2",27,TEST_RGB(8,7,12),1);
+   verify_coverage();
+  }
   assert(pause!=guides[15]);
   ui_arcade_feedback_mode(ARCADE_FEEDBACK_WIN,1);
   verify_text(10,181,"PRACTICE CLEARED! NO REWARD.",28,TEST_RGB(31,28,13),1);
