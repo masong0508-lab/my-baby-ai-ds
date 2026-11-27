@@ -12,10 +12,21 @@ static unsigned primitive_vertices,submitted_hand_caps,moon_relief_centers,teddy
 static float triangle_points[3][3];
 static int capture_geometry;
 static uint32_t geometry_hash;
+static unsigned emitted_color=~0u,color_commands,color_vertices,last_color_commands;
+void test_gl_color(unsigned value){
+ assert(value<=0x7fffu&&value!=emitted_color);
+ emitted_color=value;color_commands++;
+}
+void test_gl_flush(void){
+ assert(color_commands>0u&&color_vertices==world_vertex_count());
+ last_color_commands=color_commands;
+ emitted_color=~0u;color_commands=0;color_vertices=0;
+}
 void test_gl_begin(int mode){
  primitive_mode=mode;primitive_vertices=0;
 }
 void test_gl_vertex(float x,float y,float z){
+ assert(emitted_color<=0x7fffu);color_vertices++;
  if(capture_geometry){
   uint32_t bits;
   memcpy(&bits,&x,sizeof(bits));geometry_hash=(geometry_hash^bits)*16777619u;
@@ -125,6 +136,8 @@ int main(void){
  assert(moon_relief_centers==12u);
  assert(teddy_nose_centers==12u);
  assert(quilt_joint_vertices==4u);
+ assert(last_color_commands<world_vertex_count());
+ printf("Nursery command sample: %u color writes, %u submitted vertices\n",last_color_commands,world_vertex_count());
  /* WARDEN's physical screen clamps damaged/unknown status without
   * changing the baby or exceeding the normal scene budget. */
  {
