@@ -100,6 +100,6 @@ void ui_virtual_cursor_update(int enabled,int x,int y,int pressed);
 int ui_arcade_navigation(int x,int y); /* 1 play, 2 buy, 3 back */
 int ui_arcade_help_touch(int x,int y);
 int ui_arcade_pause_touch(int x,int y);
-int ui_arcade_guide_touch(int x,int y); /* 1 play/resume, 2 practice/end, 3 back */
+int ui_arcade_guide_touch(int x,int y); /* 1 play/resume, 2 practice/end, 3 back, 4 mode */
 void ui_arcade_guide_draw(const Game *s,unsigned id,int paused,int practice,int can_save);
 #endif
