@@ -153,7 +153,12 @@ static void solid(int x,int y,int rw,int rh,uint16_t color){
  if(!pixels||x>=x2||y>=y2)return;
  for(b=y;b<y2;b++){
   volatile uint16_t *row=pixels+(unsigned)b*W;
-  for(a=x;a<x2;a++)row[a]=color;
+  /* Four halfword stores per loop branch. Keep VRAM's native access
+   * width and use scalar tail writes for short/clipped spans. */
+  for(a=x;a+3<x2;a+=4){
+   row[a]=color;row[a+1]=color;row[a+2]=color;row[a+3]=color;
+  }
+  for(;a<x2;a++)row[a]=color;
  }
 }
 static void outline(int x,int y,int width,int height,uint16_t color){
@@ -165,9 +170,21 @@ static void outline(int x,int y,int width,int height,uint16_t color){
 /* Flat, legible notebook cards. One outline and a subtle shadow,
  * instead of multiple 1px glints that clutter a 192px touchscreen. */
 static void panel(int x,int y,int width,int height,uint16_t fill,uint16_t border){
- solid(x+1,y+2,width,height,SHADOW);
- solid(x,y,width,height,fill);
- outline(x,y,width,height,border);
+ if(width<3||height<3){
+  solid(x+1,y+2,width,height,SHADOW);
+  solid(x,y,width,height,fill);
+  outline(x,y,width,height,border);
+  return;
+ }
+ /* Draw only the visible offset shadow and the nonoverlapping interior
+  * and border. Same final pixels as shadow->fill->outline. */
+ solid(x+width,y+2,1,height-2,SHADOW);
+ solid(x+1,y+height,width,2,SHADOW);
+ solid(x+1,y+1,width-2,height-2,fill);
+ solid(x,y,width,1,border);
+ solid(x,y+height-1,width,1,border);
+ solid(x,y+1,1,height-2,border);
+ solid(x+width-1,y+1,1,height-2,border);
 }
 /* Draw horizontal font runs as single rectangles. The output matches the
  * old bit-per-pixel rasterizer while avoiding redundant VRAM write setup. */
@@ -199,10 +216,22 @@ static void fit(int x,int y,const char *s,uint16_t color,int max){
  label(x,y,s,color,1,max);
 }
 static void capsule(int x,int y,int width,int height,uint16_t fill,uint16_t edge){
- solid(x+3,y,width-6,height,fill);
- solid(x,y+3,width,height-6,fill);
- solid(x+3,y,width-6,1,edge);solid(x+3,y+height-1,width-6,1,edge);
- solid(x,y+3,1,height-6,edge);solid(x+width-1,y+3,1,height-6,edge);
+ if(width<7||height<7){
+  solid(x+3,y,width-6,height,fill);
+  solid(x,y+3,width,height-6,fill);
+  solid(x+3,y,width-6,1,edge);solid(x+3,y+height-1,width-6,1,edge);
+  solid(x,y+3,1,height-6,edge);solid(x+width-1,y+3,1,height-6,edge);
+  return;
+ }
+ /* Partition the clipped-corner silhouette into disjoint spans:
+  * no doubled fill over its central rectangle or overwritten edges. */
+ solid(x+3,y,width-6,1,edge);
+ solid(x+3,y+1,width-6,2,fill);
+ solid(x+1,y+3,width-2,height-6,fill);
+ solid(x,y+3,1,height-6,edge);
+ solid(x+width-1,y+3,1,height-6,edge);
+ solid(x+3,y+height-3,width-6,2,fill);
+ solid(x+3,y+height-1,width-6,1,edge);
 }
 static void meter(int x,int y,int value,uint16_t fill){
  int v=value;
@@ -278,9 +307,14 @@ void ui_learning_save_warning(void){
  fit(10,181,"LEARNING NOT SAVED. KEPT IN RAM!",PINK,39);
 }
 static void icon_bottle(int x,int y){
- solid(x+8,y+3,9,5,BLUE);solid(x+10,y,5,3,WHITE);
- solid(x+5,y+8,15,16,WHITE);outline(x+5,y+8,15,16,TEAL);
- solid(x+7,y+14,11,7,SKY);solid(x+10,y+9,4,3,PINK);
+ /* Stepped shoulders, round lower corners and a distinct milk line.
+  * The same 32x24 card slot and fixed 5-bit palette remain. */
+ solid(x+10,y,5,3,WHITE);solid(x+8,y+3,9,4,BLUE);
+ solid(x+7,y+7,11,2,TEAL);solid(x+5,y+9,15,13,TEAL);
+ solid(x+7,y+22,11,2,TEAL);solid(x+6,y+10,13,11,WHITE);
+ solid(x+7,y+15,11,6,SKY);solid(x+7,y+14,11,1,IVORY);
+ solid(x+8,y+10,2,4,IVORY);solid(x+15,y+12,3,1,TEAL);
+ solid(x+15,y+16,3,1,TEAL);
 }
 static void icon_chat(int x,int y){
  capsule(x+3,y+3,23,18,PURPLE,WHITE);
@@ -294,8 +328,14 @@ static void icon_play(int x,int y){
  solid(x+19,y+8,3,3,LEMON);solid(x+23,y+13,3,3,PINK);
 }
 static void icon_nap(int x,int y){
- solid(x+4,y+9,22,11,LILAC);solid(x+7,y+6,13,4,WHITE);
+ /* Little padded bed in perspective: rounded pillow, blanket folds
+  * and a real dark foot edge, without a bitmap or alpha compositor. */
+ solid(x+4,y+9,22,11,PURPLE);
+ solid(x+5,y+10,20,8,LILAC);
+ solid(x+7,y+6,13,4,WHITE);solid(x+8,y+7,11,1,IVORY);
+ solid(x+8,y+12,15,4,BLUSH);solid(x+8,y+16,15,2,PINK);
  solid(x+6,y+18,22,3,DEEP_PINK);
+ solid(x+6,y+21,3,2,PURPLE);solid(x+25,y+21,3,2,PURPLE);
  label(x+11,y+1,"Z",PURPLE,1,1);
 }
 /* Stream bounded spans directly from a reply: no copied text buffer.
