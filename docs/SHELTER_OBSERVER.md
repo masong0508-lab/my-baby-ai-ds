@@ -71,6 +71,14 @@ preview deletion; FORGET 1 YES (substitute the intended slot) explicitly
 confirms the removal. New lessons reuse vacant slots; other lessons,
 history and the existing save layout are retained.
 
+Typed BABY dialogue can also recall a taught expression: for example,
+after teaching TINY BOSS, ask DO YOU REMEMBER BOSS or RECALL TINY BOSS.
+An exact learned phrase or a unique, non-generic word in an explicit
+recall cue retrieves the lesson. Ambiguous words ask for clarification;
+MORE stays on that lesson and reports its actual practice confidence.
+Urgent care needs take priority. Recall does not reinforce a lesson,
+change game state or execute its words as commands.
+
 After three teachings, an actual healthy PLAY can reuse the phrase. The
 first and every third play event are eligible; current care needs or high
 corruption suppress this optional quote. `observer_record_care` exposes
