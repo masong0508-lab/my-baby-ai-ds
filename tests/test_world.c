@@ -8,7 +8,7 @@
  * A rigid model transform preserves triangle area. This catches repeated
  * hand-cap poles without pretending the host shim emulates DS pixels. */
 static int primitive_mode;
-static unsigned primitive_vertices,submitted_hand_caps,moon_relief_centers;
+static unsigned primitive_vertices,submitted_hand_caps,moon_relief_centers,teddy_nose_centers,quilt_joint_vertices;
 static float triangle_points[3][3];
 static int capture_geometry;
 static uint32_t geometry_hash;
@@ -22,7 +22,13 @@ void test_gl_vertex(float x,float y,float z){
   memcpy(&bits,&y,sizeof(bits));geometry_hash=(geometry_hash^bits)*16777619u;
   memcpy(&bits,&z,sizeof(bits));geometry_hash=(geometry_hash^bits)*16777619u;
  }
+ /* Quilt pieces must actually meet at one exact top-plane junction. */
+ if(primitive_mode==GL_QUADS&&x>2.279999f&&x<2.280001f&&
+    y>-.430001f&&y<-.429999f&&z>-1.715001f&&z<-1.714999f)
+  quilt_joint_vertices++;
  if(primitive_mode==GL_TRIANGLES){
+  if(x>-1.280001f&&x<-1.279999f&&y>-.575001f&&y<-.574999f&&
+     z>.856999f&&z<.857001f)teddy_nose_centers++;
   if(x>-1.350001f&&x<-1.349999f&&y>1.539999f&&y<1.540001f&&
      z>-2.948001f&&z<-2.947999f)moon_relief_centers++;
   unsigned n=primitive_vertices%3u;
@@ -114,9 +120,11 @@ int main(void){
  game_init(&s);world_init();
  /* A full circle's twelve real front triangles share a raised center.
   * The existing triangle-area assertion checks every new triangle. */
- moon_relief_centers=0;
+ moon_relief_centers=0;teddy_nose_centers=0;quilt_joint_vertices=0;
  world_draw(&s,128u,0);
  assert(moon_relief_centers==12u);
+ assert(teddy_nose_centers==12u);
+ assert(quilt_joint_vertices==4u);
  /* WARDEN's physical screen clamps damaged/unknown status without
   * changing the baby or exceeding the normal scene budget. */
  {
