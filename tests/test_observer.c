@@ -89,6 +89,26 @@ static void test_goal_guidance(void){
  contains(observer_answer(&p,&s,&g,0,"GOALS"),"ALL 16");
  contains(observer_answer(&p,&s,&g,0,"ARCADE"),"16/16");
  assert(memcmp(&g,&original,sizeof(g))==0&&memcmp(&p,&before,sizeof(p))==0);
+ /* Ending forecasts use the actual day rules, on a copy, not live state. */
+ game_init(&g);original=g;
+ contains(observer_answer(&p,&s,&g,0,"TOMORROW"),"NO ENDING");
+ contains(observer_answer(&p,&s,&g,0,"MORE"),"H43 M73 E69 C14");
+ assert(memcmp(&g,&original,sizeof(g))==0);
+ g.hunger=90;original=g;
+ contains(observer_answer(&p,&s,&g,0,"TOMORROW"),"BAD ENDING");
+ contains(s.reply,"FEED");
+ assert(memcmp(&g,&original,sizeof(g))==0);
+ g.hunger=0;g.days=3;g.mood=85;g.energy=80;g.chaos=10;
+ original=g;
+ contains(observer_answer(&p,&s,&g,0,"TOMORROW"),"GOOD ENDING");
+ contains(observer_answer(&p,&s,&g,0,"ENDINGS"),"0/4");
+ assert(memcmp(&g,&original,sizeof(g))==0);
+ assert(game_end_day(&g)==END_GRADUATION);original=g;
+ contains(observer_answer(&p,&s,&g,0,"ENDINGS"),"1/4");
+ contains(observer_answer(&p,&s,&g,0,"MORE"),"TINY DIPLOMA CEREMONY");
+ contains(observer_answer(&p,&s,&g,0,"BUDGET"),"16 DOLLARS");
+ contains(s.reply,"2 FAVORS");
+ assert(memcmp(&g,&original,sizeof(g))==0&&memcmp(&p,&before,sizeof(p))==0);
 }
 int main(void){
  test_associations();
