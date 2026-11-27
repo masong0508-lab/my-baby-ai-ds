@@ -767,7 +767,7 @@ void ui_peek_draw(const Game *s,const NurseryPeek *p,int can_save){
  result=p->phase==PEEK_WON||p->phase==PEEK_LOST;
  if(p->phase==PEEK_WON){
   fit(17,82,"BABY LOVED PLAYING!",TEAL,36);
-  fit(17,94,"MOOD UP. PLAY MEMORY SAVED.",INK,36);
+  fit(17,94,"MOOD UP. PLAY MEMORY RECORDED.",INK,36);
  }else if(p->phase==PEEK_LOST){
   fit(17,82,"LET'S TRY AGAIN LATER.",ROSE,36);
   fit(17,94,"NO CARE COST OR REWARD.",INK,36);
