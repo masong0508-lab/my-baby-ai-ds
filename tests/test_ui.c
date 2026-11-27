@@ -731,6 +731,9 @@ int main(void){
  assert(ui_room_touch(180,139)==3); /* crib */
  assert(ui_room_touch(129,139)==-1); /* column gap */
  assert(ui_room_touch(30,117)==-1); /* row gap */
+ assert(ui_room_touch(8,163)==8&&ui_room_touch(247,174)==8);
+ assert(ui_room_touch(7,163)==-1&&ui_room_touch(248,174)==-1);
+ assert(ui_room_touch(120,162)==-1&&ui_room_touch(120,175)==-1);
  assert(ui_room_touch(128,183)==4); /* return */
  assert(ui_room_touch(180,183)==5); /* native stylus sound toggle */
  assert(ui_room_touch(222,183)==6); /* native stylus USE */
