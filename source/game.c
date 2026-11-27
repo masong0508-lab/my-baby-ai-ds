@@ -51,6 +51,18 @@ int game_room_quiet_rest(Game *s,int daylight,int lamp_on){
  s->corruption=clamp((int)s->corruption-2);
  return 1;
 }
+int game_room_soothe(Game *s){
+ if(!s||s->hunger>=70u||s->energy<=15u||
+    (!s->chaos&&s->mood==100u))return 0;
+ s->mood=clamp((int)s->mood+6);
+ s->chaos=clamp((int)s->chaos-8);
+ s->energy=clamp((int)s->energy-3);
+ s->hunger=clamp((int)s->hunger+2);
+ /* A real social interaction advances the existing RNG exactly once,
+  * allowing the observed-care duplicate guard to recognize it. */
+ (void)next(s);
+ return 1;
+}
 int game_unlocked(const Game *s,int id){return id>=0&&id<MBAI_GAMES&&!!(s->unlocked&(1u<<id));}
 int game_unlock_requirements(int id,unsigned *wins,
                              unsigned *dollars,unsigned *favors){
