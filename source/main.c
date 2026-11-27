@@ -595,18 +595,20 @@ int main(void){
   ui_touch_observe(raw_touch,touch.px,touch.py,gesture.total_presses);
   /* Compare against the proven button-scanning pattern from the user's
    * Mandex DS bare-metal port. This fallback needs no working ARM7 stylus. */
-  if((down&KEY_SELECT)&&(held&KEY_R)&&!(held&KEY_L)){
+  if((view!=14||peek.phase<PEEK_SCARE)&&
+     (down&KEY_SELECT)&&(held&KEY_R)&&!(held&KEY_L)){
    perf_show=!perf_show;
    down&=~(KEY_SELECT|KEY_R); /* no day advance or safe-visual toggle */
    dirty=1;
   }
-  if((down&KEY_SELECT)&&(held&KEY_L)){
+  if((view!=14||peek.phase<PEEK_SCARE)&&
+     (down&KEY_SELECT)&&(held&KEY_L)){
    virtual_stylus_toggle(&vpen);
    down &= ~(KEY_SELECT|KEY_L); /* not "end day" or "album" */
    message=vpen.enabled?"VIRTUAL PEN: D-PAD MOVE, A TAP":"VIRTUAL PEN DISABLED.";
    dirty=1;
   }
-  if(vpen.enabled){
+  if(vpen.enabled&&(view!=14||peek.phase<PEEK_SCARE)){
    unsigned move=0;
    if(held&KEY_LEFT)move|=VS_LEFT;
    if(held&KEY_RIGHT)move|=VS_RIGHT;
@@ -1285,9 +1287,10 @@ int main(void){
                                   world_polygon_count());
   /* Every submitted frame is timed even with the optional display off.
    * This includes VBlank wait, logic and geometry/bitmap submission. */
-  perf_changed=perf_frame(&performance,cpuGetTiming(),three_d_ready?
+  perf_changed=perf_frame(&performance,cpuGetTiming(),
+                 three_d_ready&&(view!=14||peek.phase<PEEK_SCARE)?
                  perf_scene((unsigned)view,arc.id):PERF_INACTIVE);
-  if(perf_show&&(repaint||perf_changed))
+  if(perf_show&&(view!=14||peek.phase<PEEK_SCARE)&&(repaint||perf_changed))
    ui_perf_overlay(perf_current(&performance));
   /* Overlay a tiny cursor only when virtual pen is enabled. The bottom BG
    * needn't be fully repainted on every frame, avoiding DraStic flicker. */
