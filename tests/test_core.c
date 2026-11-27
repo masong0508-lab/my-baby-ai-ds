@@ -41,6 +41,36 @@ static void test_care_hint(void){
  (void)game_care(&s,NAP);
  assert(s.energy==37&&game_care_hint(&s)==-1);
 }
+static void test_peek_horror(void){
+ Game g,original;
+ NurseryPeek p;
+ unsigned hits=0;
+ game_init(&g);original=g;
+ assert(game_peek_start(&g,&p));
+ assert(!game_peek_scare_roll(&p,0u)); /* early tap cannot trigger */
+ while(p.phase==PEEK_WAIT)(void)game_peek_tick(&p);
+ /* Exhaust all 20-bit outcomes. Exactly one may trigger. */
+ for(uint32_t draw=0u;draw<(1u<<20);draw++){
+  NurseryPeek candidate=p;
+  if(game_peek_scare_roll(&candidate,draw)){
+   hits++;assert(candidate.phase==PEEK_SCARE);
+  }else assert(candidate.phase==PEEK_OPEN);
+ }
+ assert(hits==1u);
+ assert(!game_peek_scare_roll(&p,1u));
+ assert(game_peek_scare_roll(&p,1u<<20));
+ assert(p.phase==PEEK_SCARE&&p.ticks==PEEK_SCARE_TICKS);
+ assert(!game_peek_tap(&g,&p)&&!game_peek_scare_roll(&p,0u));
+ for(unsigned i=0;i<PEEK_SCARE_TICKS;i++)(void)game_peek_tick(&p);
+ assert(p.phase==PEEK_CORRUPT&&p.ticks==PEEK_CORRUPT_TICKS);
+ for(unsigned i=0;i<PEEK_CORRUPT_TICKS;i++)(void)game_peek_tick(&p);
+ assert(p.phase==PEEK_LOCKED);
+ for(unsigned i=0;i<1000u;i++){
+  assert(!game_peek_tick(&p)&&!game_peek_tap(&g,&p));
+  assert(p.phase==PEEK_LOCKED);
+ }
+ assert(memcmp(&g,&original,sizeof(g))==0);
+}
 static void test_peekaboo(void){
  Game g,before;NurseryPeek p;
  game_init(&g);before=g;
@@ -456,6 +486,7 @@ int main(void){
  test_room_quiet_rest();
  test_room_lullaby();
  test_peekaboo();
+ test_peek_horror();
  test_care_hint();
  test_day_need_cycle();
  test_long_term_rehabilitation();
