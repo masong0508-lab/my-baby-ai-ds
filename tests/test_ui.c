@@ -910,6 +910,33 @@ int main(void){
  assert(ui_arcade_navigation(112,181)==2);
  assert(ui_arcade_navigation(221,181)==3);
  assert(ui_arcade_navigation(11,122)==0);
+ assert(ui_arcade_help_touch(193,57)&&ui_arcade_help_touch(247,70));
+ assert(!ui_arcade_help_touch(192,57)&&!ui_arcade_help_touch(248,70));
+ assert(ui_arcade_pause_touch(112,8)&&ui_arcade_pause_touch(135,22));
+ assert(!ui_arcade_pause_touch(111,8)&&!ui_arcade_pause_touch(136,22));
+ assert(ui_arcade_guide_touch(8,136)==1&&ui_arcade_guide_touch(123,164)==1);
+ assert(ui_arcade_guide_touch(132,136)==2&&ui_arcade_guide_touch(247,164)==2);
+ assert(ui_arcade_guide_touch(128,150)==0&&ui_arcade_guide_touch(128,183)==3);
+ assert(ui_arcade_guide_touch(256,183)==0);
+ {
+  uint32_t guides[MBAI_GAMES],pause;
+  Game live=g,practice;
+  Arcade trial;
+  for(unsigned id=0;id<MBAI_GAMES;id++){
+   ui_arcade_guide_draw(&live,id,0,0,1);verify_coverage();
+   guides[id]=fingerprint();
+   for(unsigned j=0;j<id;j++)assert(guides[id]!=guides[j]);
+   assert(game_arcade_practice_start(&live,&practice,&trial,(int)id));
+   ui_draw(&live,&trial,2,(int)id,0,0,1,"PRACTICE");
+   verify_text(12,7,"PRACTICE",8,TEST_RGB(31,31,31),2);
+   verify_coverage();
+  }
+  ui_arcade_guide_draw(&live,15u,1,1,1);verify_coverage();pause=fingerprint();
+  assert(pause!=guides[15]);
+  ui_arcade_feedback_mode(ARCADE_FEEDBACK_WIN,1);
+  verify_text(10,181,"PRACTICE CLEARED! NO REWARD.",28,TEST_RGB(31,28,13),1);
+  verify_coverage();
+ }
  {
   uint32_t hand,foot;
   ui_draw(&g,&a,8,5,0,0,1,"TOYBOX");
