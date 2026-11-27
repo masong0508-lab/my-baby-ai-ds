@@ -63,8 +63,13 @@ asking `SAY REPAIR` only repeats the word.
 
 New phrases start at confidence 1. Teaching the same normalized phrase
 again raises confidence up to 15 without consuming another slot. A fifth
-distinct phrase replaces the oldest slot. SAY, SAY 1–4, WHAT DID I TEACH,
-and natural aliases such as SAY WHAT I TAUGHT retrieve the stored words.
+distinct phrase is refused without changing any existing lesson. SAY, SAY
+1–4, WHAT DID I TEACH, and natural aliases such as SAY WHAT I TAUGHT
+retrieve the stored words. PHRASES lists occupied slots and LESSON 1–4
+reports the exact practice confidence. Select BABY and type FORGET 1–4 to
+preview deletion; FORGET 1 YES (substitute the intended slot) explicitly
+confirms the removal. New lessons reuse vacant slots; other lessons,
+history and the existing save layout are retained.
 
 After three teachings, an actual healthy PLAY can reuse the phrase. The
 first and every third play event are eligible; current care needs or high
@@ -142,7 +147,7 @@ recovery still need native-device verification.
 Focused strict host tests and ASan/UBSan cover factual replies, exact care
 effects, no idle/query progression, stage thresholds, paused timers,
 windup timing, guard/slap/kick counters, damage/zero/repair behavior,
-phrase normalization/reinforcement/replacement/reuse, command-as-data,
+phrase normalization/reinforcement/full-library refusal/explicit deletion/reuse, command-as-data,
 integer calculation bounds, counter saturation and unchanged Game/RNG.
 The local sanitizer run disables leak detection because LeakSanitizer
 cannot operate under the workspace's ptrace environment; the engine itself
