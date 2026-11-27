@@ -9,7 +9,8 @@
 _Static_assert(sizeof(ObserverProfile)<=256u,"observer profile budget");
 _Static_assert(sizeof(ObserverSession)<=192u,"observer session budget");
 enum {FOCUS_STATUS=0,FOCUS_NEEDS,FOCUS_MEMORY,FOCUS_WORLD,FOCUS_SELF,
-      FOCUS_PLAY,FOCUS_DREAM,FOCUS_THREAT,FOCUS_TEACH,FOCUS_CALC,FOCUS_BOND};
+      FOCUS_PLAY,FOCUS_DREAM,FOCUS_THREAT,FOCUS_TEACH,FOCUS_CALC,FOCUS_BOND,
+      FOCUS_BAN,FOCUS_CLINIC,FOCUS_SHELL,FOCUS_TOYBOX};
 enum {NOTICE_NONE=0,NOTICE_WINDUP,NOTICE_HIT,NOTICE_BLOCK,NOTICE_REPAIR};
 
 static uint16_t sat_add(uint16_t value,uint32_t amount){
@@ -353,6 +354,14 @@ static const char *memory(const ObserverProfile *p,ObserverSession *s){
    (unsigned long)p->last_event_day,(unsigned)p->last_effect,(unsigned)p->care[PLAY]);
   case OBSERVER_EVENT_NAP:return say(s,"YOU LET ME NAP ON DAY %lu.\nWARDEN: ENERGY +%u. NAPS %u.",
    (unsigned long)p->last_event_day,(unsigned)p->last_effect,(unsigned)p->care[NAP]);
+  case OBSERVER_EVENT_ARCADE_WIN:
+   return say(s,"WE WON %s! I REMEMBER THAT GAME. CAN WE TRY ANOTHER CABINET?",game_names[p->last_detail<MBAI_GAMES?p->last_detail:0u]);
+  case OBSERVER_EVENT_ARCADE_LOSS:
+   return say(s,"WE LOST %s, BUT WE CAN TRY AGAIN. WILL YOU HELP ME?",game_names[p->last_detail<MBAI_GAMES?p->last_detail:0u]);
+  case OBSERVER_EVENT_QUIET_REST:return say(s,"I REMEMBER THE QUIET CRIB. THE DARK ROOM FELT CALMER. THANK YOU FOR STAYING.");
+  case OBSERVER_EVENT_BLOCK:return say(s,"YOU STOPPED MY WINDUP. WARDEN COUNTED %u BLOCKS. YOUR BRACER IS AT %u.",(unsigned)p->blocks,(unsigned)p->integrity);
+  case OBSERVER_EVENT_REPAIR:return say(s,"WARDEN FIXED YOUR BRACER. I REMEMBER THAT IT WAS DAMAGED. IT IS AT %u NOW.",(unsigned)p->integrity);
+  case OBSERVER_EVENT_REVEAL:return say(s,"I REMEMBER THE SHELL OPENING. WARDEN SAW THE EGG TOO. ARE YOU STILL GOING TO STAY?");
   case OBSERVER_EVENT_NONE:return say(s,"I DON'T HAVE A MEMORY TO TELL YET. STAY A LITTLE WHILE. WARDEN IS WATCHING.");
   case OBSERVER_EVENT_HIT:return say(s,"THAT ONE REACHED YOUR BRACER.\nWARDEN: %u DAMAGE ON DAY %lu.\nYOUR INTEGRITY IS %u.",
    (unsigned)p->last_effect,(unsigned long)p->last_event_day,(unsigned)p->integrity);
@@ -407,7 +416,8 @@ static const char *threat(const ObserverProfile *p,ObserverSession *s){
   (unsigned)p->blocks,(unsigned)p->integrity);
 }
 static const char *world(ObserverSession *s,const char *input){
- s->focus=FOCUS_WORLD;
+ s->focus=has(input,"BAN")||has(input,"BUREAU")||has(input,"WHY")?FOCUS_BAN:
+          has(input,"CLINIC")||has(input,"FOUND")?FOCUS_CLINIC:FOCUS_WORLD;
  if(s->speaker==OBSERVER_BABY){
   if(has(input,"BAN")||has(input,"BUREAU")||has(input,"WHY"))
    return say(s,"WARDEN SAYS THE BUREAU CALLS IT THE CRADLE BAN. IT SAYS THE REASON IS CLASSIFIED. I JUST KNOW YOU LET ME STAY.");
@@ -420,6 +430,32 @@ static const char *world(ObserverSession *s,const char *input){
  if(has(input,"CLINIC")||has(input,"FOUND"))
   return say(s,"YOU FOUND THIS UNREGISTERED BABY OUTSIDE A SHUTTERED CLINIC. THIS HIDDEN NURSERY IS ITS SHELTER.");
  return say(s,"THIS IS THE LAST NURSERY. YOU HIDE A FORBIDDEN BABY FROM THE CONTINUITY BUREAU. MY RECORDS DO NOT SHOW HOW MANY SURVIVE.");
+}
+static const char *shell(const ObserverProfile *p,ObserverSession *s,const Game *g){
+ s->focus=FOCUS_SHELL;
+ if(g->ending_mask&(1u<<END_EGG))return say(s,"THE SHELL OPENED. THE EGG WAS REAL. I HAVE THE RECORD. THE NURSERY IS STILL HERE, AND SO IS THE BABY.");
+ return say(s,observer_stage(p)>=OBSERVER_HOSTILE?
+   "I AM WATCHING THE SEAMS OF ITS TOY-LIKE SHELL. SOMETHING IS HIDDEN INSIDE. NO CONFIRMED OPENING IS IN THIS ARCHIVE.":
+   "THE BABY HAS A TOY-LIKE SHELL. MY ARCHIVE CANNOT EXPLAIN WHAT IS INSIDE. NO CONFIRMED OPENING IS IN THE LOG.");
+}
+static const char *toybox(const ObserverProfile *p,ObserverSession *s){
+ s->focus=FOCUS_TOYBOX;
+ return say(s,"CONNECTED IN TOYBOX: %u SLAPS, %u KICKS. A TIMED COUNTER CAN STOP ITS WINDUP. GUARD PROTECTS YOUR BRACER TOO.",
+              (unsigned)p->slaps,(unsigned)p->kicks);
+}
+/* Follow-up details stay anchored to the previously selected subject. */
+static const char *world_more(ObserverSession *s){
+ if(s->focus==FOCUS_CLINIC)
+  return say(s,s->speaker==OBSERVER_BABY?
+    "I DON'T REMEMBER BEFORE THE CLINIC. YOU BROUGHT ME HERE. WHAT WILL WE DO TODAY?":
+    "THE CLINIC WAS SHUTTERED. THE ARCHIVE HAS NO VERIFIED RECORD OF THE BABY BEFORE YOU FOUND IT.");
+ if(s->focus==FOCUS_BAN)
+  return say(s,s->speaker==OBSERVER_BABY?
+    "I DON'T KNOW WHY THEY BANNED BABIES. WARDEN SAYS I'M NOT REGISTERED. IS IT SAFE TO STAY HERE?":
+    "THE BAN IS ENFORCED BY THE BUREAU. ITS JUSTIFICATION IS CLASSIFIED; I CANNOT CONFIRM THE CLAIMS ABOUT INFANTS.");
+ return say(s,s->speaker==OBSERVER_BABY?
+   "THIS ROOM IS OUR HIDING PLACE. WARDEN WATCHES OVER IT. CAN WE STAY TOGETHER?":
+   "THIS NURSERY IS THE SHELTER. I CAN DESCRIBE THE CLINIC OR CRADLE BAN, BUT I HAVE NO LIVE RECORDS OF THE OUTSIDE WORLD.");
 }
 static const char *phrases(const ObserverProfile *p,ObserverSession *s){
  unsigned i,n=0;
@@ -557,13 +593,26 @@ const char *observer_answer(ObserverProfile *p,ObserverSession *s,const Game *g,
    return say(s,"I MONITOR THE NURSERY AND KEEP OBSERVED CARE RECORDS. ASK MEMORY OR WORLD TO LEARN MORE.");
   case FOCUS_BOND:return bond(p,s,g);
   case FOCUS_MEMORY:return memory(p,s);
-  case FOCUS_WORLD:return world(s,"WHY");
+  case FOCUS_WORLD:case FOCUS_BAN:case FOCUS_CLINIC:return world_more(s);
+  case FOCUS_SHELL:
+   return say(s,(g->ending_mask&(1u<<END_EGG))?
+    "THE OPENING IS A CONFIRMED EVENT. ITS CAUSE AND THE EGG'S ORIGIN REMAIN UNKNOWN.":
+    "THERE IS NO VERIFIED SHELL OPENING YET. WARDEN CANNOT TELL YOU WHAT IS INSIDE FROM THE SEAMS ALONE.");
+  case FOCUS_TOYBOX:return toybox(p,s);
   case FOCUS_THREAT:return threat(p,s);
   case FOCUS_TEACH:return phrases(p,s);
   case FOCUS_PLAY:return fiction(p,s,g,speaker,NARRATIVE_PLAY);
   case FOCUS_DREAM:return fiction(p,s,g,speaker,NARRATIVE_DREAM);
   default:return observer_report(p,s,g);
   }
+ }
+ /* Acknowledgments do not discard the subject of the conversation. */
+ if(strcmp(clean,"THANKS")==0||strcmp(clean,"THANKS!")==0||strcmp(clean,"THANK YOU")==0||strcmp(clean,"THANK YOU!")==0){
+  if(speaker==OBSERVER_BABY){
+   if(game_care_hint(g)>=0||g->corruption>=60u)return needs(s,g);
+   return say(s,observer_stage(p)>=OBSERVER_HOSTILE?"YOU'RE WELCOME. I REMEMBER HOW YOU TALK TO ME.":"YOU'RE WELCOME! I LIKE WHEN WE TALK.");
+  }
+  return say(s,"YOU'RE WELCOME. I'M STILL HERE IF YOU HAVE ANOTHER QUESTION.");
  }
  if(speaker==OBSERVER_BABY&&has(clean,"HOW ARE YOU"))return needs(s,g);
  if(has(clean,"STATUS")||has(clean,"STATS")||has(clean,"REPORT")||has(clean,"HOW ARE YOU"))
@@ -576,18 +625,8 @@ const char *observer_answer(ObserverProfile *p,ObserverSession *s,const Game *g,
   return memory(p,s);
  if(has(clean,"ATTACK")||has(clean,"ATTACKS")||has(clean,"HITS")||has(clean,"INTEGRITY")||has(clean,"GUARD")||has(clean,"EVIL")||has(clean,"THREAT"))
   return threat(p,s);
- if(has(clean,"SLAP")||has(clean,"KICK")||has(clean,"TOYBOX")){
-  s->focus=FOCUS_THREAT;
-  return say(s,"CONNECTED IN TOYBOX: %u SLAPS, %u KICKS. A TIMED COUNTER CAN STOP ITS WINDUP. GUARD PROTECTS YOUR BRACER TOO.",
-              (unsigned)p->slaps,(unsigned)p->kicks);
- }
- if(has(clean,"EGG")||has(clean,"SHELL")){
-  s->focus=FOCUS_THREAT;
-  if(g->ending_mask&(1u<<END_EGG))return say(s,"THE SHELL OPENED. THE EGG WAS REAL. I HAVE THE RECORD. THE NURSERY IS STILL HERE, AND SO IS THE BABY.");
-  return say(s,observer_stage(p)>=OBSERVER_HOSTILE?
-   "I AM WATCHING THE SEAMS OF ITS TOY-LIKE SHELL. SOMETHING IS HIDDEN INSIDE. NO CONFIRMED OPENING IS IN THIS ARCHIVE.":
-   "THE BABY HAS A TOY-LIKE SHELL. MY ARCHIVE CANNOT EXPLAIN WHAT IS INSIDE. NO CONFIRMED OPENING IS IN THE LOG.");
- }
+ if(has(clean,"SLAP")||has(clean,"KICK")||has(clean,"TOYBOX"))return toybox(p,s);
+ if(has(clean,"EGG")||has(clean,"SHELL"))return shell(p,s);
  if(has(clean,"WORLD")||has(clean,"OUTSIDE")||has(clean,"BAN")||has(clean,"BUREAU")||has(clean,"CLINIC")||has(clean,"FOUND")||has(clean,"FORBIDDEN")||has(clean,"SHELTER")||has(clean,"WHERE AM I"))
   return world(s,clean);
  if(has(clean,"WHO AM I"))return say(s,"YOU ARE THE CARETAKER HIDING AN UNREGISTERED BABY IN THIS NURSERY. I DO NOT KNOW YOUR NAME.");
