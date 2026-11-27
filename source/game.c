@@ -427,6 +427,54 @@ int game_arcade_practice_start_mode(const Game *live,Game *sandbox,Arcade *a,int
 int game_arcade_practice_start(const Game *live,Game *sandbox,Arcade *a,int id){
  return game_arcade_practice_start_mode(live,sandbox,a,id,ARCADE_PRACTICE_STANDARD);
 }
+void game_arcade_session_reset(ArcadeSession *session){
+ if(session)memset(session,0,sizeof(*session));
+}
+const ArcadeRecord *game_arcade_session_best(const ArcadeSession *session,unsigned id,unsigned mode){
+ return session&&id<MBAI_GAMES&&mode<=ARCADE_PRACTICE_EXPERT?
+         &session->records[id][mode]:0;
+}
+int game_arcade_session_record(ArcadeSession *session,Arcade *a){
+ ArcadeRecord *r;
+ if(!session||!a||a->id>=MBAI_GAMES||a->practice>ARCADE_PRACTICE_EXPERT||
+    a->active||a->recorded||(a->finished!=1u&&a->finished!=2u))return 0;
+ r=&session->records[a->id][a->practice];
+ a->recorded=1u;
+ if(r->attempts<UINT16_MAX)r->attempts++;
+ if(a->finished==1u){
+  if(!r->clears||a->run_ticks<r->best_ticks)r->best_ticks=a->run_ticks;
+  if(r->clears<UINT16_MAX)r->clears++;
+  if(!a->mistakes&&r->perfect<UINT16_MAX)r->perfect++;
+ }
+ return 1;
+}
+int game_arcade_session_practice(ArcadeSession *session,const Game *live,
+                                Game *sandbox,Arcade *a,int id,unsigned mode){
+ uint32_t seed;
+ if(!session||!live||!sandbox||live==sandbox||!a||id<0||id>=MBAI_GAMES||
+    mode<ARCADE_PRACTICE_STANDARD||mode>ARCADE_PRACTICE_EXPERT)return 0;
+ /* Advance only a transient training nonce. Replays no longer open with
+  * the same questions if the real game RNG has not changed. */
+ session->practice_nonce++;
+ seed=live->rng^(session->practice_nonce*0x9e3779b9u);
+ seed^=seed>>16;seed*=0x7feb352du;seed^=seed>>15;seed*=0x846ca68bu;seed^=seed>>16;
+ *sandbox=*live;
+ sandbox->rng=seed?seed:0xa17u;
+ sandbox->unlocked|=(uint16_t)(1u<<id);
+ sandbox->corruption=(uint8_t)(mode==ARCADE_PRACTICE_EXPERT?65u:0u);
+ arcade_start(sandbox,a,id,mode);
+ return a->active!=0u;
+}
+int game_arcade_rattle_ready(const Arcade *a){
+ return a&&a->active&&a->id==7u&&a->hold_frames&&
+        a->timer<=a->hold_frames/3u&&a->timer>=8u;
+}
+int game_arcade_nap_ready(const Arcade *a){
+ unsigned phase;
+ if(!a||!a->active||a->id!=6u||!a->hold_frames||a->taped)return 0;
+ phase=a->elapsed%a->hold_frames;
+ return phase>=a->hold_frames*38u/100u&&phase<=a->hold_frames*70u/100u;
+}
 int game_arcade_expected(const Arcade *a){
  if(a->id==1)return a->target^(a->reverse?2:0);
  if(a->id==7||a->id==2)return a->target;
@@ -566,11 +614,8 @@ void game_arcade_input(Game *s,Arcade *a,int dir){
   return;
  }
  if(a->id==6){
-  unsigned phase;
-  if(dir!=0||a->taped)return;
-  phase=a->elapsed%a->hold_frames;
-  if(phase>=a->hold_frames*38u/100u&&
-     phase<=a->hold_frames*70u/100u){
+  if(dir!=0||a->taped||!a->hold_frames)return;
+  if(game_arcade_nap_ready(a)){
    a->round++;
    a->taped=1; /* One success per lullaby cycle. */
    if(a->round>=4)finish(s,a,1);
@@ -601,7 +646,7 @@ void game_arcade_input(Game *s,Arcade *a,int dir){
  if(a->id==7){
   /* Match the lane only when the falling rattle enters the catch zone.
    * Tapping immediately on spawn is not a valid catch. */
-  if(dir==a->target&&a->timer<=a->hold_frames/3u&&a->timer>=8){
+  if(dir==a->target&&game_arcade_rattle_ready(a)){
    a->round++;
    if(a->round>=MBAI_ROUNDS)finish(s,a,1);
    else rattle_next(s,a);
@@ -785,6 +830,7 @@ static void bottle_tick(Game *s,Arcade *a){
 }
 void game_arcade_tick(Game *s,Arcade *a){
  if(!a->active)return;
+ if(a->run_ticks<UINT16_MAX)a->run_ticks++;
  if(a->id==0){bottle_tick(s,a);return;}
  if(a->id==8){
   if(a->timer)a->timer--;
