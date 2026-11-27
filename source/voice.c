@@ -104,6 +104,8 @@ void voice_capture_pcm16(VoiceCapture *c,const int16_t *pcm,unsigned samples){
    * consecutive second frame, then enter CAPTURING with both frames
    * included. No extra PCM storage or loss of the word's first syllable. */
   if(!c->tail){
+   /* Do not begin a two-block onset at the wait deadline. */
+   if(c->blocks>=VOICE_MAX_WAIT){c->state=VOICE_NO_SPEECH;return;}
    memcpy(c->measurements[0],row,sizeof(row));
    c->tail=1u;
    return;

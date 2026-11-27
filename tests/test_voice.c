@@ -142,6 +142,18 @@ int main(void){
  assert_stationary_noise_ignored(25000,90u);
  assert_stationary_noise_ignored(13000,45u);
  assert_pop_is_not_speech();
+ /* A first onset at the deadline cannot extend the wait window. */
+ voice_capture_reset(&c);
+ for(unsigned n=0u;n<VOICE_MAX_WAIT-1u;n++)steady_noise(&c,0);
+ steady_noise(&c,24000);
+ assert(c.state==VOICE_NO_SPEECH&&c.frames==0u&&c.tail==0u);
+ steady_noise(&c,24000);
+ assert(c.state==VOICE_NO_SPEECH);
+ /* Two-block onset completed exactly at the deadline is valid. */
+ voice_capture_reset(&c);
+ for(unsigned n=0u;n<VOICE_MAX_WAIT-2u;n++)steady_noise(&c,0);
+ steady_noise(&c,24000);steady_noise(&c,24000);
+ assert(c.state==VOICE_CAPTURING&&c.frames==2u);
  /* A real word starts with two consecutive above-floor frames: unlike a
   * click, this has its first 31ms block preserved for template training. */
  voice_capture_reset(&c);
