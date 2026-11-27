@@ -842,6 +842,7 @@ int main(void){
     Game before_arcade=baby;
     Game *run=arc.practice?&arcade_practice_state:&baby;
     int old_beat_slot=game_arcade_beat_slot(&arc);
+    int old_timing_ready=game_arcade_rattle_ready(&arc)||game_arcade_nap_ready(&arc);
     unsigned old_round=arc.round,old_mistakes=arc.mistakes,old_phase=arc.phase;
     if(arc.id==0||arc.id==9){
      int steer=0;
@@ -963,7 +964,8 @@ int main(void){
     /* Timed questions and WATCH -> REPEAT must become visible in the
      * same tick that changes their rules. Static cabinets otherwise
      * wait up to 60 frames for their throttled timer repaint. */
-    if(arc.round!=old_round||arc.mistakes!=old_mistakes||arc.phase!=old_phase)
+    if(arc.round!=old_round||arc.mistakes!=old_mistakes||arc.phase!=old_phase||
+       old_timing_ready!=(game_arcade_rattle_ready(&arc)||game_arcade_nap_ready(&arc)))
      dirty=1;
     /* Observe once AFTER all input/timer work and BEFORE leaving a
      * finished cabinet. Footer exits are cancellations, never results. */
@@ -1324,6 +1326,7 @@ int main(void){
                     (room_lamp?16:0)|(sfx_is_enabled()?0:32)):
            view==11?talk_selected:
            selected,last_ending,reset_step,storage_ok,message);
+   if(view==1)ui_arcade_record_draw(game_arcade_session_best(&arcade_session,(unsigned)selected,ARCADE_NORMAL));
    {
     int event=arcade_feedback_current(&arcade_feedback);
     if(view==0||view==8){
