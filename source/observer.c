@@ -626,7 +626,7 @@ const char *observer_answer(ObserverProfile *p,ObserverSession *s,const Game *g,
  if(has(clean,"ATTACK")||has(clean,"ATTACKS")||has(clean,"HITS")||has(clean,"INTEGRITY")||has(clean,"GUARD")||has(clean,"EVIL")||has(clean,"THREAT"))
   return threat(p,s);
  if(has(clean,"SLAP")||has(clean,"KICK")||has(clean,"TOYBOX"))return toybox(p,s);
- if(has(clean,"EGG")||has(clean,"SHELL"))return shell(p,s);
+ if(has(clean,"EGG")||has(clean,"SHELL"))return shell(p,s,g);
  if(has(clean,"WORLD")||has(clean,"OUTSIDE")||has(clean,"BAN")||has(clean,"BUREAU")||has(clean,"CLINIC")||has(clean,"FOUND")||has(clean,"FORBIDDEN")||has(clean,"SHELTER")||has(clean,"WHERE AM I"))
   return world(s,clean);
  if(has(clean,"WHO AM I"))return say(s,"YOU ARE THE CARETAKER HIDING AN UNREGISTERED BABY IN THIS NURSERY. I DO NOT KNOW YOUR NAME.");
