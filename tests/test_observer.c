@@ -29,7 +29,41 @@ static void hit(ObserverProfile *p,ObserverSession *s,const Game *g){
   assert(observer_tick(p,s,g,1,0)==OBSERVER_TICK_NONE);
  assert(observer_tick(p,s,g,1,0)==OBSERVER_TICK_HIT);
 }
+static void test_associations(void){
+ Game g,original;
+ ObserverProfile p,before;
+ ObserverSession s;
+ game_init(&g);observer_profile_reset(&p,&g);observer_session_reset(&s,&g);
+ assert(observer_teach(&p,"TINY BOSS")==1);
+ assert(observer_teach(&p,"TINY BOSS")==2);
+ assert(observer_teach(&p,"TINY BOSS")==2);
+ assert(observer_teach(&p,"SILLY CLOUD")==1);
+ original=g;before=p;
+ contains(observer_answer(&p,&s,&g,1,"DO YOU REMEMBER BOSS?"),"I REMEMBER YOU TAUGHT ME: TINY BOSS");
+ contains(observer_answer(&p,&s,&g,1,"MORE"),"PRACTICE 3/15");
+ contains(observer_answer(&p,&s,&g,1,"WHAT ABOUT CLOUD?"),"SILLY CLOUD");
+ contains(observer_answer(&p,&s,&g,1,"MORE?"),"PRACTICE 1/15");
+ contains(observer_answer(&p,&s,&g,1,"TINY BOSS"),"I REMEMBER YOU TAUGHT ME");
+ contains(observer_answer(&p,&s,&g,0,"MORE"),"FOUND. DAY 1.");
+ contains(observer_answer(&p,&s,&g,0,"WHAT ABOUT CLOUD?"),"DO NOT UNDERSTAND");
+ contains(observer_answer(&p,&s,&g,1,"REMEMBER"),"I DON'T HAVE A MEMORY");
+ assert(memcmp(&p,&before,sizeof(p))==0&&memcmp(&g,&original,sizeof(g))==0);
+ assert(observer_teach(&p,"CLOUD PARADE")==1);
+ before=p;
+ contains(observer_answer(&p,&s,&g,1,"RECALL CLOUD"),"MORE THAN ONE LESSON");
+ contains(observer_answer(&p,&s,&g,1,"RECALL CLOUD PARADE"),"CLOUD PARADE");
+ contains(observer_answer(&p,&s,&g,1,"RECALL PARADE?"),"CLOUD PARADE");
+ assert(memcmp(&p,&before,sizeof(p))==0);
+ assert(observer_teach(&p,"REPAIR")==1);
+ p.integrity=19;before=p;
+ contains(observer_answer(&p,&s,&g,1,"RECALL REPAIR"),"I REMEMBER YOU TAUGHT ME: REPAIR");
+ assert(memcmp(&p,&before,sizeof(p))==0&&p.integrity==19);
+ g.energy=0;original=g;
+ contains(observer_answer(&p,&s,&g,1,"RECALL BOSS"),"PLEASE LET ME NAP");
+ assert(memcmp(&p,&before,sizeof(p))==0&&memcmp(&g,&original,sizeof(g))==0);
+}
 int main(void){
+ test_associations();
  Game g,original;
  ObserverProfile p,before;
  ObserverSession s,paused;
