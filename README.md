@@ -125,6 +125,10 @@ Learned preferences fit a **40-byte profile**. When saving is enabled, checksumm
 
 In ROOM, tap **LULLABY** or press SELECT to sing to the baby. A useful lullaby raises mood by up to 6 and lowers chaos by up to 8, costing 3 energy and adding 2 hunger. It plays a separate gentle melody and a connected regroup animation, and records one social care interaction. The baby refuses if hungry, exhausted, or already completely calm and happy. No extra currency, save fields or automatic actions are involved.
 
+### Peekaboo
+
+In ROOM, tap **PEEKABOO** or press R. Wait until the baby opens its eyes, then tap BOO or press A. Three successful reveals win; two early or missed reveals end the activity. A win raises mood by up to 12 and adds 4 chaos, costing 8 energy and adding 6 hunger. It records one play interaction, plays a result animation and saves if storage is enabled. No arcade currency or win/loss counts change. B cancels without a care cost. The baby needs sufficient energy and reasonable hunger/chaos before starting.
+
 ### Care flow and recent memories
 
 Rapid care taps carry the baby's current arm, head, eyelid and bounce pose into the next gesture over 12 game ticks. This includes tiredness changes and the extra recovery from a quiet crib nap. Each gesture still settles back to idle after its original 56-tick cycle.
