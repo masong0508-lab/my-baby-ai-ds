@@ -314,7 +314,8 @@ static void face_oval(float x,float y,float z,float rx,float ry,
  * The opening and iris narrow together, so a blink needs no rectangular
  * skin shutter covering the cheek. The gentle rim stays inside the face.
  * Draw the closed-lid crease separately once the opening is below 1/4. */
-static void baby_eye(float x,float y,float z,float scale,int lid){
+static void baby_eye(float x,float y,float z,float scale,int lid,int gaze){
+ const float shift=(float)gaze*.006f*scale;
  const float aperture=.090f*(float)lid/256.f;
  const float center=y-(.090f-aperture)*.16f*scale;
  const float iris=aperture*.88f<.063f?aperture*.88f:.063f;
@@ -323,14 +324,14 @@ static void baby_eye(float x,float y,float z,float scale,int lid){
             24,17,15,2);
  face_oval(x,center,z+.010f,.106f*scale,aperture*scale,
             31,30,27,-1);
- face_oval(x+.011f*scale,center-.006f*scale,z+.021f,
+ face_oval(x+.011f*scale+shift,center-.006f*scale,z+.021f,
             .057f*scale,iris*scale,11,19,20,-3);
- face_oval(x+.013f*scale,center-.008f*scale,z+.031f,
+ face_oval(x+.013f*scale+shift,center-.008f*scale,z+.031f,
             .030f*scale,pupil*scale,4,7,9,-1);
  /* A smaller glint disappears during a low blink instead of floating
   * above the narrowed pupil. It remains attached to the same eye. */
  if(lid>=112)
-  soft_mark(x-.010f*scale,center+.024f*scale,z+.038f,
+  soft_mark(x-.010f*scale+shift,center+.024f*scale,z+.038f,
              .023f*scale,.018f*scale,31,31,29);
 }
 /* Low CHAT syllables used a wafer-thin ellipsoid whose pole bands could
@@ -686,8 +687,25 @@ int world_baby_speech_open(uint32_t age){
  beat=(age-8u)%12u;
  return (int)(beat<=6u?beat:12u-beat)*42;
 }
+/* Quiet eye contact alternates with two short, eased glances. Iris,
+ * pupil and glint share the same offset; sockets never move. */
+int world_baby_gaze(uint32_t frame){
+ uint32_t phase=frame%480u;
+ if(phase>=192u&&phase<248u){
+  uint32_t age=phase-192u;
+  return -3*smooth8(age<12u?age:age>=44u?56u-age:12u,12u)/256;
+ }
+ if(phase>=352u&&phase<408u){
+  uint32_t age=phase-352u;
+  return 3*smooth8(age<12u?age:age>=44u?56u-age:12u,12u)/256;
+ }
+ return 0;
+}
 int world_baby_lid_open(uint32_t frame,int action,uint32_t age){
  uint32_t beat=frame%173u;
+ /* Every fourth cycle includes a second, naturally spaced blink.
+  * Reuse the established eight-tick aperture curve. */
+ if((frame/173u)%4u==2u&&beat>=20u&&beat<28u)beat-=20u;
  int openness=256,nap;
  if(beat<8u){
   int blink=beat<4u?256-(int)(beat+1u)*64:(int)(beat-3u)*64;
@@ -870,6 +888,9 @@ static void baby_model(const Game *s,uint32_t frame,int action,
   * connected to the parent model rather than becoming floating parts. */
  const float settle=rag?(float)rag->impact*.0025f:0.f;
  const int lid=rig.lid;
+ /* Keep the title and Toybox shell gaze stable. The live nursery uses
+  * small horizontal eye excursions within the existing sockets. */
+ const int gaze=rag?0:world_baby_gaze(frame);
  /* Hungry and exhausted infants should look unsettled even when
   * an old positive mood score hasn't yet caught up with their needs.
   * NAP/FEED restores the same face without adding new visual states. */
@@ -952,8 +973,8 @@ static void baby_model(const Game *s,uint32_t frame,int action,
   soft_mark(.159f,.565f,.534f,.092f,.018f,18,11,10);
   soft_mark(.250f,.572f,.532f,.092f,.018f,18,11,10);
  }else{
-  baby_eye(-.205f,.575f,.480f,1.f,lid);
-  baby_eye(.205f,.575f,.480f,1.f,lid);
+  baby_eye(-.205f,.575f,.480f,1.f,lid,gaze);
+  baby_eye(.205f,.575f,.480f,1.f,lid,gaze);
  }
  /* Warm cheeks, gentle brows, button nose and a tiny restrained smile. */
  face_oval(-.355f,.365f,.411f,.095f,.050f,31,19,19,2);
@@ -1744,8 +1765,8 @@ void world_draw_title(uint32_t frame){
  hair_fringe(-.25f,.54f,.30f,.30f,.09f,.025f);
  hair_fringe(.17f,.54f,.29f,.28f,.09f,-.03f);
  hair_fringe(-.015f,.59f,.305f,.16f,.074f,-.027f);
- baby_eye(-.225f,.057f,.333f,1.08f,256);
- baby_eye(.225f,.057f,.333f,1.08f,256);
+ baby_eye(-.225f,.057f,.333f,1.08f,256,0);
+ baby_eye(.225f,.057f,.333f,1.08f,256,0);
  face_oval(-.43f,-.205f,.282f,.080f,.043f,31,19,19,2);
  face_oval(.43f,-.205f,.282f,.080f,.043f,31,19,19,2);
  soft_mark(0,-.27f,.337f,.14f,.023f,18,9,11);
