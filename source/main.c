@@ -33,6 +33,7 @@
 #define SAVE_BASE "fat:/my_baby_ai"
 static Game baby;
 static Arcade arc;
+static NurseryPeek peek;
 static ArcadeFeedback arcade_feedback;
 static uint8_t save_write_failed;
 static uint8_t learning_write_failed;
@@ -91,6 +92,7 @@ static void reset_care_motion(void){
  care_motion=(WorldBabyMotion){0};
 }
 static void reset_care_session(void){
+ memset(&peek,0,sizeof(peek));
  mic_input_stop();voice_mode=0;voice_match=-1;voice_slot=-1;
  voice_forget_armed=0;voice_profile_present=0;
  voice_profile_reset(&voice_profile);voice_capture_reset(&voice_capture);
@@ -413,6 +415,45 @@ static void room_lullaby(uint32_t frame){
           (unsigned)before.chaos-(unsigned)baby.chaos);
  message=room_feedback;
  (void)persist();
+}
+/* Peekaboo awards one genuine social play event only on completion.
+ * Timed misses, cancellation, and result acknowledgments never train
+ * the baby or spend currency. */
+static void room_peek_begin(void){
+ if(!game_peek_start(&baby,&peek)){
+  message=baby.hunger>=70u?"FEED ME BEFORE PLAYING.":
+          baby.energy<25u?"I NEED A NAP BEFORE PLAYING.":
+          "LET'S CALM DOWN BEFORE PLAYING.";
+  return;
+ }
+ reset_care_motion();
+ view=14;
+}
+static int room_peek_step(uint32_t frame,int pressed){
+ Game before=baby;
+ unsigned round=peek.round,misses=peek.misses;
+ int changed=pressed?game_peek_tap(&baby,&peek):game_peek_tick(&peek);
+ if(!changed)return 0;
+ if(peek.phase==PEEK_WON){
+  WorldBabyPose from=world_baby_pose(&before,frame,pose,pose_age,
+                                     pose?&care_motion:0);
+  (void)dialogue_contextual_reply(&memories,&baby,PLAY,"PEEKABOO!");
+  conversation_record_care(&conversation,&before,&baby,PLAY);
+  (void)observer_record_care(&shelter,&observer,&before,&baby,PLAY);
+  pose=WORLD_BABY_CHEER;pose_age=0;
+  world_baby_motion_start(&care_motion,from,&baby,frame,pose);
+  sfx_play(SFX_ARCADE_WIN);
+  snprintf(room_feedback,sizeof(room_feedback),"PEEKABOO: +%u MOOD",
+           (unsigned)baby.mood-(unsigned)before.mood);
+  message=room_feedback;
+  (void)persist();
+ }else if(peek.phase==PEEK_LOST){
+  observer_pose(WORLD_BABY_REGROUP,frame);
+  sfx_play(SFX_ARCADE_LOSS);
+  message="WE CAN TRY PEEKABOO AGAIN.";
+ }else if(peek.misses!=misses)sfx_play(SFX_ARCADE_MISS);
+ else if(peek.round!=round)sfx_play(SFX_ARCADE_PROGRESS);
+ return 1;
 }
 static void end_day(void){
  int e=game_end_day(&baby);
@@ -1024,6 +1065,7 @@ int main(void){
     view=0;message="BACK IN BABY'S NURSERY.";dirty=1;
    }else{
     if(down&KEY_SELECT)picked=8;
+    else if(down&KEY_R)picked=9;
     else if(tap)picked=ui_room_touch(touch.px,touch.py);
     else if(!vpen.enabled){
      /* D-pad selects/uses the pictured objects without a touchscreen. */
@@ -1035,7 +1077,9 @@ int main(void){
     }
     /* The sound toggle and USE labels are also true stylus hitboxes. */
     if(picked==6)picked=room_focus;
-    if(picked==8){
+    if(picked==9){
+     room_peek_begin();dirty=1;
+    }else if(picked==8){
      room_lullaby(frame);dirty=1;
     }else if(picked==7){
      save_live_baby();dirty=1;
@@ -1091,6 +1135,16 @@ int main(void){
      dirty=1;
     }
    }
+  }else if(view==14){
+   int picked=tap?ui_peek_touch(touch.px,touch.py):0;
+   int pressed=(down&KEY_A)!=0||picked==1;
+   if((down&(KEY_B|KEY_START))||picked==2||
+      (pressed&&(peek.phase==PEEK_WON||peek.phase==PEEK_LOST))){
+    if(peek.phase!=PEEK_WON&&peek.phase!=PEEK_LOST)
+     message="PEEKABOO CANCELLED.";
+    peek.phase=PEEK_IDLE;
+    view=10;dirty=1;
+   }else if(room_peek_step(frame,pressed))dirty=1;
   }
   /* Delay the lightweight top portrait until AFTER the bottom title has
    * been visible for 16 frames. It keeps boot safe on older DS emulators. */
@@ -1138,6 +1192,8 @@ int main(void){
     world_draw_care_from(&baby,frame,pose,pose_age,&care_motion);
    else if(view==8||(view==0&&rag.moving))
     world_draw_roughhouse(&baby,frame,&rag);
+   else if(view==14&&peek.phase==PEEK_WAIT)
+    world_draw_care(&baby,frame,NAP+1,24u);
    else if(view==0||view==10||view==11||view==12||view==13)
     world_draw_nursery(&baby,frame,pose,pose_age,
                        room_focus,room_previous,room_camera_age,
@@ -1151,7 +1207,8 @@ int main(void){
      (view==2&&frame%arcade_redraw_period(&arc)==0u)){
    /* The actual per-frame draw must receive the Room prop selection and
     * lamp/day flags. Startup UI paint is NOT the Room redraw path. */
-   if(view==13)ui_mic_draw(&baby,storage_ok,voice_word,
+   if(view==14)ui_peek_draw(&baby,&peek,storage_ok);
+   else if(view==13)ui_mic_draw(&baby,storage_ok,voice_word,
        voice_mode?voice_capture.state==VOICE_CALIBRATE?
          "MEASURING ROOM NOISE...":voice_capture.state==VOICE_WAIT?
          "LISTENING. SAY YOUR WORD NOW.":"HEARD YOU. FINISH THE WORD.":voice_status,
