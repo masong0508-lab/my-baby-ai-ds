@@ -70,7 +70,9 @@ def status(image, cabinet):
     if cabinet == 6:
         state["marker_x"] = marker(image, 147, 20, 239, 4)
         state["cue"] = text_at(image, 82, 134, 19)
-        assert state["cue"] in ("TAP IN GREEN", "SWEET DREAMS!"), state
+        if state["cue"] not in ("WAIT FOR GREEN", "SWEET DREAMS!"):
+            state["cue"] = text_at(image, 82, 134, 19, ink="teal")
+        assert state["cue"] in ("WAIT FOR GREEN", "TAP NOW!", "SWEET DREAMS!"), state
     return state
 
 
@@ -275,7 +277,7 @@ def test_nap(player):
     for calm in range(4):
         image, state = player.observe("unscored green timing window", lambda s:
             s["round"] == calm and s["mistakes"] == 1 and
-            s["cue"] == "TAP IN GREEN" and 121 <= s["marker_x"] <= 139,
+            s["cue"] == "TAP NOW!" and 121 <= s["marker_x"] <= 139,
             limit=1000)
         # Both sides of the visible marker belong to the mint timing band.
         assert color_at(image, 110, 155) == "mint"
@@ -311,8 +313,9 @@ def rattle_scene(image):
             if any(rgb5(image, x, y) == SUN5
                    for x in range(33 + lane * 82, 62 + lane * 82))]
     assert rows, "Falling rattle face is not visible"
-    assert color_at(image, 18 + lane * 82, 130) == "gold"
-    assert color_at(image, 18 + lane * 82, 145) == "lemon"
+    edge = color_at(image, 18 + lane * 82, 130)
+    fill = color_at(image, 18 + lane * 82, 145)
+    assert (edge, fill) in (("gold", "lemon"), ("green", "mint")), (edge, fill)
     return lane, min(rows)
 
 
@@ -330,8 +333,9 @@ def test_rattle(player):
         def catchable(image):
             state = status(image, 7)
             assert state == {"round": caught, "mistakes": 2}, state
-            _, face = rattle_scene(image)
-            return 132 <= face <= 140
+            lane, face = rattle_scene(image)
+            return (132 <= face <= 140 and
+                    color_at(image, 18 + lane * 82, 145) == "mint")
 
         image = player.wait("rattle face enters the gold catch zone", catchable,
                             limit=1100, stride=2)
