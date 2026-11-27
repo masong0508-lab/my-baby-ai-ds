@@ -1333,6 +1333,7 @@ int main(void){
    }
    dirty=0;
   }
+  if(view==2)ui_arcade_clock(&arc);
   if(view==7)ui_touch_diag_update(world_vertex_count(),
                                   world_polygon_count());
   /* Every submitted frame is timed even with the optional display off.
