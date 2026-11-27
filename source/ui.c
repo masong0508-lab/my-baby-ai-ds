@@ -1415,7 +1415,7 @@ void ui_arcade_guide_draw(const Game *s,unsigned id,int paused,int practice,int 
  fit(65,50,arcade_goal_text[id],INK,30);
  fit(65,61,paused?(practice?"PRACTICE RUN PAUSED":"NORMAL RUN PAUSED"):
                   game_unlocked(s,(int)id)?"CABINET UNLOCKED":"PRACTICE IS AVAILABLE",TEAL,30);
- fit(65,72,"WIN $5; FAVOR EVERY 2ND WIN",MUTED,30);
+ fit(65,72,paused&&practice?"NO REWARDS OR PENALTIES":"WIN $5; FAVOR EVERY 2ND WIN",MUTED,30);
  panel(8,89,240,43,WHITE,PURPLE);
  for(unsigned i=0;i<3u;i++)fit(17,95+(int)i*10,arcade_instructions[id][i],INK,37);
  capsule(8,136,116,29,paused?MINT:game_unlocked(s,(int)id)?MINT:GRAY,TEAL);
@@ -1455,6 +1455,21 @@ static void arcade_wall(uint16_t background){
  solid(0,174,256,2,screen_accent);
 }
 /* A quiet status rule instead of an extra dense row of pixel badges. */
+static int clock_width=-1;
+static uint16_t clock_color;
+void ui_arcade_clock(const Arcade *a){
+ unsigned left,width;
+ uint16_t color;
+ if(!pixels||!a)return;
+ left=a->timer>a->timer_limit?a->timer_limit:a->timer;
+ width=a->timer_limit?left*104u/a->timer_limit:0u;
+ color=width>52u?TEAL:width>26u?GOLD:ROSE;
+ if(clock_width==(int)width&&clock_color==color)return;
+ cursor_erase();
+ solid(96,73,104,2,GRAY);
+ solid(96,73,(int)width,2,color);
+ clock_width=(int)width;clock_color=color;
+}
 static void cabinet_chrome(const Arcade *a){
  int i;
  int goal=(int)game_arcade_goal(a->id);
@@ -1463,6 +1478,8 @@ static void cabinet_chrome(const Arcade *a){
   solid(12+i*12,73,9,2,i<a->round?GREEN:TEAL);
  for(i=0;i<3;i++)
   solid(210+i*11,73,8,2,i<a->mistakes?ROSE:SILVER);
+ clock_width=-1;
+ ui_arcade_clock(a);
 }
 static void bar(int x,int y,int width,int value,int total,uint16_t color){
  int fill=total>0?value*(width-4)/total:0;
