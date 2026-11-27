@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <stdio.h>
+#include <string.h>
 #include "game.h"
 static void bottle(void){
  Game g;Arcade a;int i;
@@ -457,7 +458,62 @@ static void rattle(void){
  g.corruption=65;game_arcade_start(&g,&a,7);
  assert(a.hold_frames==108);
 }
+/* Practice uses the real cabinet engine but a separate state. Cover
+ * every paid/free cabinet, its normal difficulty, timers and live-save
+ * isolation even after repeated mistakes/timeouts. */
+static void practice_all(void){
+ Game live,original,sandbox;Arcade a;
+ static const unsigned goal[16]={6,4,6,6,3,6,4,6,6,5,6,6,6,4,4,6};
+ game_init(&live);live.corruption=95;live.wins=7;live.losses=3;
+ original=live;
+ for(int id=0;id<MBAI_GAMES;id++){
+  assert(game_arcade_goal((unsigned)id)==goal[id]);
+  assert(game_arcade_practice_start(&live,&sandbox,&a,id));
+  assert(a.active&&a.practice&&a.id==id&&sandbox.corruption==0);
+  assert(game_unlocked(&sandbox,id));
+  assert(memcmp(&live,&original,sizeof(live))==0);
+  for(unsigned tick=0;tick<2500u&&a.active;tick++)
+   game_arcade_tick(&sandbox,&a);
+  assert(!a.active&&a.finished);
+  assert(memcmp(&live,&original,sizeof(live))==0);
+ }
+ assert(!game_arcade_goal(16u));
+ assert(!game_arcade_practice_start(&live,&live,&a,0));
+ assert(!game_arcade_practice_start(&live,&sandbox,&a,16));
+ assert(memcmp(&live,&original,sizeof(live))==0);
+ assert(game_arcade_practice_start(&live,&sandbox,&a,4));
+ assert(game_arcade_beat_slot(&a)==0);
+ while(a.elapsed<30u)game_arcade_tick(&sandbox,&a);
+ assert(game_arcade_beat_slot(&a)==1);
+ while(a.elapsed<60u)game_arcade_tick(&sandbox,&a);
+ assert(game_arcade_beat_slot(&a)==2);
+ while(!a.phase)game_arcade_tick(&sandbox,&a);
+ assert(game_arcade_beat_slot(&a)==-1);
+ /* Normal play is still locked and never inherits practice mode. */
+ game_arcade_start(&live,&a,8);assert(!a.active&&!a.practice);
+ game_arcade_start(&live,&a,0);assert(a.active&&!a.practice);
+ assert(memcmp(&live,&original,sizeof(live))==0);
+}
+static void arcade_counter_limits(void){
+ Game g;Arcade a;
+ game_init(&g);g.unlocked=UINT16_MAX;g.wins=UINT32_MAX-1u;
+ game_arcade_start(&g,&a,10);
+ for(unsigned i=0;i<6u;i++)game_arcade_input(&g,&a,game_arcade_expected(&a));
+ assert(g.wins==UINT32_MAX);
+ game_arcade_start(&g,&a,10);
+ for(unsigned i=0;i<6u;i++)game_arcade_input(&g,&a,game_arcade_expected(&a));
+ assert(g.wins==UINT32_MAX);
+ g.losses=UINT32_MAX;
+ game_arcade_start(&g,&a,10);
+ for(unsigned i=0;i<3u;i++)game_arcade_input(&g,&a,(game_arcade_expected(&a)+1)%3);
+ assert(g.losses==UINT32_MAX&&a.finished==2);
+ /* A released stylus must not constantly redraw a button-only trace. */
+ game_arcade_start(&g,&a,14);
+ game_arcade_input(&g,&a,game_arcade_expected(&a));
+ assert(a.stage==1&&!game_arcade_court_touch(&g,&a,0,0,0)&&a.stage==1);
+}
 int main(void){
+ practice_all();arcade_counter_limits();
  bottle();diaper();diaper_gestures();tax_receipts();
  crib_kart();baby_beatbox();sock_market();naptime();rattle();
  corporate_crawl();stroller_drift();cereal_cipher();tantrum_blocks();
