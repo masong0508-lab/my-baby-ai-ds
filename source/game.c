@@ -237,6 +237,9 @@ const char *game_ending_name(int e){
  * Arcade state is intentionally not part of the persistent Game save.
  */
 static void arcade_timer(Arcade *a,unsigned ticks){
+ /* Optional practice modifiers apply at every new question/phase. */
+ if(a->practice==ARCADE_PRACTICE_RELAXED)ticks=ticks*3u/2u;
+ else if(a->practice==ARCADE_PRACTICE_EXPERT)ticks=ticks*4u/5u;
  a->timer=a->timer_limit=(uint16_t)ticks;
 }
 static const uint8_t diaper_tasks[4]={3,1,2,0}; /* left,right,down,up */
@@ -303,9 +306,19 @@ static void stroller_begin(Game *s,Arcade *a){
 }
 static void cereal_next(Game *s,Arcade *a){
  int i,answer;
- a->stage=(uint8_t)(1u+next(s)%4u);
- a->direction=(uint8_t)(1u+next(s)%4u);
- answer=a->stage+a->direction;
+ if(a->practice==ARCADE_PRACTICE_EXPERT){
+  /* Alternate bigger sums and nonnegative subtraction problems. Keep
+   * the answer >=2 so all three nearby choices are valid numbers. */
+  a->reverse=(uint8_t)(a->round&1u);
+  a->stage=(uint8_t)(5u+next(s)%5u);
+  a->direction=(uint8_t)(2u+next(s)%(a->reverse?(unsigned)a->stage-3u:8u));
+  answer=a->reverse?a->stage-a->direction:a->stage+a->direction;
+ }else{
+  a->reverse=0;
+  a->stage=(uint8_t)(1u+next(s)%4u);
+  a->direction=(uint8_t)(1u+next(s)%4u);
+  answer=a->stage+a->direction;
+ }
  a->target=(uint8_t)(next(s)%3u);
  for(i=0;i<3;i++)a->notes[i]=(uint8_t)(answer+i-a->target);
  arcade_timer(a,game_glitch_tier(s)>=3?120:180);
@@ -314,11 +327,16 @@ static void blocks_next(Game *s,Arcade *a){
  a->target=(uint8_t)(next(s)%3u);
  a->elapsed=0;a->direction=0;
  a->hold_frames=(uint16_t)(game_glitch_tier(s)>=3?11:16);
+ if(a->practice==ARCADE_PRACTICE_RELAXED)a->hold_frames=24u;
+ else if(a->practice==ARCADE_PRACTICE_EXPERT)a->hold_frames=9u;
  arcade_timer(a,game_glitch_tier(s)>=3?130:190);
 }
 static void audit_next(Game *s,Arcade *a){
  a->stage=(uint8_t)(20u+next(s)%50u);
- a->direction=(uint8_t)(a->stage+((next(s)&1u)?0u:5u));
+ if(a->practice==ARCADE_PRACTICE_EXPERT){
+  static const int differences[]={0,0,-1,1,-10,10};
+  a->direction=(uint8_t)((int)a->stage+differences[next(s)%6u]);
+ }else a->direction=(uint8_t)(a->stage+((next(s)&1u)?0u:5u));
  a->target=(uint8_t)(a->stage==a->direction?0:1);
  arcade_timer(a,game_glitch_tier(s)>=3?125:180);
 }
@@ -366,11 +384,11 @@ int game_arcade_beat_slot(const Arcade *a){
  slot=(unsigned)a->elapsed*3u/a->hold_frames;
  return (int)(slot>2u?2u:slot);
 }
-void game_arcade_start(Game *s,Arcade *a,int id){
+static void arcade_start(Game *s,Arcade *a,int id,unsigned practice){
  if(!a)return;
  memset(a,0,sizeof(*a));
  if(!s||!game_unlocked(s,id))return;
- a->active=1;a->id=(uint8_t)id;
+ a->active=1;a->id=(uint8_t)id;a->practice=(uint8_t)practice;
  if(id==0){
   arcade_timer(a,600u);
   a->reverse=(uint8_t)(game_glitch_tier(s)>=2);
@@ -394,14 +412,20 @@ void game_arcade_start(Game *s,Arcade *a,int id){
  else if(id==15)ceo_begin(s,a);
  else round_next(s,a);
 }
-int game_arcade_practice_start(const Game *live,Game *sandbox,Arcade *a,int id){
- if(!live||!sandbox||live==sandbox||!a||id<0||id>=MBAI_GAMES)return 0;
+void game_arcade_start(Game *s,Arcade *a,int id){
+ arcade_start(s,a,id,ARCADE_NORMAL);
+}
+int game_arcade_practice_start_mode(const Game *live,Game *sandbox,Arcade *a,int id,unsigned mode){
+ if(!live||!sandbox||live==sandbox||!a||id<0||id>=MBAI_GAMES||
+    mode<ARCADE_PRACTICE_STANDARD||mode>ARCADE_PRACTICE_EXPERT)return 0;
  *sandbox=*live;
  sandbox->unlocked|=(uint16_t)(1u<<id);
- sandbox->corruption=0;
- game_arcade_start(sandbox,a,id);
- a->practice=1u;
+ sandbox->corruption=(uint8_t)(mode==ARCADE_PRACTICE_EXPERT?65u:0u);
+ arcade_start(sandbox,a,id,mode);
  return a->active!=0u;
+}
+int game_arcade_practice_start(const Game *live,Game *sandbox,Arcade *a,int id){
+ return game_arcade_practice_start_mode(live,sandbox,a,id,ARCADE_PRACTICE_STANDARD);
 }
 int game_arcade_expected(const Arcade *a){
  if(a->id==1)return a->target^(a->reverse?2:0);
