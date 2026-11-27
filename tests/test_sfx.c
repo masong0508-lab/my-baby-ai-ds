@@ -98,6 +98,11 @@ int main(void){
  finish(SFX_NAP,40);
  finish(SFX_ROOM_SWITCH,16);
  finish(SFX_MOBILE,36);
+ finish(SFX_LULLABY,54);
+ assert(cue_signature(SFX_LULLABY)!=cue_signature(SFX_NAP));
+ cannot_interrupt(SFX_SCARE,SFX_LULLABY);
+ cannot_interrupt(SFX_UNSEAL,SFX_LULLABY);
+ cannot_interrupt(SFX_PULSE,SFX_LULLABY);
  assert(note_changes>=15);
  /* Audio CHAT is synchronized to the rig's three 12-tick mouth pulses:
   * age 0..7 anticipation is silent, 8..43 contains the babble, and
