@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include "game.h"
 #include "arcade_feedback.h"
+#include "perf.h"
 /* Bottom-screen native bitmap UI: no heap, no asset files, no extra framebuffer. */
 void ui_init(void *vram);
 void ui_draw(const Game *s,const Arcade *a,int view,int selected,
@@ -87,6 +88,8 @@ void ui_touch_observe(int down,int x,int y,uint32_t count);
 /* Live DS geometry submissions, updated only on the optional diagnostics
  * page. Counts are not hardware FPS or RAM measurements. */
 void ui_touch_diag_update(unsigned vertices,unsigned polygons);
+/* Optional seven-pixel status strip above the original header labels. */
+void ui_perf_overlay(const PerfScene *stats);
 void ui_virtual_cursor_update(int enabled,int x,int y,int pressed);
 int ui_arcade_navigation(int x,int y); /* 1 play, 2 buy, 3 back */
 #endif
