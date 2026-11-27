@@ -85,8 +85,24 @@ static void peek_miss(NurseryPeek *p){
  if(p->misses>=2u){p->phase=PEEK_LOST;p->ticks=0;}
  else peek_wait(p);
 }
+int game_peek_scare_roll(NurseryPeek *p,uint32_t draw){
+ if(!p||p->phase!=PEEK_OPEN||(draw&0xfffffu)!=0u)return 0;
+ p->phase=PEEK_SCARE;
+ p->ticks=PEEK_SCARE_TICKS;
+ return 1;
+}
 int game_peek_tick(NurseryPeek *p){
- if(!p||(p->phase!=PEEK_WAIT&&p->phase!=PEEK_OPEN))return 0;
+ if(!p)return 0;
+ if(p->phase==PEEK_SCARE||p->phase==PEEK_CORRUPT){
+  if(p->ticks&&--p->ticks)return 0;
+  if(p->phase==PEEK_SCARE){
+   p->phase=PEEK_CORRUPT;p->ticks=PEEK_CORRUPT_TICKS;
+  }else{
+   p->phase=PEEK_LOCKED;p->ticks=0;
+  }
+  return 1;
+ }
+ if(p->phase!=PEEK_WAIT&&p->phase!=PEEK_OPEN)return 0;
  if(p->ticks&&--p->ticks)return 0;
  if(p->phase==PEEK_WAIT){p->phase=PEEK_OPEN;p->ticks=48u;}
  else peek_miss(p);
