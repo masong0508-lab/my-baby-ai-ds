@@ -749,11 +749,41 @@ static void room_screen(const Game *s,int state,const char *message){
 }
 /* A separate full lower-screen activity with readable timing cues.
  * No text or cursor storage beyond the existing bitmap surface. */
+/* The lost-session display uses only normal bitmap drawing.
+ * No storage or hardware faults, no rapid flashing. */
+static void peek_horror_screen(const Game *s,const NurseryPeek *p){
+ unsigned i;
+ cursor_visible=0;
+ solid(0,0,256,192,NIGHT);
+ if(p->phase==PEEK_SCARE){
+  fit(18,26,"YOU LOOKED.",PINK,36);
+  label(18,66,"IT SAW YOU",WHITE,2,18);
+  fit(18,136,"WARDEN SIGNAL LOST",ROSE,36);
+ }else if(p->phase==PEEK_CORRUPT){
+  if(!s->safe_visuals){
+   for(i=0;i<12u;i++){
+    int x=(int)((i*47u+17u)%180u);
+    solid(x,8+(int)i*14,12+(int)(i*11u%56u),2,
+          i%3u==0u?ROSE:PURPLE);
+   }
+  }
+  panel(12,42,232,110,INK,ROSE);
+  fit(21,52,"WARDEN // LINK FAILURE",PINK,35);
+  fit(21,76,"SESSION IMAGE INVALID",WHITE,35);
+  fit(21,94,"NURSERY PROCESS HALTED",WHITE,35);
+  fit(21,126,"RECOVERY UNAVAILABLE",ROSE,35);
+ }else{
+  fit(18,26,"WARDEN // OFFLINE",ROSE,36);
+  label(18,73,"GAME HALTED",WHITE,2,18);
+  fit(18,132,"RESTART THE GAME TO RECOVER.",MUTED,36);
+ }
+}
 void ui_peek_draw(const Game *s,const NurseryPeek *p,int can_save){
  char line[40];
  unsigned i;
  int result;
  if(!pixels||!s||!p)return;
+ if(p->phase>=PEEK_SCARE){peek_horror_screen(s,p);return;}
  cursor_visible=0;screen_accent=AQUA;
  header("PEEKABOO",s,can_save);
  solid(0,27,256,149,LILAC);
