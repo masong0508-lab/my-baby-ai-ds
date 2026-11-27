@@ -8,7 +8,7 @@
  * A rigid model transform preserves triangle area. This catches repeated
  * hand-cap poles without pretending the host shim emulates DS pixels. */
 static int primitive_mode;
-static unsigned primitive_vertices,submitted_hand_caps;
+static unsigned primitive_vertices,submitted_hand_caps,moon_relief_centers;
 static float triangle_points[3][3];
 static int capture_geometry;
 static uint32_t geometry_hash;
@@ -23,6 +23,8 @@ void test_gl_vertex(float x,float y,float z){
   memcpy(&bits,&z,sizeof(bits));geometry_hash=(geometry_hash^bits)*16777619u;
  }
  if(primitive_mode==GL_TRIANGLES){
+  if(x>-1.350001f&&x<-1.349999f&&y>1.539999f&&y<1.540001f&&
+     z>-2.948001f&&z<-2.947999f)moon_relief_centers++;
   unsigned n=primitive_vertices%3u;
   triangle_points[n][0]=x;triangle_points[n][1]=y;triangle_points[n][2]=z;
   if(n==2u){
@@ -110,6 +112,11 @@ static uint32_t baby_geometry(const Game *s,int action,unsigned age){
 int main(void){
  Game s;Roughhouse r;int i;unsigned worst_v=0,worst_p=0;
  game_init(&s);world_init();
+ /* A full circle's twelve real front triangles share a raised center.
+  * The existing triangle-area assertion checks every new triangle. */
+ moon_relief_centers=0;
+ world_draw(&s,128u,0);
+ assert(moon_relief_centers==12u);
  /* WARDEN's physical screen clamps damaged/unknown status without
   * changing the baby or exceeding the normal scene budget. */
  {
