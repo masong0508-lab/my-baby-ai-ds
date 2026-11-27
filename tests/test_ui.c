@@ -1087,8 +1087,13 @@ int main(void){
  assert(ui_nap_touch(20,92)==0);
  assert(ui_nap_touch(256,145)==-1);
  assert(ui_nap_touch(128,183)==-1);
- a.id=7;a.timer=70;a.hold_frames=144;a.target=1;a.round=2;
+ a.id=7;a.active=1;a.timer=70;a.hold_frames=144;a.target=1;a.round=2;
  ui_draw(&g,&a,2,0,0,0,1,"RATTLE");
+ assert(screen[136*256+100]==TEST_RGB(31,28,13));
+ a.timer=48;ui_draw(&g,&a,2,0,0,0,1,"RATTLE");
+ assert(screen[136*256+100]==TEST_RGB(22,30,23));
+ a.timer=7;ui_draw(&g,&a,2,0,0,0,1,"RATTLE");
+ assert(screen[136*256+100]==TEST_RGB(31,28,13));
  assert(ui_rattle_touch(40,143)==0);
  assert(ui_rattle_touch(122,143)==1);
  assert(ui_rattle_touch(210,143)==2);
