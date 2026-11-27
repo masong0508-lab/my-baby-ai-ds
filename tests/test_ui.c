@@ -731,7 +731,9 @@ int main(void){
  assert(ui_room_touch(180,139)==3); /* crib */
  assert(ui_room_touch(129,139)==-1); /* column gap */
  assert(ui_room_touch(30,117)==-1); /* row gap */
- assert(ui_room_touch(8,163)==8&&ui_room_touch(247,174)==8);
+ assert(ui_room_touch(8,163)==8&&ui_room_touch(123,174)==8);
+ assert(ui_room_touch(132,163)==9&&ui_room_touch(247,174)==9);
+ assert(ui_room_touch(128,166)==-1);
  assert(ui_room_touch(7,163)==-1&&ui_room_touch(248,174)==-1);
  assert(ui_room_touch(120,162)==-1&&ui_room_touch(120,175)==-1);
  assert(ui_room_touch(128,183)==4); /* return */
@@ -743,6 +745,16 @@ int main(void){
  assert(ui_room_touch(0,0)==-1);
  assert(ui_room_touch(256,95)==-1);
  assert(ui_room_touch(40,192)==-1);
+ assert(ui_peek_touch(40,119)==1&&ui_peek_touch(215,164)==1);
+ assert(ui_peek_touch(39,119)==0&&ui_peek_touch(216,164)==0);
+ assert(ui_peek_touch(128,183)==2&&ui_peek_touch(256,183)==0);
+ {
+  NurseryPeek peek={0};uint32_t wait,open,win;
+  peek.phase=PEEK_WAIT;ui_peek_draw(&g,&peek,1);verify_coverage();wait=fingerprint();
+  peek.phase=PEEK_OPEN;ui_peek_draw(&g,&peek,1);verify_coverage();open=fingerprint();
+  peek.phase=PEEK_WON;peek.round=3;ui_peek_draw(&g,&peek,1);verify_coverage();win=fingerprint();
+  assert(wait!=open&&open!=win&&wait!=win);
+ }
  {
   uint32_t night,day,lamp_off,light_on,teddy;
   ui_draw(&g,&a,10,16,0,0,1,"ROOM TOUR");
