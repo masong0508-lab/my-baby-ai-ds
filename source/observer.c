@@ -10,7 +10,8 @@ _Static_assert(sizeof(ObserverProfile)<=256u,"observer profile budget");
 _Static_assert(sizeof(ObserverSession)<=192u,"observer session budget");
 enum {FOCUS_STATUS=0,FOCUS_NEEDS,FOCUS_MEMORY,FOCUS_WORLD,FOCUS_SELF,
       FOCUS_PLAY,FOCUS_DREAM,FOCUS_THREAT,FOCUS_TEACH,FOCUS_CALC,FOCUS_BOND,
-      FOCUS_BAN,FOCUS_CLINIC,FOCUS_SHELL,FOCUS_TOYBOX};
+      FOCUS_BAN,FOCUS_CLINIC,FOCUS_SHELL,FOCUS_TOYBOX,FOCUS_LEARNED_BASE};
+_Static_assert(FOCUS_LEARNED_BASE+OBSERVER_PHRASES<=UINT8_MAX,"lesson focus range");
 enum {NOTICE_NONE=0,NOTICE_WINDUP,NOTICE_HIT,NOTICE_BLOCK,NOTICE_REPAIR};
 
 static uint16_t sat_add(uint16_t value,uint32_t amount){
@@ -520,6 +521,56 @@ static const char *calculate(ObserverSession *s,const char *input){
                             (long)a,(long)b,(long)result,(long)(a%b));
  return say(s,"%ld %c %ld = %ld.",(long)a,op,(long)b,(long)result);
 }
+/* Resolve a taught expression exactly, or a distinctive single-word
+ * cue within an explicitly requested recall. Ambiguous words never pick
+ * an arbitrary lesson; these are quoted memories, not executable input. */
+static int association_slot(const ObserverProfile *p,const char *cue,int words){
+ char key[OBSERVER_PHRASE_CHARS+2u];
+ size_t n=strlen(cue);
+ unsigned i;
+ int found=-1;
+ if(!n||n>=sizeof(key))return -1;
+ memcpy(key,cue,n+1u);
+ for(i=0;i<OBSERVER_PHRASES;i++)
+  if(p->phrases[i].confidence&&strcmp(key,p->phrases[i].text)==0)return (int)i;
+ if(key[n-1u]=='?'||key[n-1u]=='!')key[--n]=0;
+ if(!n)return -1;
+ for(i=0;i<OBSERVER_PHRASES;i++)
+  if(p->phrases[i].confidence&&strcmp(key,p->phrases[i].text)==0)return (int)i;
+ if(!words||n<4u)return -1;
+ for(i=0;key[i];i++)if(key[i]<'A'||key[i]>'Z')return -1;
+ if(has("THIS THAT WHAT YOUR ABOUT HAVE BEEN THEM SOME MORE KNOW REMEMBER RECALL WORD WORDS PHRASE LESSON",key))return -1;
+ for(i=0;i<OBSERVER_PHRASES;i++){
+  if(!p->phrases[i].confidence||!has(p->phrases[i].text,key))continue;
+  if(found>=0)return -2;
+  found=(int)i;
+ }
+ return found;
+}
+static const char *association_reply(const ObserverProfile *p,ObserverSession *s,
+                                     const Game *g,int slot,int followup){
+ if(slot==-2){
+  s->focus=FOCUS_TEACH;
+  return say(s,"THAT WORD MATCHES MORE THAN ONE LESSON. ASK PHRASES OR SAY A SLOT NUMBER.");
+ }
+ if(slot<0||(unsigned)slot>=OBSERVER_PHRASES||!p->phrases[slot].confidence)
+  return NULL;
+ if(game_care_hint(g)>=0||g->corruption>=60u)return needs(s,g);
+ s->focus=(uint8_t)(FOCUS_LEARNED_BASE+(unsigned)slot);
+ if(followup)return say(s,"YOU TAUGHT ME: %s. PRACTICE %u/15. %s",p->phrases[slot].text,
+  (unsigned)p->phrases[slot].confidence,p->phrases[slot].confidence>=3u?
+  "I MAY SAY IT DURING HEALTHY PLAY.":"TEACH IT AGAIN TO HELP ME REMEMBER.");
+ return say(s,"I REMEMBER YOU TAUGHT ME: %s. ASK MORE TO SEE HOW WELL I KNOW IT.",p->phrases[slot].text);
+}
+static const char *recall_cue(const char *input){
+ static const char *const prefixes[]={"DO YOU REMEMBER ","DO YOU RECALL ","DO YOU KNOW ","WHAT ABOUT ","REMEMBER ","RECALL "};
+ unsigned i;
+ for(i=0;i<sizeof(prefixes)/sizeof(prefixes[0]);i++){
+  size_t n=strlen(prefixes[i]);
+  if(strncmp(input,prefixes[i],n)==0)return input+n;
+ }
+ return NULL;
+}
 static const char *fiction(ObserverProfile *p,ObserverSession *s,const Game *g,
                            unsigned speaker,unsigned topic){
  unsigned used;
@@ -624,6 +675,12 @@ const char *observer_answer(ObserverProfile *p,ObserverSession *s,const Game *g,
     (*at>='0'&&*at<='9')||((*at=='-'||*at=='+')&&at[1]>='0'&&at[1]<='9'))
   return calculate(s,clean);
  if(strcmp(clean,"MORE")==0||strcmp(clean,"MORE?")==0||strcmp(clean,"TELL ME MORE")==0||strcmp(clean,"TELL ME MORE?")==0||strcmp(clean,"WHY?")==0||strcmp(clean,"WHY")==0){
+  if(speaker==OBSERVER_BABY&&s->focus>=FOCUS_LEARNED_BASE&&
+     s->focus<FOCUS_LEARNED_BASE+OBSERVER_PHRASES){
+   const char *reply=association_reply(p,s,g,s->focus-FOCUS_LEARNED_BASE,1);
+   if(reply)return reply;
+   return phrases(p,s);
+  }
   switch(s->focus){
   case FOCUS_NEEDS:return needs(s,g);
   case FOCUS_SELF:
@@ -659,6 +716,13 @@ const char *observer_answer(ObserverProfile *p,ObserverSession *s,const Game *g,
   return needs(s,g);
  if(has(clean,"BOND")||has(clean,"TRUST")||has(clean,"FRIEND")||has(clean,"FRIENDS")||has(clean,"CARE PATTERN")||has(clean,"DO YOU LIKE ME"))
   return bond(p,s,g);
+ if(speaker==OBSERVER_BABY){
+  const char *cue=recall_cue(clean);
+  if(cue){
+   const char *reply=association_reply(p,s,g,association_slot(p,cue,1),0);
+   if(reply)return reply;
+  }
+ }
  if(has(clean,"MEMORY")||has(clean,"REMEMBER")||has(clean,"HISTORY")||has(clean,"LAST EVENT"))
   return memory(p,s);
  if(has(clean,"ATTACK")||has(clean,"ATTACKS")||has(clean,"HITS")||has(clean,"INTEGRITY")||has(clean,"GUARD")||has(clean,"EVIL")||has(clean,"THREAT"))
@@ -679,8 +743,14 @@ const char *observer_answer(ObserverProfile *p,ObserverSession *s,const Game *g,
   s->focus=FOCUS_PLAY;topic=NARRATIVE_PLAY;
  }else if(has(clean,"HELLO")||has(clean,"HI")||has(clean,"HEY")){
   s->focus=FOCUS_SELF;topic=NARRATIVE_GREETING;
- }else return say(s,speaker==OBSERVER_BABY?
+ }else{
+  if(speaker==OBSERVER_BABY){
+   const char *reply=association_reply(p,s,g,association_slot(p,clean,0),0);
+   if(reply)return reply;
+  }
+  return say(s,speaker==OBSERVER_BABY?
    "I DON'T KNOW THAT ONE. WARDEN MIGHT KNOW. TRY NEEDS, MEMORY, PLAY OR DREAM.":
    "I DO NOT UNDERSTAND THAT QUESTION YET. ASK HELP FOR MY TOPICS. MY ARCHIVE HAS NO ANSWER.");
+ }
  return fiction(p,s,g,speaker,topic);
 }
