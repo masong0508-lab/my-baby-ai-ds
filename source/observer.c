@@ -10,8 +10,10 @@ _Static_assert(sizeof(ObserverProfile)<=256u,"observer profile budget");
 _Static_assert(sizeof(ObserverSession)<=192u,"observer session budget");
 enum {FOCUS_STATUS=0,FOCUS_NEEDS,FOCUS_MEMORY,FOCUS_WORLD,FOCUS_SELF,
       FOCUS_PLAY,FOCUS_DREAM,FOCUS_THREAT,FOCUS_TEACH,FOCUS_CALC,FOCUS_BOND,
-      FOCUS_BAN,FOCUS_CLINIC,FOCUS_SHELL,FOCUS_TOYBOX,FOCUS_LEARNED_BASE};
-_Static_assert(FOCUS_LEARNED_BASE+OBSERVER_PHRASES<=UINT8_MAX,"lesson focus range");
+      FOCUS_BAN,FOCUS_CLINIC,FOCUS_SHELL,FOCUS_TOYBOX,FOCUS_LEARNED_BASE,
+      FOCUS_GOALS=FOCUS_LEARNED_BASE+OBSERVER_PHRASES,
+      FOCUS_ARCADE,FOCUS_TOMORROW,FOCUS_ENDINGS,FOCUS_BUDGET};
+_Static_assert(FOCUS_BUDGET<=UINT8_MAX,"lesson focus range");
 enum {NOTICE_NONE=0,NOTICE_WINDUP,NOTICE_HIT,NOTICE_BLOCK,NOTICE_REPAIR};
 
 static uint16_t sat_add(uint16_t value,uint32_t amount){
@@ -317,6 +319,67 @@ static const char *needs(ObserverSession *s,const Game *g){
  if(g->corruption>=60u)return say(s,"CORRUPTION %u.\nTRY QUIET CRIB REST: MOONLIGHT, LAMP OFF, THEN CRIB.",(unsigned)g->corruption);
  return say(s,"NO URGENT CARE REQUEST.\nHUNGER %u, MOOD %u, ENERGY %u, CHAOS %u. THE NURSERY CONTROLS STILL PROVIDE CARE.",
               (unsigned)g->hunger,(unsigned)g->mood,(unsigned)g->energy,(unsigned)g->chaos);
+}
+/* Gameplay guidance reads the same rules as the arcade and day system.
+ * These queries neither consume currency nor change progress. */
+static unsigned arcade_open(const Game *g){
+ unsigned i,n=0;
+ for(i=0;i<MBAI_GAMES;i++)if(game_unlocked(g,(int)i))n++;
+ return n;
+}
+static unsigned deficit(unsigned target,uint32_t value){
+ return value>=target?0u:target-(unsigned)value;
+}
+static const char *goals(ObserverSession *s,const Game *g,int detail){
+ unsigned i,wins,dollars,favors,dw,dd,df;
+ s->focus=FOCUS_GOALS;
+ if(game_care_hint(g)>=0||g->corruption>=60u)return needs(s,g);
+ for(i=8u;i<MBAI_GAMES;i++){
+  if(game_unlocked(g,(int)i))continue;
+  if(!game_unlock_requirements((int)i,&wins,&dollars,&favors))continue;
+  if(detail)return say(s,"%s REQUIRES:\n%u WINS, %u DOLLARS, %u FAVORS.\nEARN REWARDS IN ARCADE.",
+                       game_names[i],wins,dollars,favors);
+  dw=deficit(wins,g->wins);dd=deficit(dollars,g->dollars);df=deficit(favors,g->favors);
+  if(!dw&&!dd&&!df)return say(s,"NEXT: %s.\nREADY TO BUY IN THE ARCADE.\nUSE BUY ON ITS CABINET.",
+                              game_names[i]);
+  return say(s,"NEXT: %s.\nSTILL NEED:\n%u WINS, %u DOLLARS, %u FAVORS.\nASK MORE FOR TOTAL COST.",
+             game_names[i],dw,dd,df);
+ }
+ return say(s,"ALL 16 CABINETS ARE OPEN.\nKEEP CARING AND PLAYING.\nASK ENDINGS FOR COLLECTION PROGRESS.");
+}
+static const char *arcade_report(ObserverSession *s,const Game *g){
+ s->focus=FOCUS_ARCADE;
+ return say(s,"ARCADE: %u/16 CABINETS OPEN.\nWINS %lu. LOSSES %lu.\n%u DOLLARS, %u FAVORS.\nASK MORE FOR YOUR NEXT GOAL.",
+             arcade_open(g),(unsigned long)g->wins,(unsigned long)g->losses,
+             (unsigned)g->dollars,(unsigned)g->favors);
+}
+static const char *budget(ObserverSession *s,const Game *g){
+ s->focus=FOCUS_BUDGET;
+ return say(s,"YOU HAVE %u DOLLARS AND %u FAVORS.\nWIN ARCADE GAMES TO EARN MORE.\nASK GOALS FOR YOUR NEXT PURCHASE.",
+             (unsigned)g->dollars,(unsigned)g->favors);
+}
+static const char *tomorrow(ObserverSession *s,const Game *g,int detail){
+ Game preview=*g;
+ int ending=game_end_day(&preview);
+ s->focus=FOCUS_TOMORROW;
+ if(detail)return say(s,"IF YOU END THE DAY NOW:\nH%u M%u E%u C%u.\nGLITCH %u. DAY %lu.\nNO CHANGES MADE.",
+  (unsigned)preview.hunger,(unsigned)preview.mood,(unsigned)preview.energy,
+  (unsigned)preview.chaos,(unsigned)preview.corruption,(unsigned long)preview.days);
+ if(ending==END_OK)return say(s,"NO ENDING IF YOU END THE DAY NOW.\nHUNGER WILL RISE; ENERGY WILL FALL.\nASK MORE FOR THE FORECAST.");
+ if(game_is_good_ending(ending))return say(s,"A GOOD ENDING IS AVAILABLE NOW.\nEND DAY TO EARN ITS REWARD.\nASK MORE FOR TOMORROW'S NEEDS.");
+ return say(s,"RISK: BAD ENDING IF YOU END NOW.\n%s\nASK NEEDS OR MORE.",
+  ending==END_BOTTLE?"FEED THE BABY FIRST.":ending==END_CEO?"USE CHAT TO IMPROVE MOOD.":
+  ending==END_INTERN?"NAP TO REDUCE CHAOS.":"QUIET CRIB REST CAN HELP.");
+}
+static const char *endings(ObserverSession *s,const Game *g,int detail){
+ unsigned i,n=(unsigned)game_good_ending_count(g);
+ s->focus=FOCUS_ENDINGS;
+ if(!detail)return say(s,"GOOD ENDINGS: %u/4 COLLECTED.\nBAD ENDINGS: %u TOTAL.\nASK MORE FOR A DISCOVERED ENDING.",
+                         n,(unsigned)g->bad_endings);
+ for(i=END_GRADUATION;i<=END_SECOND_CHANCE;i++)
+  if(g->ending_mask&(1u<<i))return say(s,"COLLECTED: %s.\n%u/4 GOOD ENDINGS.\nSEE THE ALBUM WITH L IN CARE.",
+                                      game_ending_name((int)i),n);
+ return say(s,"NO GOOD ENDINGS COLLECTED YET.\nKEEP THE BABY HEALTHY AND PLAY.\nASK TOMORROW BEFORE END DAY.");
 }
 /* A relationship question is grounded in OBSERVED interaction history.
  * No invented trust percentage, hidden meter or extra persistent bytes.
@@ -673,7 +736,7 @@ const char *observer_answer(ObserverProfile *p,ObserverSession *s,const Game *g,
  }
  if(strcmp(clean,"PHRASES 2")==0)return phrase_page(p,s,1u);
  if(has(clean,"TEACH")||has(clean,"PHRASES"))return phrases(p,s);
- if(has(clean,"HELP"))return say(s,"ASK STATUS, NEEDS, MEMORY, WORLD, ATTACKS, BOND, PLAY OR DREAM. TRY TEACH HELLO, SAY, PHRASES, FORGET 1, CALC 2+3.");
+ if(has(clean,"HELP"))return say(s,"ASK STATUS, NEEDS, MEMORY, WORLD, BOND, GOALS, ARCADE, BUDGET, TOMORROW OR ENDINGS. TRY TEACH, SAY, PHRASES OR CALC.");
  at=clean;
  if(strncmp(at,"WHAT IS ",8u)==0)at+=8;
  if(has(clean,"CALC")||has(clean,"CALCULATE")||
@@ -688,6 +751,10 @@ const char *observer_answer(ObserverProfile *p,ObserverSession *s,const Game *g,
   }
   switch(s->focus){
   case FOCUS_NEEDS:return needs(s,g);
+  case FOCUS_GOALS:return goals(s,g,1);
+  case FOCUS_ARCADE:case FOCUS_BUDGET:return goals(s,g,0);
+  case FOCUS_TOMORROW:return tomorrow(s,g,1);
+  case FOCUS_ENDINGS:return endings(s,g,1);
   case FOCUS_SELF:
    if(speaker==OBSERVER_BABY)return fiction(p,s,g,speaker,NARRATIVE_SELF);
    return say(s,"I MONITOR THE NURSERY AND KEEP OBSERVED CARE RECORDS. ASK MEMORY OR WORLD TO LEARN MORE.");
@@ -714,6 +781,15 @@ const char *observer_answer(ObserverProfile *p,ObserverSession *s,const Game *g,
   }
   return say(s,"YOU'RE WELCOME. I'M STILL HERE IF YOU HAVE ANOTHER QUESTION.");
  }
+ /* Exact topic commands avoid intercepting learned phrases or other
+  * natural questions which happen to contain a gameplay word. */
+ if(strcmp(clean,"GOALS")==0||strcmp(clean,"NEXT GOAL")==0||
+    strcmp(clean,"WHAT SHOULD I DO?")==0||strcmp(clean,"WHAT SHOULD I DO")==0)
+  return goals(s,g,0);
+ if(strcmp(clean,"ARCADE")==0||strcmp(clean,"ARCADE PROGRESS")==0)return arcade_report(s,g);
+ if(strcmp(clean,"BUDGET")==0||strcmp(clean,"CURRENCY")==0)return budget(s,g);
+ if(strcmp(clean,"TOMORROW")==0||strcmp(clean,"END DAY?")==0)return tomorrow(s,g,0);
+ if(strcmp(clean,"ENDINGS")==0||strcmp(clean,"ALBUM")==0)return endings(s,g,0);
  if(speaker==OBSERVER_BABY&&has(clean,"HOW ARE YOU"))return needs(s,g);
  if(has(clean,"STATUS")||has(clean,"STATS")||has(clean,"REPORT")||has(clean,"HOW ARE YOU"))
   return observer_report(p,s,g);
