@@ -9,7 +9,7 @@ typedef struct {
  ConversationSession session;
  uint16_t displayed;
 } Fixture;
-static unsigned seen[CONVERSATION_TOPIC_COUNT*6u];
+static unsigned seen[CONVERSATION_TOPIC_COUNT*9u];
 static const char *phase;
 static void reset(Fixture *f,uint32_t seed){
  game_init(&f->game);
@@ -20,7 +20,7 @@ static void reset(Fixture *f,uint32_t seed){
 static void check_reply(Fixture *f,const ConversationReply *reply){
  assert(reply&&reply->id<conversation_catalog_count());
  assert(reply==conversation_catalog_reply(reply->id));
- assert(reply->topic==reply->id/6u&&reply->style==(reply->id%6u)/2u);
+ assert(reply->topic==reply->id/9u&&reply->style==(reply->id%9u)/3u);
  if(reply->id==f->displayed)
   fprintf(stderr,"repeated reply %u in %s prompt %u day %lu\n",reply->id,
           phase,f->session.last_prompt,(unsigned long)f->game.days);
@@ -159,21 +159,23 @@ static void all_responses_reachable(void){
   reset(&f,17u);prefer_style(&f.profile,style);
   prepare_topic(&f,(ConversationTopic)topic);
   if(topic==CONVERSATION_ACK_LIKE){
-   (void)ask(&f,CONVERSATION_HOW);
-   reply=ask(&f,CONVERSATION_LIKE);assert(reply->topic==topic);
-   (void)ask(&f,CONVERSATION_HOW);
-   reply=ask(&f,CONVERSATION_LIKE);assert(reply->topic==topic);
+   for(unsigned n=0;n<3u;n++){
+    (void)ask(&f,CONVERSATION_HOW);
+    reply=ask(&f,CONVERSATION_LIKE);assert(reply->topic==topic);
+   }
    continue;
   }
   if(topic==CONVERSATION_ACK_RATED){
    (void)ask(&f,CONVERSATION_HOW);(void)ask(&f,CONVERSATION_LIKE);
-   reply=ask(&f,CONVERSATION_LIKE);assert(reply->topic==topic);
-   reply=ask(&f,CONVERSATION_LIKE);assert(reply->topic==topic);
+   for(unsigned n=0;n<3u;n++){
+    reply=ask(&f,CONVERSATION_LIKE);assert(reply->topic==topic);
+   }
    continue;
   }
   if(topic==CONVERSATION_ASK_FIRST){
-   reply=ask(&f,CONVERSATION_LIKE);assert(reply->topic==topic);
-   reply=ask(&f,CONVERSATION_LIKE);assert(reply->topic==topic);
+   for(unsigned n=0;n<3u;n++){
+    reply=ask(&f,CONVERSATION_LIKE);assert(reply->topic==topic);
+   }
    continue;
   }
   if(topic>=CONVERSATION_IMAGINE_TEDDY&&topic<=CONVERSATION_IMAGINE_WORLD){
@@ -192,12 +194,14 @@ static void all_responses_reachable(void){
    reply=ask(&f,CONVERSATION_REMEMBER);
   else reply=ask(&f,CONVERSATION_HOW);
   assert(reply->topic==topic&&reply->style==style);
-  reply=ask(&f,CONVERSATION_MORE);
-  assert(reply->topic==topic&&reply->style==style);
+  for(unsigned n=0;n<2u;n++){
+   reply=ask(&f,CONVERSATION_MORE);
+   assert(reply->topic==topic&&reply->style==style);
+  }
  }
  for(unsigned id=0;id<conversation_catalog_count();id++){
   if(!seen[id])fprintf(stderr,"unreachable response %u topic %u style %u\n",
-                      id,id/6u,(id%6u)/2u);
+                      id,id/9u,(id%9u)/3u);
   assert(seen[id]);
  }
 }
