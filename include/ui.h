@@ -60,7 +60,10 @@ void ui_mic_draw(const Game *s,int can_save,const char *label,
                  unsigned examples,int forget_armed,unsigned speaker,
                  unsigned mode,unsigned phase);
 int ui_room_entry_touch(int x,int y);
-int ui_room_touch(int x,int y); /* 0 window, 1 lamp, 2 teddy, 3 crib, 4 back, 5 sound, 6 use, 7 save, 8 lullaby */
+int ui_room_touch(int x,int y); /* 0 window, 1 lamp, 2 teddy, 3 crib, 4 back, 5 sound, 6 use, 7 save, 8 lullaby, 9 peekaboo */
+/* Nursery timing game: action=1, back=2, blank=0. */
+int ui_peek_touch(int x,int y);
+void ui_peek_draw(const Game *s,const NurseryPeek *p,int can_save);
 int ui_prank_entry_touch(int x,int y);
 int ui_roughhouse_touch(int x,int y); /* 1 slap, 2 kick, 3 back */
 /* Film: 1 skip, 2 pause/resume, 3 next act. The readout is tappable. */
