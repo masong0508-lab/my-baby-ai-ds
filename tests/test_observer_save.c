@@ -135,6 +135,16 @@ int main(void){
  assert(memcmp(&p,&out,sizeof(p))==0);
  assert(save_write(base,&g));assert(g.sequence==1u);
  assert(observer_save_write(base,&g,&p));assert(observer_save_load(base,&g,&out));
+ /* Persist a deliberately removed lesson without changing the watch
+  * record size or losing the surviving lesson. */
+ assert(observer_forget_phrase(&p,0u));
+ assert(p.phrase_count==1u&&observer_profile_valid(&p));
+ assert(save_write(base,&g));
+ assert(observer_save_write(base,&g,&p));assert(observer_save_load(base,&g,&out));
+ assert(memcmp(&p,&out,sizeof(p))==0&&out.phrases[0].confidence==0u);
+ assert(strcmp(out.phrases[1].text,"HELLO NURSERY")==0);
+ assert(observer_teach(&out,"NEW LESSON")==1);
+ assert(strcmp(out.phrases[0].text,"NEW LESSON")==0);
  {
   char long_base[256];
   memset(long_base,'x',sizeof(long_base));long_base[sizeof(long_base)-1u]=0;
