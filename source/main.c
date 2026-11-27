@@ -390,6 +390,30 @@ static void observer_pose(int action,uint32_t frame){
  pose=action;pose_age=0;
  world_baby_motion_start(&care_motion,from,&baby,frame,pose);
 }
+/* Soothe is a real social care action with separate costs and results.
+ * Use the existing CHAT memory counters and connected regroup pose;
+ * a refusal neither consumes RNG nor saves, and creates no fake event. */
+static void room_lullaby(uint32_t frame){
+ Game before=baby;
+ WorldBabyPose from=world_baby_pose(&baby,frame,pose,pose_age,
+                                   pose?&care_motion:0);
+ if(!game_room_soothe(&baby)){
+  message=before.hunger>=70u?"FEED ME BEFORE A LULLABY.":
+          before.energy<=15u?"I NEED A NAP FIRST.":
+          "I'M ALREADY CALM AND HAPPY.";
+  return;
+ }
+ conversation_record_care(&conversation,&before,&baby,CHAT);
+ (void)observer_record_care(&shelter,&observer,&before,&baby,CHAT);
+ pose=WORLD_BABY_REGROUP;pose_age=0;
+ world_baby_motion_start(&care_motion,from,&baby,frame,pose);
+ sfx_play(SFX_LULLABY);
+ snprintf(room_feedback,sizeof(room_feedback),"LULLABY: +%u MOOD -%u CHAOS",
+          (unsigned)baby.mood-(unsigned)before.mood,
+          (unsigned)before.chaos-(unsigned)baby.chaos);
+ message=room_feedback;
+ (void)persist();
+}
 static void end_day(void){
  int e=game_end_day(&baby);
  (void)observer_record_event(&shelter,&observer,&baby,OBSERVER_EVENT_DAY,0u);
@@ -999,7 +1023,8 @@ int main(void){
     room_retarget(-1);
     view=0;message="BACK IN BABY'S NURSERY.";dirty=1;
    }else{
-    if(tap)picked=ui_room_touch(touch.px,touch.py);
+    if(down&KEY_SELECT)picked=8;
+    else if(tap)picked=ui_room_touch(touch.px,touch.py);
     else if(!vpen.enabled){
      /* D-pad selects/uses the pictured objects without a touchscreen. */
      if(down&KEY_UP)picked=0;
@@ -1010,7 +1035,9 @@ int main(void){
     }
     /* The sound toggle and USE labels are also true stylus hitboxes. */
     if(picked==6)picked=room_focus;
-    if(picked==7){
+    if(picked==8){
+     room_lullaby(frame);dirty=1;
+    }else if(picked==7){
      save_live_baby();dirty=1;
     }else if(picked==5){
      sfx_set_enabled(!sfx_is_enabled());
