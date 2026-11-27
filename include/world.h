@@ -85,6 +85,8 @@ int world_baby_need_fidget(int hunger,int chaos,uint32_t frame);
 /* Q8 gesture and eye-aperture channels, cheap deterministic samples. */
 int world_baby_care_weight(uint32_t age);
 int world_baby_lid_open(uint32_t frame,int action,uint32_t age);
+/* Small, eased pupil/iris/glint movement with no new geometry. */
+int world_baby_gaze(uint32_t frame);
 int world_baby_speech_open(uint32_t age);
 /* Finite plush reaction and bounded whole-head furniture attention. */
 int world_teddy_bow_angle(uint32_t age);

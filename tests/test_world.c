@@ -883,6 +883,26 @@ int main(void){
  assert(world_baby_lid_open(10u,4,0u)==256);
  assert(world_baby_lid_open(10u,4,56u)==256);
  assert(world_baby_lid_open(3u,0,25u)<80);
+ /* Occasional double blink preserves the original aperture bounds and
+  * tick-to-tick speed. The neutral first cycle is unchanged. */
+ assert(world_baby_lid_open(346u+23u,0,0u)==0);
+ assert(world_baby_lid_open(346u+28u,0,0u)==256);
+ assert(world_baby_lid_open(173u+23u,0,0u)==256);
+ assert(world_baby_gaze(128u)==0);
+ assert(world_baby_gaze(204u)==-3);
+ assert(world_baby_gaze(364u)==3);
+ assert(world_baby_gaze(248u)==0);
+ assert(world_baby_gaze(408u)==0);
+ {
+  unsigned tick;
+  for(tick=1u;tick<=1384u;tick++){
+   int g=world_baby_gaze(tick),p=world_baby_gaze(tick-1u);
+   int lid=world_baby_lid_open(tick,0,0u);
+   int prev=world_baby_lid_open(tick-1u,0,0u);
+   assert(g>=-3&&g<=3&&g-p<=1&&p-g<=1);
+   assert(lid>=0&&lid<=256&&lid-prev<=64&&prev-lid<=64);
+  }
+ }
  for(i=0;i<58;i++){
   world_draw_care(&s,(uint32_t)(200+i),3,(uint32_t)i);
   assert(world_vertex_count()<=5000);
