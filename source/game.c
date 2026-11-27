@@ -63,6 +63,49 @@ int game_room_soothe(Game *s){
  (void)next(s);
  return 1;
 }
+/* Three timely reveals win one bounded play interaction.
+ * The wait duration changes by round/mistake, while the open window
+ * remains generous enough for DS buttons and the virtual stylus. */
+static void peek_wait(NurseryPeek *p){
+ p->phase=PEEK_WAIT;
+ p->ticks=(uint16_t)(42u+(p->round*19u+p->misses*13u)%37u);
+}
+static int peek_allowed(const Game *s){
+ return s&&s->hunger<70u&&s->energy>=25u&&s->chaos<75u;
+}
+int game_peek_start(const Game *s,NurseryPeek *p){
+ if(!p)return 0;
+ memset(p,0,sizeof(*p));
+ if(!peek_allowed(s))return 0;
+ peek_wait(p);
+ return 1;
+}
+static void peek_miss(NurseryPeek *p){
+ p->misses++;
+ if(p->misses>=2u){p->phase=PEEK_LOST;p->ticks=0;}
+ else peek_wait(p);
+}
+int game_peek_tick(NurseryPeek *p){
+ if(!p||(p->phase!=PEEK_WAIT&&p->phase!=PEEK_OPEN))return 0;
+ if(p->ticks&&--p->ticks)return 0;
+ if(p->phase==PEEK_WAIT){p->phase=PEEK_OPEN;p->ticks=48u;}
+ else peek_miss(p);
+ return 1;
+}
+int game_peek_tap(Game *s,NurseryPeek *p){
+ if(!s||!p||(p->phase!=PEEK_WAIT&&p->phase!=PEEK_OPEN))return 0;
+ if(p->phase==PEEK_WAIT){peek_miss(p);return 1;}
+ if(++p->round<3u){peek_wait(p);return 1;}
+ p->ticks=0;
+ if(!peek_allowed(s)){p->phase=PEEK_LOST;return 1;}
+ p->phase=PEEK_WON;
+ s->mood=clamp((int)s->mood+12);
+ s->energy=clamp((int)s->energy-8);
+ s->hunger=clamp((int)s->hunger+6);
+ s->chaos=clamp((int)s->chaos+4);
+ (void)next(s);
+ return 1;
+}
 int game_unlocked(const Game *s,int id){return id>=0&&id<MBAI_GAMES&&!!(s->unlocked&(1u<<id));}
 int game_unlock_requirements(int id,unsigned *wins,
                              unsigned *dollars,unsigned *favors){
