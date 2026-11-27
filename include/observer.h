@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include "game.h"
 
-#define OBSERVER_PHRASES 4u
+#define OBSERVER_PHRASES 8u
 #define OBSERVER_PHRASE_CHARS 24u
 #define OBSERVER_REPLY_CAP 160u
 #define OBSERVER_WINDUP_TICKS 60u
