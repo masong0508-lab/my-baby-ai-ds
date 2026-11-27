@@ -33,10 +33,18 @@ void world_observer_status(unsigned stage,unsigned integrity,int warning){
  observer_visual_integrity=integrity>100u?100u:integrity;
  observer_visual_warning=warning!=0;
 }
+/* The DS geometry engine retains its current vertex color. Avoid
+ * submitting the same color register command twice in succession.
+ * Invalidate at each scene submission, including after a frozen image. */
+static unsigned last_vertex_color=~0u;
 static void color(int r,int g,int b,int shift){
- glColor(RGB15(limit(r+shift+nursery_ambient),
-               limit(g+shift+nursery_ambient),
-               limit(b+shift+nursery_ambient)));
+ unsigned packed=RGB15(limit(r+shift+nursery_ambient),
+                       limit(g+shift+nursery_ambient),
+                       limit(b+shift+nursery_ambient));
+ if(packed!=last_vertex_color){
+  glColor(packed);
+  last_vertex_color=packed;
+ }
 }
 static void face(float a,float b,float c,float d,float e,float f,
                  float g,float i,float j,float k,float l,float m){
@@ -1152,7 +1160,7 @@ void world_draw_nursery(const Game *s,uint32_t frame,int activity,
            camera.look_x,camera.look_y,camera.look_z,0,1,0);
  (void)camera; /* host GL shim intentionally discards its arguments */
  glPolyFmt(POLY_ALPHA(31)|POLY_CULL_NONE);
- frame_vertices=0;frame_polygons=0;
+ frame_vertices=0;frame_polygons=0;last_vertex_color=~0u;
  tour_daylight=daylight!=0;
  tour_lamp_on=lamp!=0;
  /* The window is a meaningful daylight source: daylight now gently
@@ -1209,7 +1217,7 @@ static void draw_roughhouse(const Game *s,uint32_t frame,const Roughhouse *r,int
  if(prologue)gluLookAt(.28f,.86f,3.15f,-.12f,.25f,.17f,0,1,0);
  else gluLookAt(.97f,1.05f,3.43f,-.12f,.035f,.17f,0,1,0);
  glPolyFmt(POLY_ALPHA(31)|POLY_CULL_NONE);
- frame_vertices=0;frame_polygons=0;
+ frame_vertices=0;frame_polygons=0;last_vertex_color=~0u;
  room(0);
  if(r){
   /* The contact moves WITH the synthetic doll and tightens as it falls.
@@ -1639,7 +1647,7 @@ void world_draw_secret(const Game *s,uint32_t frame,const Roughhouse *r){
  /* The host geometry stub elides gluLookAt arguments entirely. */
  (void)camera;
  glPolyFmt(POLY_ALPHA(31)|POLY_CULL_NONE);
- frame_vertices=0;frame_polygons=0;
+ frame_vertices=0;frame_polygons=0;last_vertex_color=~0u;
  /* Keep the real nursery where the player last saw it: the patterned
   * rug, window and crib provide persistent parallax behind the synthetic
   * shell. Final scare still cuts to a stark silhouette for contrast. */
@@ -1811,7 +1819,7 @@ void world_draw_title(uint32_t frame){
  /* Frame the complete baby rather than a large head above a plinth. */
  gluLookAt(0.0f,.18f,4.35f,0.0f,-.22f,-.12f,0,1,0);
  glPolyFmt(POLY_ALPHA(31)|POLY_CULL_NONE);
- frame_vertices=0;frame_polygons=0;
+ frame_vertices=0;frame_polygons=0;last_vertex_color=~0u;
  block(0,-.12f,-1.89f,6.8f,4.4f,.08f,21,27,30);
  block(0,-1.24f,-.68f,6.2f,.16f,2.3f,25,22,29);
  /* Remove the two tall pink pillars that looked attached to its head. */
