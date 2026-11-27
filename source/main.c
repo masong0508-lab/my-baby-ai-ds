@@ -432,7 +432,20 @@ static void room_peek_begin(void){
 static int room_peek_step(uint32_t frame,int pressed){
  Game before=baby;
  unsigned round=peek.round,misses=peek.misses;
- int changed=pressed?game_peek_tap(&baby,&peek):game_peek_tick(&peek);
+ int changed;
+ /* Mix input timing and the existing seed into an isolated cosmetic
+  * draw; do not advance gameplay RNG or save anything on a scare. */
+ if(pressed&&peek.phase==PEEK_OPEN){
+  uint32_t draw=frame^baby.rng^((uint32_t)peek.round*0x9e3779b9u);
+  draw^=draw>>16;draw*=0x7feb352du;
+  draw^=draw>>15;draw*=0x846ca68bu;
+  draw^=draw>>16;
+  if(game_peek_scare_roll(&peek,draw)){
+   sfx_play(SFX_SCARE);
+   return 1;
+  }
+ }
+ changed=pressed?game_peek_tap(&baby,&peek):game_peek_tick(&peek);
  if(!changed)return 0;
  if(peek.phase==PEEK_WON){
   WorldBabyPose from=world_baby_pose(&before,frame,pose,pose_age,
@@ -1138,7 +1151,11 @@ int main(void){
   }else if(view==14){
    int picked=tap?ui_peek_touch(touch.px,touch.py):0;
    int pressed=(down&KEY_A)!=0||picked==1;
-   if((down&(KEY_B|KEY_START))||picked==2||
+   if(peek.phase>=PEEK_SCARE){
+    /* Intentionally lock the GAME session until an external restart.
+     * Keep VBlank, input polling and normal hardware services alive. */
+    if(game_peek_tick(&peek))dirty=1;
+   }else if((down&(KEY_B|KEY_START))||picked==2||
       (pressed&&(peek.phase==PEEK_WON||peek.phase==PEEK_LOST))){
     if(peek.phase!=PEEK_WON&&peek.phase!=PEEK_LOST)
      message="PEEKABOO CANCELLED.";
@@ -1192,7 +1209,12 @@ int main(void){
     world_draw_care_from(&baby,frame,pose,pose_age,&care_motion);
    else if(view==8||(view==0&&rag.moving))
     world_draw_roughhouse(&baby,frame,&rag);
-   else if(view==14&&peek.phase==PEEK_WAIT)
+   else if(view==14&&peek.phase>=PEEK_SCARE){
+    /* Jump straight to the existing alien lunge. Afterward leave the
+     * last rendered image frozen while the lower LCD shows the halt. */
+    if(peek.phase==PEEK_SCARE)
+     world_draw_secret(&baby,EGG_SCARE_FRAME+PEEK_SCARE_TICKS-peek.ticks,&rag);
+   }else if(view==14&&peek.phase==PEEK_WAIT)
     world_draw_care(&baby,frame,NAP+1,24u);
    else if(view==0||view==10||view==11||view==12||view==13)
     world_draw_nursery(&baby,frame,pose,pose_age,
@@ -1251,8 +1273,9 @@ int main(void){
                                   world_polygon_count());
   /* Overlay a tiny cursor only when virtual pen is enabled. The bottom BG
    * needn't be fully repainted on every frame, avoiding DraStic flicker. */
-  ui_virtual_cursor_update(vpen.enabled,vpen.x,vpen.y,
-                           vpen.enabled && (held&KEY_A)!=0);
+  if(view!=14||peek.phase<PEEK_SCARE)
+   ui_virtual_cursor_update(vpen.enabled,vpen.x,vpen.y,
+                            vpen.enabled && (held&KEY_A)!=0);
   (void)virtual_move;
   /* Allow a full anticipation/gesture/recovery, then return to normal
    * idle. No extra timers, background threads or save-state entries. */
