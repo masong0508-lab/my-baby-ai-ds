@@ -930,6 +930,13 @@ int main(void){
    ui_draw(&live,&trial,2,(int)id,0,0,1,"PRACTICE");
    verify_text(12,7,"PRACTICE",8,TEST_RGB(31,31,31),2);
    verify_coverage();
+   assert(screen[73*256+199]==TEST_RGB(12,24,26));
+   trial.timer=trial.timer_limit/4u;ui_arcade_clock(&trial);
+   assert(screen[73*256+96]==TEST_RGB(30,13,22));
+   assert(screen[73*256+199]==TEST_RGB(26,25,27));
+   trial.timer=0;ui_arcade_clock(&trial);
+   assert(screen[73*256+96]==TEST_RGB(26,25,27));
+   verify_coverage();
   }
   ui_arcade_guide_draw(&live,15u,1,1,1);verify_coverage();pause=fingerprint();
   assert(pause!=guides[15]);
@@ -1024,7 +1031,7 @@ int main(void){
  assert(ui_kart_touch(204,142)==2);
  assert(ui_kart_touch(87,142)==-1);
  assert(ui_kart_touch(120,190)==-1);
- a.id=4;a.phase=0;a.timer=90;a.hold_frames=90;
+ a.id=4;a.active=1;a.phase=0;a.elapsed=0;a.timer=90;a.hold_frames=90;
  a.notes[0]=1;a.notes[1]=3;a.notes[2]=2;
  ui_draw(&g,&a,2,0,0,0,1,"BABY BEATBOX");
  {
