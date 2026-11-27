@@ -40,7 +40,7 @@ int main(void){
  Game g,first,loaded,unchanged;
  ObserverProfile p,older,newer,out;
  ObserverSession s;
- unsigned char bytes[256],original[256];
+ unsigned char bytes[512],original[512];
  size_t size;
  int n=snprintf(directory,sizeof(directory),"/tmp/baby-observer-save-%ld",(long)getpid());
  assert(n>0&&(size_t)n<sizeof(directory));assert(mkdir(directory,0700)==0);
@@ -66,7 +66,7 @@ int main(void){
  assert(strcmp(observer_answer(&out,&s,&g,1,"SAY"),"YOU TAUGHT ME: TINY BOSS")==0);
  assert(out.phrases[0].confidence==2u&&out.integrity==92u&&out.hits==1u);
  name_for(".watch.1");size=read_bytes(original,sizeof(original));
- assert(size==172u);
+ assert(size==276u);
 
  /* Matching sequence alone cannot import another baby's words/history. */
  loaded=g;loaded.rng^=1u;rejects_unchanged(&loaded);
@@ -79,7 +79,7 @@ int main(void){
  memcpy(bytes,original,size);bytes[size]=0;write_bytes(bytes,size+1u);rejects_unchanged(&g);
  memcpy(bytes,original,size);bytes[size-1u]^=1u;write_bytes(bytes,size);rejects_unchanged(&g);
  memcpy(bytes,original,size);bytes[0]^=1u;rehash(bytes,size);write_bytes(bytes,size);rejects_unchanged(&g);
- memcpy(bytes,original,size);bytes[4]=2u;rehash(bytes,size);write_bytes(bytes,size);rejects_unchanged(&g);
+ memcpy(bytes,original,size);bytes[4]=3u;rehash(bytes,size);write_bytes(bytes,size);rejects_unchanged(&g);
  memcpy(bytes,original,size);bytes[6]++;rehash(bytes,size);write_bytes(bytes,size);rejects_unchanged(&g);
  memcpy(bytes,original,size);bytes[16u+offsetof(ObserverProfile,integrity)]=101u;
  rehash(bytes,size);write_bytes(bytes,size);rejects_unchanged(&g);
@@ -90,6 +90,19 @@ int main(void){
  memcpy(bytes,original,size);
  memset(bytes+16u+offsetof(ObserverProfile,phrases),'A',25u);
  rehash(bytes,size);write_bytes(bytes,size);rejects_unchanged(&g);
+ write_bytes(original,size);assert(observer_save_load(base,&g,&out));
+ /* Reconstruct the exact v1 wire layout from the common prefix.
+  * The 152nd profile byte used to be padding. It must not become slot 5. */
+ memset(bytes,0,172u);
+ memcpy(bytes,original,16u+151u);
+ bytes[4]=1u;bytes[5]=0u;bytes[6]=152u;bytes[7]=0u;
+ bytes[167]=0xA5u;
+ rehash(bytes,172u);write_bytes(bytes,172u);
+ assert(observer_save_load(base,&g,&out));
+ assert(memcmp(&p,&out,sizeof(p))==0);
+ assert(out.phrases[4].confidence==0u&&out.phrases[4].text[0]==0);
+ bytes[16u+offsetof(ObserverProfile,phrase_next)]=4u;
+ rehash(bytes,172u);write_bytes(bytes,172u);rejects_unchanged(&g);
  write_bytes(original,size);assert(observer_save_load(base,&g,&out));
 
  /* An older v1 fallback gets exactly its older observer profile. */
@@ -145,6 +158,16 @@ int main(void){
  assert(strcmp(out.phrases[1].text,"HELLO NURSERY")==0);
  assert(observer_teach(&out,"NEW LESSON")==1);
  assert(strcmp(out.phrases[0].text,"NEW LESSON")==0);
+ for(unsigned j=2u;j<8u;j++){
+  char label[16];snprintf(label,sizeof(label),"LESSON %u",j+1u);
+  assert(observer_teach(&out,label)==1);
+ }
+ assert(out.phrase_count==8u);
+ assert(observer_save_write(base,&g,&out));
+ {ObserverProfile roundtrip;
+  assert(observer_save_load(base,&g,&roundtrip));
+  assert(memcmp(&out,&roundtrip,sizeof(out))==0);
+ }
  {
   char long_base[256];
   memset(long_base,'x',sizeof(long_base));long_base[sizeof(long_base)-1u]=0;

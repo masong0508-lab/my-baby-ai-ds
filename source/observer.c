@@ -471,18 +471,22 @@ static const char *world_more(ObserverSession *s){
    "THIS ROOM IS OUR HIDING PLACE. WARDEN WATCHES OVER IT. CAN WE STAY TOGETHER?":
    "THIS NURSERY IS THE SHELTER. I CAN DESCRIBE THE CLINIC OR CRADLE BAN, BUT I HAVE NO LIVE RECORDS OF THE OUTSIDE WORLD.");
 }
-static const char *phrases(const ObserverProfile *p,ObserverSession *s){
- unsigned i,n=0;
+static const char *phrase_page(const ObserverProfile *p,ObserverSession *s,unsigned page){
+ unsigned i,n=0,first=page*4u;
  size_t used=0;
  s->focus=FOCUS_TEACH;
  if(!p->phrase_count)return say(s,"NO TAUGHT PHRASES YET. TYPE TEACH FOLLOWED BY UP TO 24 CHARACTERS. REPEAT A PHRASE TO REINFORCE IT.");
  s->reply[0]=0;
- for(i=0;i<OBSERVER_PHRASES;i++)if(p->phrases[i].confidence){
+ for(i=first;i<first+4u&&i<OBSERVER_PHRASES;i++)if(p->phrases[i].confidence){
   int written=snprintf(s->reply+used,145u-used,"%s%u: %s",n?"\n":"",i+1u,p->phrases[i].text);
   if(written<0||(size_t)written>=145u-used)break;
   used+=(size_t)written;n++;
  }
+ if(!n)return say(s,"NO LESSONS ON THIS PAGE. TRY PHRASES 1 OR PHRASES 2.");
  return s->reply;
+}
+static const char *phrases(const ObserverProfile *p,ObserverSession *s){
+ return phrase_page(p,s,0u);
 }
 static int number(const char **at,int32_t *out){
  const char *p=*at;
@@ -559,7 +563,7 @@ const char *observer_answer(ObserverProfile *p,ObserverSession *s,const Game *g,
   result=observer_teach(p,clean+6);
   s->focus=FOCUS_TEACH;
   if(!result)return say(s,"TEACH 1 TO 24 LETTERS, DIGITS OR KEYBOARD PUNCTUATION. SPACES ARE ALLOWED. I CANNOT READ THAT LESSON.");
-  if(result==3)return say(s,"ALL FOUR LESSONS ARE FULL. I KEPT THEM ALL. ASK PHRASES TO REVIEW THEM OR FORGET 1 TO FREE A SLOT.");
+  if(result==3)return say(s,"ALL EIGHT LESSONS ARE FULL. I KEPT THEM ALL. ASK PHRASES 1 OR PHRASES 2. FORGET A SLOT TO MAKE ROOM.");
   record(p,g,OBSERVER_EVENT_TEACH,0u,0u);
   return say(s,result==2?"PHRASE REINFORCED. ASK SAY TO HEAR IT. REPEATED TEACHING CAN MAKE THE BABY QUOTE IT DURING PLAY.":
    "PHRASE LEARNED. ASK SAY TO HEAR IT. TEACH IT AGAIN TO REINFORCE IT.");
@@ -568,8 +572,8 @@ const char *observer_answer(ObserverProfile *p,ObserverSession *s,const Game *g,
   unsigned slot;
   s->focus=FOCUS_TEACH;
   if(speaker!=OBSERVER_BABY)return say(s,"SELECT BABY TO MANAGE ITS TAUGHT PHRASES.");
-  if(strlen(clean)<8u||clean[7]<'1'||clean[7]>'4')
-   return say(s,"USE FORGET 1, 2, 3 OR 4. ASK PHRASES TO SEE THE SLOTS.");
+  if(strlen(clean)<8u||clean[7]<'1'||clean[7]>'8')
+   return say(s,"USE FORGET 1 TO 8. ASK PHRASES 1 OR PHRASES 2 TO SEE THE SLOTS.");
   slot=(unsigned)(clean[7]-'1');
   if(clean[8]&&strcmp(clean+8," YES")!=0)
    return say(s,"USE FORGET 1 TO REVIEW, OR FORGET 1 YES TO CONFIRM. REPLACE 1 WITH THE SLOT NUMBER.");
@@ -581,7 +585,7 @@ const char *observer_answer(ObserverProfile *p,ObserverSession *s,const Game *g,
   }
   return say(s,"LESSON NOT CHANGED.");
  }
- if(strncmp(clean,"LESSON ",7u)==0&&strlen(clean)==8u&&clean[7]>='1'&&clean[7]<='4'){
+ if(strncmp(clean,"LESSON ",7u)==0&&strlen(clean)==8u&&clean[7]>='1'&&clean[7]<='8'){
   unsigned slot=(unsigned)(clean[7]-'1');
   s->focus=FOCUS_TEACH;
   if(!p->phrases[slot].confidence)return say(s,"LESSON %u IS EMPTY.",slot+1u);
@@ -608,7 +612,7 @@ const char *observer_answer(ObserverProfile *p,ObserverSession *s,const Game *g,
   unsigned i;
   s->focus=FOCUS_TEACH;
   at=clean+4;
-  if(at[0]>='1'&&at[0]<='4'&&!at[1]){
+  if(at[0]>='1'&&at[0]<='8'&&!at[1]){
    i=(unsigned)(at[0]-'1');
    if(p->phrases[i].confidence)return say(s,"YOU TAUGHT ME: %s",p->phrases[i].text);
   }else for(i=0;i<OBSERVER_PHRASES;i++)
@@ -616,6 +620,7 @@ const char *observer_answer(ObserverProfile *p,ObserverSession *s,const Game *g,
     return say(s,"YOU TAUGHT ME: %s",p->phrases[i].text);
   return say(s,"THAT PHRASE IS NOT IN A TAUGHT SLOT. TRY SAY OR WHAT DID I TEACH.");
  }
+ if(strcmp(clean,"PHRASES 2")==0)return phrase_page(p,s,1u);
  if(has(clean,"TEACH")||has(clean,"PHRASES"))return phrases(p,s);
  if(has(clean,"HELP"))return say(s,"ASK STATUS, NEEDS, MEMORY, WORLD, ATTACKS, BOND, PLAY OR DREAM. TRY TEACH HELLO, SAY, PHRASES, FORGET 1, CALC 2+3.");
  at=clean;
