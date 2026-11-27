@@ -37,14 +37,18 @@ void world_observer_status(unsigned stage,unsigned integrity,int warning){
  * submitting the same color register command twice in succession.
  * Invalidate at each scene submission, including after a frozen image. */
 static unsigned last_vertex_color=~0u;
-static void color(int r,int g,int b,int shift){
- unsigned packed=RGB15(limit(r+shift+nursery_ambient),
-                       limit(g+shift+nursery_ambient),
-                       limit(b+shift+nursery_ambient));
+static unsigned packed_color(int r,int g,int b,int shift){
+ const int delta=shift+nursery_ambient;
+ return RGB15(limit(r+delta),limit(g+delta),limit(b+delta));
+}
+static void submit_color(unsigned packed){
  if(packed!=last_vertex_color){
   glColor(packed);
   last_vertex_color=packed;
  }
+}
+static void color(int r,int g,int b,int shift){
+ submit_color(packed_color(r,g,b,shift));
 }
 static void face(float a,float b,float c,float d,float e,float f,
                  float g,float i,float j,float k,float l,float m){
@@ -180,17 +184,31 @@ static void crib_rail(float x,float y,float z,float width,float height,
 static void ellipse(float x,float y,float z,float rx,float ry,float rz,
                     int red,int green,int blue){
  int a,i,j;
+ /* Both middle rings have the same radius. Compute their coordinates
+  * once, reuse the two poles, and prepare the six band colors once.
+  * Keep the original multiplication grouping and strip winding. */
+ const float sx=rx*w[1],sz=rz*w[1];
+ float ringx[8],ringz[8],ringy[4];
+ unsigned shades[2][3];
+ for(i=0;i<8;i++){
+  ringx[i]=x+sx*cx[i];
+  ringz[i]=z+sz*cz[i];
+ }
+ for(i=0;i<4;i++)ringy[i]=y+ry*h[i];
+ shades[0][0]=packed_color(red,green,blue,1);
+ shades[0][1]=packed_color(red,green,blue,-4);
+ shades[0][2]=packed_color(red,green,blue,-1);
+ shades[1][0]=packed_color(red,green,blue,3);
+ shades[1][1]=packed_color(red,green,blue,-2);
+ shades[1][2]=shades[0][0];
  for(a=0;a<3;a++){
-  /* Hoist ring scale/height out of the angular loop. The emitted
-   * coordinates and per-vertex shading remain identical. */
-  const float ax=rx*w[a],az=rz*w[a],ay=y+ry*h[a];
-  const float bx=rx*w[a+1],bz=rz*w[a+1],by=y+ry*h[a+1];
+  const unsigned *palette=shades[a==2];
   glBegin(GL_QUAD_STRIP);
   for(i=0;i<=8;i++){
    j=i&7;
-   color(red,green,blue,(j<3?2:j<5?-3:0)+(a==2?1:-1));
-   glVertex3f(x+ax*cx[j],ay,z+az*cz[j]);
-   glVertex3f(x+bx*cx[j],by,z+bz*cz[j]);
+   submit_color(palette[j<3?0:j<5?1:2]);
+   glVertex3f(a==0?x:ringx[j],ringy[a],a==0?z:ringz[j]);
+   glVertex3f(a==2?x:ringx[j],ringy[a+1],a==2?z:ringz[j]);
   }
   glEnd();
  }
@@ -209,17 +227,35 @@ static void soft_head(float x,float y,float z,float rx,float ry,float rz,
  static const float v[6]={-1,-.72f,-.28f,.28f,.72f,1};
  static const float radius[6]={0,.66f,.96f,.96f,.66f,0};
  static const int light[12]={0,1,2,3,4,5,2,-1,-3,-4,-3,-1};
+ static const unsigned rings[6]={0,1,2,2,1,0};
+ float xs[3][12],zs[3][12],ys[6];
+ unsigned shades[15];
  int a,i,j;
+ /* Only two nonzero radii exist across the six rings. Reuse the
+  * coordinates at each adjacent strip and mirrored latitude. */
+ for(i=0;i<12;i++){
+  xs[0][i]=x;zs[0][i]=z;
+ }
+ for(a=1;a<=2;a++){
+  const float sx=rx*radius[a],sz=rz*radius[a];
+  for(i=0;i<12;i++){
+   xs[a][i]=x+sx*ring_x[i];
+   zs[a][i]=z+sz*ring_z[i];
+  }
+ }
+ for(i=0;i<6;i++)ys[i]=y+ry*v[i];
+ for(i=0;i<15;i++)shades[i]=packed_color(red,green,blue,i-7);
  for(a=0;a<5;a++){
-  const float ax=rx*radius[a],az=rz*radius[a],ay=y+ry*v[a];
-  const float bx=rx*radius[a+1],bz=rz*radius[a+1],by=y+ry*v[a+1];
+  const unsigned lo=rings[a],hi=rings[a+1];
+  const unsigned *low_shades=shades+7+(a>=3?2:a==0?-3:0);
+  const unsigned *high_shades=shades+7+(a>=2?2:-2);
   glBegin(GL_QUAD_STRIP);
   for(i=0;i<=12;i++){
-   j=i%12;
-   color(red,green,blue,light[j]+(a>=3?2:a==0?-3:0));
-   glVertex3f(x+ax*ring_x[j],ay,z+az*ring_z[j]);
-   color(red,green,blue,light[j]+(a>=2?2:-2));
-   glVertex3f(x+bx*ring_x[j],by,z+bz*ring_z[j]);
+   j=i==12?0:i;
+   submit_color(low_shades[light[j]]);
+   glVertex3f(xs[lo][j],ys[a],zs[lo][j]);
+   submit_color(high_shades[light[j]]);
+   glVertex3f(xs[hi][j],ys[a+1],zs[hi][j]);
   }
   glEnd();
  }
