@@ -8,6 +8,7 @@ void test_gl_vertex(float x,float y,float z);
 void test_gl_end(void);
 void test_gl_color(unsigned value);
 void test_gl_flush(void);
+void test_gl_matrix_barrier(void);
 #define RGB15(r,g,b) ((unsigned)((r)|((g)<<5)|((b)<<10)))
 #define GL_TRIANGLES 0
 #define GL_QUADS 1
@@ -24,21 +25,21 @@ void test_gl_flush(void);
 #define glClearPolyID(...) ((void)0)
 #define glClearDepth(...) ((void)0)
 #define glViewport(...) ((void)0)
-#define glMatrixMode(...) ((void)0)
-#define glLoadIdentity() ((void)0)
+#define glMatrixMode(...) test_gl_matrix_barrier()
+#define glLoadIdentity() test_gl_matrix_barrier()
 #define gluPerspective(...) ((void)0)
-#define gluLookAt(...) ((void)0)
+#define gluLookAt(...) test_gl_matrix_barrier()
 #define glPolyFmt(...) ((void)0)
-#define glPushMatrix() ((void)0)
-#define glPopMatrix(n) ((void)(n))
-#define glTranslatef(x,y,z) ((void)(x),(void)(y),(void)(z))
+#define glPushMatrix() test_gl_matrix_barrier()
+#define glPopMatrix(n) ((void)(n),test_gl_matrix_barrier())
+#define glTranslatef(x,y,z) ((void)(x),(void)(y),(void)(z),test_gl_matrix_barrier())
 #define degreesToAngle(n) (n)
 #define glRotateZ(n) ((void)(n))
-#define glRotateZi(n) ((void)(n))
+#define glRotateZi(n) ((void)(n),test_gl_matrix_barrier())
 #define glRotateX(n) ((void)(n))
-#define glRotateXi(n) ((void)(n))
+#define glRotateXi(n) ((void)(n),test_gl_matrix_barrier())
 #define glRotateY(n) ((void)(n))
-#define glRotateYi(n) ((void)(n))
+#define glRotateYi(n) ((void)(n),test_gl_matrix_barrier())
 #define glBegin(mode) test_gl_begin(mode)
 #define glEnd() test_gl_end()
 #define glColor(value) test_gl_color(value)

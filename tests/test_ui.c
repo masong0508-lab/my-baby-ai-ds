@@ -918,6 +918,8 @@ int main(void){
  assert(ui_arcade_guide_touch(132,136)==2&&ui_arcade_guide_touch(247,164)==2);
  assert(ui_arcade_guide_touch(128,150)==0&&ui_arcade_guide_touch(128,183)==3);
  assert(ui_arcade_guide_touch(256,183)==0);
+ assert(ui_arcade_guide_touch(61,68)==4&&ui_arcade_guide_touch(238,81)==4);
+ assert(ui_arcade_guide_touch(60,68)==0&&ui_arcade_guide_touch(239,81)==0);
  {
   uint32_t guides[MBAI_GAMES],pause;
   Game live=g,practice;
@@ -938,6 +940,18 @@ int main(void){
    assert(screen[73*256+96]==TEST_RGB(26,25,27));
    verify_coverage();
   }
+  ui_arcade_guide_draw(&live,10u,0,ARCADE_PRACTICE_STANDARD,1);verify_coverage();
+  verify_text(67,72,"Y MODE: STANDARD",16,TEST_RGB(8,7,12),1);
+  ui_arcade_guide_draw(&live,10u,0,ARCADE_PRACTICE_RELAXED,1);verify_coverage();
+  verify_text(67,72,"Y MODE: RELAXED",15,TEST_RGB(8,7,12),1);
+  ui_arcade_guide_draw(&live,10u,0,ARCADE_PRACTICE_EXPERT,1);verify_coverage();
+  verify_text(67,72,"Y MODE: EXPERT",14,TEST_RGB(8,7,12),1);
+  assert(game_arcade_practice_start_mode(&live,&practice,&trial,10,ARCADE_PRACTICE_EXPERT));
+  game_arcade_input(&practice,&trial,trial.target);
+  assert(trial.reverse==1u);
+  ui_draw(&live,&trial,2,10,0,0,1,"PRACTICE");
+  verify_text(95,91,"-",1,TEST_RGB(18,11,23),1);
+  verify_coverage();
   ui_arcade_guide_draw(&live,15u,1,1,1);verify_coverage();pause=fingerprint();
   assert(pause!=guides[15]);
   ui_arcade_feedback_mode(ARCADE_FEEDBACK_WIN,1);

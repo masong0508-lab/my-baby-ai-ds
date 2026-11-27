@@ -1402,7 +1402,12 @@ static const char *const arcade_instructions[MBAI_GAMES][3]={
  {"TRACE THE CLUES IN NUMBER ORDER.","KEEP THE STYLUS DOWN FOR A TRACE.","LEFT / UP / RIGHT = CLUE NODES."},
  {"BALANCE BUDGET AND MORALE.","TAP A POLICY OR LEFT/DOWN/RIGHT.","FINISH BOTH METERS WITHIN 35-80."}
 };
+static const char *practice_name(int mode){
+ return mode==ARCADE_PRACTICE_EXPERT?"EXPERT":
+        mode==ARCADE_PRACTICE_RELAXED?"RELAXED":"STANDARD";
+}
 void ui_arcade_guide_draw(const Game *s,unsigned id,int paused,int practice,int can_save){
+ char mode_line[30];
  if(!pixels||!s)return;
  if(id>=MBAI_GAMES)id=0;
  cursor_visible=0;screen_accent=AQUA;
@@ -1415,9 +1420,23 @@ void ui_arcade_guide_draw(const Game *s,unsigned id,int paused,int practice,int 
  fit(65,50,arcade_goal_text[id],INK,30);
  fit(65,61,paused?(practice?"PRACTICE RUN PAUSED":"NORMAL RUN PAUSED"):
                   game_unlocked(s,(int)id)?"CABINET UNLOCKED":"PRACTICE IS AVAILABLE",TEAL,30);
- fit(65,72,paused&&practice?"NO REWARDS OR PENALTIES":"WIN $5; FAVOR EVERY 2ND WIN",MUTED,30);
+ if(paused){
+  snprintf(mode_line,sizeof(mode_line),"%s",practice?practice_name(practice):"NORMAL REWARD RUN");
+  fit(65,72,mode_line,MUTED,30);
+ }else{
+  capsule(61,68,178,14,LEMON,GOLD);
+  snprintf(mode_line,sizeof(mode_line),"Y MODE: %s",practice_name(practice));
+  fit(67,72,mode_line,INK,28);
+ }
  panel(8,89,240,43,WHITE,PURPLE);
- for(unsigned i=0;i<3u;i++)fit(17,95+(int)i*10,arcade_instructions[id][i],INK,37);
+ for(unsigned i=0;i<3u;i++){
+  const char *line=arcade_instructions[id][i];
+  if(practice==ARCADE_PRACTICE_EXPERT&&id==10u&&i==0u)
+   line="ADD OR SUBTRACT THE TWO NUMBERS.";
+  if(practice==ARCADE_PRACTICE_EXPERT&&id==12u&&i==0u)
+   line="CHECK NEAR-MATCHES CAREFULLY.";
+  fit(17,95+(int)i*10,line,INK,37);
+ }
  capsule(8,136,116,29,paused?MINT:game_unlocked(s,(int)id)?MINT:GRAY,TEAL);
  capsule(132,136,116,29,LEMON,GOLD);
  fit(20,143,paused?"A RESUME":game_unlocked(s,(int)id)?"A PLAY":"A LOCKED",INK,16);
@@ -1425,7 +1444,9 @@ void ui_arcade_guide_draw(const Game *s,unsigned id,int paused,int practice,int 
  fit(142,143,paused?"X END RUN":"X PRACTICE",INK,16);
  fit(142,153,paused?"RETURN TO LIST":"NO SAVE EFFECT",MUTED,16);
  foot(PURPLE);
- fit(10,181,paused?"B / START RESUME":"B BACK   PRACTICE ALL 16 CABINETS",WHITE,39);
+ fit(10,181,paused?"B / START RESUME":practice==ARCADE_PRACTICE_EXPERT?
+     "B BACK   EXPERT: FAST / GLITCHED":practice==ARCADE_PRACTICE_RELAXED?
+     "B BACK   RELAXED: 50% MORE TIME":"B BACK   STANDARD PRACTICE",WHITE,39);
 }
 int ui_arcade_help_touch(int x,int y){
  return x>=193&&x<248&&y>=57&&y<71;
@@ -1436,6 +1457,7 @@ int ui_arcade_pause_touch(int x,int y){
 int ui_arcade_guide_touch(int x,int y){
  if(x<0||x>=256||y<0||y>=192)return 0;
  if(y>=176)return 3;
+ if(x>=61&&x<239&&y>=68&&y<82)return 4;
  if(y>=136&&y<165)return x>=8&&x<124?1:x>=132&&x<248?2:0;
  return 0;
 }
@@ -1819,7 +1841,7 @@ static void cereal_challenge(const Arcade *a){
  snprintf(text,sizeof(text),"SOLVED %u/6  WRONG %u/3",a->round,a->mistakes);
  fit(12,54,text,DEEP_PINK,38);
  capsule(36,79,184,33,WHITE,PURPLE);
- snprintf(text,sizeof(text),"%u + %u = ?",a->stage,a->direction);
+ snprintf(text,sizeof(text),"%u %c %u = ?",a->stage,a->reverse?'-':'+',a->direction);
  fit(83,91,text,PURPLE,18);
  sparkle(18,95,WHITE);sparkle(232,95,PINK);
  for(int i=0;i<3;i++){
@@ -2427,6 +2449,8 @@ void ui_draw(const Game *s,const Arcade *a,int view,int selection,
  if(view==2){
   capsule(112,8,24,15,IVORY,TEAL);
   fit(118,12,"II",INK,2);
+  /* The header title and pause hitbox stay unchanged. The thin time
+   * track is tinted by the actual sandbox mode in the cabinet guide. */
  }
  if(view==0||view==11){
   capsule(80,5,44,16,MINT,TEAL);

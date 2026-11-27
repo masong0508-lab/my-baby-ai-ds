@@ -16,6 +16,8 @@ typedef struct {
  uint16_t dollars, favors, unlocked, ending_mask, bad_endings;
  uint8_t hunger, mood, energy, chaos, corruption, safe_visuals;
 } Game;
+enum { ARCADE_NORMAL=0, ARCADE_PRACTICE_STANDARD=1,
+       ARCADE_PRACTICE_RELAXED=2, ARCADE_PRACTICE_EXPERT=3 };
 typedef struct {
  uint8_t active, id, round, mistakes, direction, reverse, finished;
  uint16_t timer,timer_limit;
@@ -28,7 +30,7 @@ typedef struct {
  uint8_t touch_active,progress,taped;
  /* Beatbox three-note memory pattern and presentation phase. */
  uint8_t phase,notes[3];
- uint8_t practice; /* session only; real Game is never used for practice */
+ uint8_t practice; /* ARCADE_PRACTICE_* mode; sandbox only */
  int16_t touch_start_x,touch_start_y,touch_last_x,touch_last_y;
 } Arcade;
 extern const char *const game_names[MBAI_GAMES];
@@ -75,6 +77,7 @@ void game_arcade_start(Game *s,Arcade *a,int id);
  * Game snapshot. Only that snapshot may be passed to the arcade engine.
  * The live save and its RNG, unlocks, economy and needs are untouched. */
 int game_arcade_practice_start(const Game *live,Game *sandbox,Arcade *a,int id);
+int game_arcade_practice_start_mode(const Game *live,Game *sandbox,Arcade *a,int id,unsigned mode);
 unsigned game_arcade_goal(unsigned id);
 /* Active demonstration index (0..2), or -1 outside the watch phase. */
 int game_arcade_beat_slot(const Arcade *a);

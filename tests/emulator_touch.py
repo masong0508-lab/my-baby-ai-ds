@@ -1286,8 +1286,43 @@ def test_actual_game(path: Path, output: Path) -> dict:
     assert read_text(practice_result, 10, 192+181,
                      max_chars=39, ink="lemon") == "PRACTICE CLEARED! NO REWARD."
     picture(emu, output, "arcade_practice_success_no_reward")
+
+    # Browse and play the expert training tier, without altering the live
+    # save. Native pixels must report the selected tier, and both math
+    # operations must be playable using the real touch answer slots.
+    stylus_tap(emu, 220, 63)
+    guide = current_header("GUIDE")
+    assert read_text(guide, 67, 192+72, max_chars=28, ink="ink") == "Y MODE: STANDARD"
+    stylus_tap(emu, 145, 75)
+    guide = current_header("GUIDE")
+    assert read_text(guide, 67, 192+72, max_chars=28, ink="ink") == "Y MODE: RELAXED"
+    press(Keys.KEY_Y)
+    guide = current_header("GUIDE")
+    assert read_text(guide, 67, 192+72, max_chars=28, ink="ink") == "Y MODE: EXPERT"
+    picture(emu, output, "arcade_expert_guide")
+    stylus_tap(emu, 190, 149)
+    signs = set()
+    for round_index in range(6):
+        practice = current_header("PRACTICE")
+        equation = read_text(practice, 83, 192+91, max_chars=18, ink="purple")
+        left, sign, right, equal, unknown = equation.split()
+        assert sign in ("+", "-") and equal == "=" and unknown == "?", equation
+        signs.add(sign)
+        answer = int(left) + int(right) if sign == "+" else int(left) - int(right)
+        values = [int(read_text(practice, 41+i*82, 192+139,
+                                max_chars=2, ink="ink")) for i in range(3)]
+        assert values.count(answer) == 1, values
+        stylus_tap(emu, 46+values.index(answer)*82, 150)
+    assert signs == {"+", "-"}
+    practice_result = current_header("ARCADE")
+    assert arcade_balance(practice_result) == before_practice
+    assert read_text(practice_result, 10, 192+181,
+                     max_chars=39, ink="lemon") == "PRACTICE CLEARED! NO REWARD."
+    picture(emu, output, "arcade_expert_success")
     write_fps_report()
     return {
+        "expert_practice_addition_and_subtraction": True,
+        "three_practice_modes_verified": True,
         "arcade_guides_verified": len(titles),
         "paid_practice_completed_without_reward": True,
         "arcade_pause_preserved_question": True,

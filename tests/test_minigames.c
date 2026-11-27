@@ -495,6 +495,51 @@ static void practice_all(void){
  game_arcade_start(&live,&a,0);assert(a.active&&!a.practice);
  assert(memcmp(&live,&original,sizeof(live))==0);
 }
+static void practice_difficulty(void){
+ Game live,original,sandbox;Arcade a;
+ game_init(&live);original=live;
+ for(int id=0;id<MBAI_GAMES;id++){
+  unsigned standard;
+  assert(game_arcade_practice_start(&live,&sandbox,&a,id));
+  standard=a.timer;
+  assert(game_arcade_practice_start_mode(&live,&sandbox,&a,id,ARCADE_PRACTICE_RELAXED));
+  assert(a.practice==ARCADE_PRACTICE_RELAXED&&a.timer==standard*3u/2u&&a.timer_limit==a.timer);
+  assert(game_arcade_practice_start_mode(&live,&sandbox,&a,id,ARCADE_PRACTICE_EXPERT));
+  assert(a.practice==ARCADE_PRACTICE_EXPERT&&sandbox.corruption==65u);
+  assert(a.timer<standard&&a.timer_limit==a.timer);
+ }
+ for(unsigned mode=ARCADE_PRACTICE_STANDARD;mode<=ARCADE_PRACTICE_EXPERT;mode++){
+  unsigned delay;
+  assert(game_arcade_practice_start_mode(&live,&sandbox,&a,4,mode));
+  delay=a.timer;
+  for(unsigned i=0;i<delay;i++)game_arcade_tick(&sandbox,&a);
+  assert(a.phase==1u&&a.timer_limit==a.timer);
+  assert(a.timer==(mode==ARCADE_PRACTICE_EXPERT?144u:mode==ARCADE_PRACTICE_RELAXED?360u:240u));
+ }
+ /* Expert math alternates addition/subtraction with unique, valid options. */
+ assert(game_arcade_practice_start_mode(&live,&sandbox,&a,10,ARCADE_PRACTICE_EXPERT));
+ for(unsigned i=0;i<MBAI_ROUNDS;i++){
+  unsigned answer=a.reverse?a.stage-a.direction:a.stage+a.direction;
+  assert(a.reverse==(i&1u)&&answer>=2u&&answer<=18u&&a.notes[a.target]==answer);
+  assert(a.notes[0]<a.notes[1]&&a.notes[1]<a.notes[2]);
+  game_arcade_input(&sandbox,&a,a.target);
+ }
+ assert(a.finished==1&&sandbox.wins==1u);
+ for(unsigned seed=1;seed<=32u;seed++){
+  Game seeded=live;seeded.rng=seed;
+  assert(game_arcade_practice_start_mode(&seeded,&sandbox,&a,12,ARCADE_PRACTICE_EXPERT));
+  for(unsigned i=0;i<6;i++){
+   int diff=(int)a.direction-(int)a.stage;
+   assert(diff==0||diff==1||diff==-1||diff==10||diff==-10);
+   assert(a.target==(diff!=0));
+   game_arcade_input(&sandbox,&a,a.target);
+  }
+  assert(a.finished==1);
+ }
+ assert(!game_arcade_practice_start_mode(&live,&sandbox,&a,0,0));
+ assert(!game_arcade_practice_start_mode(&live,&sandbox,&a,0,4));
+ assert(memcmp(&live,&original,sizeof(live))==0);
+}
 static void arcade_counter_limits(void){
  Game g;Arcade a;
  game_init(&g);g.unlocked=UINT16_MAX;g.wins=UINT32_MAX-1u;
@@ -514,7 +559,7 @@ static void arcade_counter_limits(void){
  assert(a.stage==1&&!game_arcade_court_touch(&g,&a,0,0,0)&&a.stage==1);
 }
 int main(void){
- practice_all();arcade_counter_limits();
+ practice_all();practice_difficulty();arcade_counter_limits();
  bottle();diaper();diaper_gestures();tax_receipts();
  crib_kart();baby_beatbox();sock_market();naptime();rattle();
  corporate_crawl();stroller_drift();cereal_cipher();tantrum_blocks();
