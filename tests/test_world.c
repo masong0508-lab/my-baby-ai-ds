@@ -7,7 +7,8 @@
 /* Capture actual submitted triangle vertices before the no-op transforms.
  * A rigid model transform preserves triangle area. This catches repeated
  * hand-cap poles without pretending the host shim emulates DS pixels. */
-static int primitive_mode;
+static int primitive_mode,primitive_open;
+static unsigned frame_batches,first_batch_vertices,last_batches,last_first_batch_vertices;
 static unsigned primitive_vertices,submitted_hand_caps,moon_relief_centers,teddy_nose_centers,quilt_joint_vertices;
 static float triangle_points[3][3];
 static int capture_geometry;
@@ -19,11 +20,17 @@ void test_gl_color(unsigned value){
  emitted_color=value;color_commands++;
 }
 void test_gl_flush(void){
+ assert(!primitive_open);
+ last_batches=frame_batches;last_first_batch_vertices=first_batch_vertices;
+ frame_batches=first_batch_vertices=0;
  assert(color_commands>0u&&color_vertices==world_vertex_count());
  last_color_commands=color_commands;
  emitted_color=~0u;color_commands=0;color_vertices=0;
 }
+void test_gl_matrix_barrier(void){assert(!primitive_open);}
 void test_gl_begin(int mode){
+ assert(!primitive_open);
+ primitive_open=1;frame_batches++;
  primitive_mode=mode;primitive_vertices=0;
  if(verify_title_rings&&mode==GL_QUAD_STRIP)title_strip_index++;
 }
@@ -71,7 +78,7 @@ static void verify_title_ring_vertex(float x,float y,float z){
  }
 }
 void test_gl_vertex(float x,float y,float z){
- assert(emitted_color<=0x7fffu);color_vertices++;
+ assert(primitive_open&&emitted_color<=0x7fffu);color_vertices++;
  verify_title_ring_vertex(x,y,z);
  if(capture_geometry){
   uint32_t bits;
@@ -122,7 +129,12 @@ void test_gl_vertex(float x,float y,float z){
  primitive_vertices++;
 }
 void test_gl_end(void){
+ assert(primitive_open);
  if(primitive_mode==GL_TRIANGLES)assert(primitive_vertices%3u==0u);
+ if(primitive_mode==GL_QUADS)assert(primitive_vertices%4u==0u);
+ if(primitive_mode==GL_QUAD_STRIP)assert(primitive_vertices>=4u&&primitive_vertices%2u==0u);
+ if(frame_batches==1u)first_batch_vertices=primitive_vertices;
+ primitive_open=0;
 }
 static void assert_baby_pose_equal(WorldBabyPose a,WorldBabyPose b){
  assert(a.reach_left==b.reach_left&&a.reach_right==b.reach_right);
@@ -182,6 +194,11 @@ int main(void){
  assert(moon_relief_centers==12u);
  assert(teddy_nose_centers==12u);
  assert(quilt_joint_vertices==4u);
+ /* The uninterrupted room opening contains 96 independent quads.
+  * It must be one batch, not 50 separate begin/end pairs. */
+ assert(last_first_batch_vertices==384u);
+ printf("Nursery draw batches: %u (first batch %u vertices)\n",
+        last_batches,last_first_batch_vertices);
  assert(last_color_commands<world_vertex_count());
  printf("Nursery command sample: %u color writes, %u submitted vertices\n",last_color_commands,world_vertex_count());
  /* WARDEN's physical screen clamps damaged/unknown status without
