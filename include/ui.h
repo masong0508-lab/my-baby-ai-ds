@@ -102,4 +102,5 @@ int ui_arcade_help_touch(int x,int y);
 int ui_arcade_pause_touch(int x,int y);
 int ui_arcade_guide_touch(int x,int y); /* 1 play/resume, 2 practice/end, 3 back, 4 mode */
 void ui_arcade_guide_draw(const Game *s,unsigned id,int paused,int practice,int can_save);
+void ui_arcade_record_draw(const ArcadeRecord *record);
 #endif
