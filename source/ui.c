@@ -1245,33 +1245,35 @@ static const char *const spr_ceo[]={
   ".oooooooooooooo.",
   "................"
 };
+/* Compile the ROM-native sprite palette into a direct lookup. Each
+ * source texel is decoded once per row, without a switch dispatch. */
+static const uint16_t art_palette[128]={
+ ['o']=INK,
+ ['h']=RGB(16,11,8),
+ ['s']=RGB(31,24,20),
+ ['r']=RGB(31,18,19),
+ ['p']=PINK,
+ ['w']=WHITE,
+ ['b']=SKY,
+ ['g']=GOLD,
+ ['t']=TEAL,
+ ['k']=RGB(5,7,11),
+ ['a']=RGB(27,18,16),
+ ['c']=RGB(31,29,25),
+ ['d']=RGB(23,14,9),
+ ['f']=RGB(22,30,23),
+ ['i']=RGB(30,27,30),
+ ['j']=RGB(15,26,29),
+ ['l']=RGB(31,27,23),
+ ['m']=RGB(12,24,21),
+ ['q']=RGB(12,11,16),
+ ['u']=RGB(23,19,27),
+ ['v']=RGB(21,10,13),
+ ['y']=RGB(31,28,16),
+};
 static uint16_t art_ink(char p){
- switch(p){
- case 'o':return INK;
- case 'h':return RGB(16,11,8);
- case 's':return RGB(31,24,20);
- case 'r':return RGB(31,18,19);
- case 'p':return PINK;
- case 'w':return WHITE;
- case 'b':return SKY;
- case 'g':return GOLD;
- case 't':return TEAL;
- case 'k':return RGB(5,7,11);
- /* Extended warm baby/material palette, using only 16-bit DS RGB5 colors. */
- case 'a':return RGB(27,18,16); /* skin shadow */
- case 'c':return RGB(31,29,25); /* romper collar */
- case 'd':return RGB(23,14,9);  /* chestnut sheen */
- case 'f':return RGB(22,30,23); /* mint fabric highlight */
- case 'i':return RGB(30,27,30); /* pillow ivory */
- case 'j':return RGB(15,26,29); /* badge sky */
- case 'l':return RGB(31,27,23); /* face highlight */
- case 'm':return RGB(12,24,21); /* jade cloth */
- case 'q':return RGB(12,11,16); /* muted ink */
- case 'u':return RGB(23,19,27); /* lavender shadow */
- case 'v':return RGB(21,10,13); /* small smile */
- case 'y':return RGB(31,28,16); /* sunlit gold */
- default:return 0;
- }
+ unsigned index=(unsigned char)p;
+ return index<128u?art_palette[index]:0;
 }
 /* Group equal-color horizontal pixels to avoid one VRAM rectangle call
  * per sprite pixel. Transparent runs never write stale/background columns. */
@@ -1281,10 +1283,16 @@ static void sprite(int x,int y,int scale,const char *const *rows,int count){
  for(yy=0;yy<count;yy++){
   const char *line=rows[yy];
   xx=0;
-  while(line[xx]){
-   uint16_t color=art_ink(line[xx]);
-   int start=xx++;
-   while(line[xx]&&art_ink(line[xx])==color)xx++;
+  if(line[0]){
+   uint16_t color=art_ink(line[0]);
+   int start=0;
+   for(xx=1;line[xx];xx++){
+    uint16_t next=art_ink(line[xx]);
+    if(next!=color){
+     if(color)solid(x+start*scale,y+yy*scale,(xx-start)*scale,scale,color);
+     start=xx;color=next;
+    }
+   }
    if(color)solid(x+start*scale,y+yy*scale,(xx-start)*scale,scale,color);
   }
  }
@@ -1448,6 +1456,20 @@ void ui_arcade_guide_draw(const Game *s,unsigned id,int paused,int practice,int 
      "B BACK   EXPERT: FAST / GLITCHED":practice==ARCADE_PRACTICE_RELAXED?
      "B BACK   RELAXED: 50% MORE TIME":"B BACK   STANDARD PRACTICE",WHITE,39);
 }
+void ui_arcade_record_draw(const ArcadeRecord *record){
+ char line[44];
+ if(!pixels)return;
+ solid(8,167,240,8,IVORY);
+ if(!record||!record->attempts){
+  fit(10,167,"SESSION RECORD: NO COMPLETED RUNS",MUTED,39);
+  return;
+ }
+ if(record->clears)
+  snprintf(line,sizeof(line),"CLEARS %u/%u BEST %uT CLEAN %u",
+           record->clears,record->attempts,record->best_ticks,record->perfect);
+ else snprintf(line,sizeof(line),"CLEARS 0/%u BEST -- CLEAN 0",record->attempts);
+ fit(10,167,line,INK,39);
+}
 int ui_arcade_help_touch(int x,int y){
  return x>=193&&x<248&&y>=57&&y<71;
 }
@@ -1488,8 +1510,19 @@ void ui_arcade_clock(const Arcade *a){
  color=width>52u?TEAL:width>26u?GOLD:ROSE;
  if(clock_width==(int)width&&clock_color==color)return;
  cursor_erase();
- solid(96,73,104,2,GRAY);
- solid(96,73,(int)width,2,color);
+ /* Update only the changed two-row portion. A full chrome repaint
+  * invalidates the cached width; a color threshold repaints the fill. */
+ if(clock_width<0){
+  solid(96,73,104,2,GRAY);
+  solid(96,73,(int)width,2,color);
+ }else{
+  if(width<(unsigned)clock_width)
+   solid(96+(int)width,73,clock_width-(int)width,2,GRAY);
+  if(clock_color!=color)
+   solid(96,73,(int)width,2,color);
+  else if(width>(unsigned)clock_width)
+   solid(96+clock_width,73,(int)width-clock_width,2,color);
+ }
  clock_width=(int)width;clock_color=color;
 }
 static void cabinet_chrome(const Arcade *a){
@@ -1597,8 +1630,19 @@ static void kart_challenge(const Arcade *a){
 static void sock_picture(int x,int y,int scale,int kind){
  static const uint16_t cloth[3]={PINK,TEAL,LEMON};
  sprite(x,y,scale,spr_sock,13);
- solid(x+5*scale,y+3*scale,3*scale,2*scale,cloth[kind%3]);
- solid(x+5*scale,y+7*scale,3*scale,2*scale,cloth[kind%3]);
+ /* Match pattern as well as color: stripe, two dots or checker.
+  * All three remain legible without distinguishing hue alone. */
+ int k=kind%3;
+ if(k==0){
+  solid(x+5*scale,y+3*scale,3*scale,2*scale,cloth[k]);
+  solid(x+5*scale,y+7*scale,3*scale,2*scale,cloth[k]);
+ }else if(k==1){
+  solid(x+5*scale,y+3*scale,2*scale,2*scale,cloth[k]);
+  solid(x+7*scale,y+7*scale,2*scale,2*scale,cloth[k]);
+ }else{
+  for(int i=0;i<3;i++)solid(x+(5+i)*scale,y+(3+(i&1))*scale,scale,2*scale,cloth[k]);
+  for(int i=0;i<3;i++)solid(x+(5+i)*scale,y+(7+((i+1)&1))*scale,scale,2*scale,cloth[k]);
+ }
 }
 static void sock_challenge(const Arcade *a){
  char text[40];int i;
@@ -1610,7 +1654,7 @@ static void sock_challenge(const Arcade *a){
  capsule(9,76,238,40,MINT,TEAL);
  sock_picture(53,79,2,a->target);
  fit(96,86,"MATCH THIS",PURPLE,18);
- fit(96,97,"STRIPE COLOR",TEAL,21);
+ fit(96,97,"COLOR + PATTERN",TEAL,21);
  for(i=0;i<3;i++){
   int x=13+i*82;
   capsule(x,121,66,53,WHITE,i==0?PINK:i==1?TEAL:GOLD);
@@ -1622,10 +1666,13 @@ static void sock_challenge(const Arcade *a){
 }
 static void nap_challenge(const Arcade *a){
  char text[40];
- int phase=(int)(a->elapsed%a->hold_frames);
- int pos=20+phase*214/a->hold_frames;
- int green_x=20+38*214/100;
- int green_w=33*214/100;
+ unsigned period=a->hold_frames?a->hold_frames:1u;
+ unsigned phase=a->elapsed%period;
+ int pos=20+(int)(phase*214u/period);
+ int green_x=20+(int)((period*38u/100u)*214u/period);
+ int green_end=20+(int)((period*70u/100u)*214u/period);
+ int green_w=green_end-green_x+1;
+ int ready=game_arcade_nap_ready(a);
  arcade_wall(BLUE);
  panel(6,31,244,41,WHITE,LILAC);
  label(13,35,"NAPTIME",PURPLE,2,7);
@@ -1644,7 +1691,7 @@ static void nap_challenge(const Arcade *a){
  solid(pos,146,4,20,DEEP_PINK);
  /* Dark legible instruction on the cream crib card. The previous WHITE
   * text was effectively invisible on the WHITE card below the baby. */
- fit(82,134,a->taped?"SWEET DREAMS!":"TAP IN GREEN",PURPLE,19);
+ fit(82,134,a->taped?"SWEET DREAMS!":ready?"TAP NOW!":"WAIT FOR GREEN",ready?TEAL:PURPLE,19);
  foot(PURPLE);
  snprintf(text,sizeof(text),"TAP IN GREEN! %u SEC  B BACK",(a->timer+59)/60);
  fit(12,181,text,WHITE,39);
@@ -1757,6 +1804,7 @@ static void diaper_challenge(const Arcade *a){
 static void rattle_challenge(const Arcade *a){
  char text[40];
  int lane,y,i,fall;
+ int ready=game_arcade_rattle_ready(a);
  arcade_wall(SKY);
  panel(6,31,244,40,WHITE,TEAL);
  label(13,35,"RATTLE RESCUE",PURPLE,2,13);
@@ -1765,8 +1813,8 @@ static void rattle_challenge(const Arcade *a){
  for(i=0;i<3;i++){
   int x=13+i*82;
   capsule(x,76,66,91,i==a->target?WHITE:BLUSH,LILAC);
-  solid(x+4,130,58,29,LEMON);
-  outline(x+4,130,58,29,GOLD);
+  solid(x+4,130,58,29,i==a->target&&ready?MINT:LEMON);
+  outline(x+4,130,58,29,i==a->target&&ready?GREEN:GOLD);
   fit(x+27,159,i==0?"L":i==1?"D":"R",PURPLE,1);
  }
  lane=13+a->target*82;
@@ -1775,7 +1823,7 @@ static void rattle_challenge(const Arcade *a){
  sprite(lane+17,y,2,spr_rattle,17);
  sparkle(8,90,PINK);sparkle(240,105,LEMON);
  foot(PURPLE);
- fit(11,181,"TAP GOLD ZONE AS RATTLE FALLS",WHITE,39);
+ fit(11,181,ready?"CATCH NOW! TAP THE GREEN LANE":a->timer<8u?"TOO LATE - WAIT FOR NEXT RATTLE":"WAIT UNTIL THE LANE TURNS GREEN",WHITE,39);
 }
 static void crawl_challenge(const Arcade *a){
  char text[40];int x;
@@ -1975,6 +2023,7 @@ static void ceo_challenge(const Arcade *a){
  solid(76,85,a->balance*150/100,8,TEAL);
  solid(76,99,a->progress*150/100,8,PINK);
  solid(76+35*150/100,82,2,28,GOLD);
+ solid(76+80*150/100,82,2,28,GOLD);
  for(i=0;i<3;i++){
   int x=13+i*82;
   capsule(x,121,66,51,i==0?MINT:i==1?PINK:SKY,PURPLE);
@@ -1994,7 +2043,9 @@ static void ceo_challenge(const Arcade *a){
    solid(x+33,130,13,14,SKY);
    solid(x+26,133,5,4,WHITE);
   }
-  label(x+12,149,actions[i],INK,2,4);
+  label(x+12,146,actions[i],INK,2,4);
+  /* Show real policy tradeoffs before making a decision. */
+  fit(x+3,162,i==0?"+12 / -8":i==1?"-10 / +13":"-5 / +4",INK,10);
  }
  foot(PURPLE);
  fit(9,181,"BALANCE THE BOOKS AND BABY!",WHITE,40);
