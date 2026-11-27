@@ -80,6 +80,8 @@ const char *observer_report(const ObserverProfile *profile,
 const char *observer_answer(ObserverProfile *profile,ObserverSession *session,
                             const Game *state,unsigned speaker,
                             const char *input);
-/* 0 rejected, 1 new phrase, 2 reinforced duplicate, 3 replaced oldest slot. */
+/* 0 rejected, 1 new phrase, 2 reinforced duplicate, 3 full (unchanged). */
 int observer_teach(ObserverProfile *profile,const char *text);
+/* Explicit deletion only; other lessons and the history remain intact. */
+int observer_forget_phrase(ObserverProfile *profile,unsigned slot);
 #endif
