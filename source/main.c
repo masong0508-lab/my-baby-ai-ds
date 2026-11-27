@@ -85,6 +85,7 @@ static uint32_t egg_frame;
 static int egg_paused;
 static int toy_tool=ROUGHHOUSE_SLAP;
 static const char *message="THE LAST NURSERY. WARDEN IS ONLINE.";
+static char room_feedback[64];
 static void reset_care_motion(void){
  pose=0;pose_age=0;
  care_motion=(WorldBabyMotion){0};
@@ -148,7 +149,9 @@ static void save_live_baby(void){
  }
  else message="NO SAVE DEVICE - RAM ONLY.";
 }
-static int care(Care action,uint32_t frame){
+/* Apply a care event before saving so compound interactions can commit
+ * their complete state together, rather than writing intermediate saves. */
+static void care_apply(Care action,uint32_t frame){
  Game before=baby;
  /* Capture the current articulated pose BEFORE care changes tiredness
   * and need-driven fidget. A repeated tap can interrupt another blend. */
@@ -177,6 +180,9 @@ static int care(Care action,uint32_t frame){
  case NAP:sfx_play(SFX_NAP);break;
  default:break;
  }
+}
+static int care(Care action,uint32_t frame){
+ care_apply(action,frame);
  return persist();
 }
 /* Questions and feedback are conversation, not another care action:
@@ -218,17 +224,18 @@ static void terminal_type(char key){
   terminal_input[length]=key;terminal_input[length+1u]='\0';
  }
 }
+static void animate_baby_reply(uint32_t frame){
+ WorldBabyPose from=world_baby_pose(&baby,frame,pose,pose_age,
+                                    pose?&care_motion:0);
+ pose=CHAT+1;pose_age=0;
+ world_baby_motion_start(&care_motion,from,&baby,frame,pose);
+ sfx_play(SFX_CHAT);
+}
 static void terminal_send(uint32_t frame){
  ObserverProfile before=shelter;
  (void)observer_answer(&shelter,&observer,&baby,terminal_speaker,terminal_input);
  terminal_sent=1;
- if(terminal_speaker==OBSERVER_BABY){
-  WorldBabyPose from=world_baby_pose(&baby,frame,pose,pose_age,
-                                    pose?&care_motion:0);
-  pose=CHAT+1;pose_age=0;
-  world_baby_motion_start(&care_motion,from,&baby,frame,pose);
-  sfx_play(SFX_CHAT);
- }
+ if(terminal_speaker==OBSERVER_BABY)animate_baby_reply(frame);
  if(memcmp(&before,&shelter,sizeof(shelter))!=0)(void)persist();
 }
 /* Speak-to-command is opt-in. A microphone match is a suggestion only;
@@ -359,7 +366,7 @@ static int microphone_tick(uint32_t frame){
  }
  voice_mode=0;return 1;
 }
-static void terminal_teach(void){
+static void terminal_teach(uint32_t frame){
  ObserverProfile before=shelter;
  char lesson[40];
  if(terminal_speaker!=OBSERVER_BABY){
@@ -370,7 +377,12 @@ static void terminal_teach(void){
  memcpy(lesson+6u,terminal_input,strlen(terminal_input)+1u);
  (void)observer_answer(&shelter,&observer,&baby,terminal_speaker,lesson);
  terminal_sent=1;
- if(memcmp(&before,&shelter,sizeof(shelter))!=0)(void)persist();
+ if(memcmp(&before,&shelter,sizeof(shelter))!=0){
+  /* A newly stored/reinforced phrase is a visible response, just like
+   * a typed SEND, without spending care, advancing RNG or exposure. */
+  animate_baby_reply(frame);
+  (void)persist();
+ }
 }
 static void observer_pose(int action,uint32_t frame){
  WorldBabyPose from=world_baby_pose(&baby,frame,pose,pose_age,
@@ -599,7 +611,7 @@ int main(void){
       "WARDEN ONLINE. ASK STATUS, WORLD,\nMEMORY, HELP OR A CALCULATION.");
     dirty=1;
    }else if(picked==32){
-    terminal_teach();dirty=1;
+    terminal_teach(frame);dirty=1;
    }else if((down&(KEY_X|KEY_START))||picked==33){
     terminal_send(frame);dirty=1;
    }else if((down&KEY_SELECT)||picked==34){
@@ -1024,7 +1036,9 @@ int main(void){
       /* Never overwrite a failed-write warning with a joke. */
       if(care(PLAY,frame))message="TEDDY RECEIVED A PROMOTION.";
      }else{
-      int saved=care(NAP,frame);
+      unsigned energy,chaos,glitch;
+      care_apply(NAP,frame);
+      energy=baby.energy;chaos=baby.chaos;glitch=baby.corruption;
       /* The attached mobile chimes while it performs its one-shot
        * 40-tick swing. It supersedes the ordinary NAP phrase only here. */
       sfx_play(SFX_MOBILE);
@@ -1037,9 +1051,15 @@ int main(void){
        /* Quiet rest changes energy again in the same tick; retain the
         * original captured rig against this final sleepy-arm baseline. */
        world_baby_motion_start(&care_motion,care_motion.start,&baby,frame,pose);
-       message="QUIET: +8 ENERGY -4 CHAOS -2 GLITCH";
-       (void)persist(); /* save BOTH care and conditional quiet benefit */
-      }else if(saved)message="CRIB NAP: BOARD APPROVED.";
+       /* Report the real bonus after clamping at 0/100. */
+       snprintf(room_feedback,sizeof(room_feedback),
+                "QUIET: +%u ENERGY -%u CHAOS -%u GLITCH",
+                (unsigned)baby.energy-energy,chaos-(unsigned)baby.chaos,
+                glitch-(unsigned)baby.corruption);
+       message=room_feedback;
+      }else message="CRIB NAP: BOARD APPROVED.";
+      /* Save both parts once; persist owns the final failure warning. */
+      (void)persist();
      }
      dirty=1;
     }
