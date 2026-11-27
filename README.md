@@ -140,6 +140,14 @@ Rapid care taps carry the baby's current arm, head, eyelid and bounce pose into 
 
 When the baby is comfortable, CHAT can mention a recent bottle, playtime, nap, quiet crib rest or completed arcade win/loss. Four distinct events fit in a 20-byte session memory; needs take priority, repeated replies are avoided, and events expire with further interactions or a new day. Loading or resetting a baby starts a fresh memory. The existing save format remains unchanged. See [care-motion details](docs/CARE_MOTION_CONTINUITY.md) and [recent-interaction memory](docs/RECENT_INTERACTION_MEMORY.md).
 
+### Arcade training, pause and timing
+
+All sixteen cabinets have illustrated **GUIDE** pages (tap Y GUIDE or press Y in the arcade). The guide explains each actual objective, touch gestures and button controls. Select **X PRACTICE** to try even a locked paid cabinet. Practice uses an isolated, normal-difficulty copy of game state: no live rewards, wins/losses, corruption, RNG, learning events, unlocks or save writes. Real runs retain the original purchase requirements and reward economy.
+
+Press **START** or tap the small **II** badge in a cabinet to pause and read its guide. A/B/START or RESUME continues; X END RUN exits. Unfinished drag/trace gestures must be started again; all other puzzle state and timers are held. All cabinets now have a green/amber/red live time track between progress and mistake indicators. The track uses the actual remaining fraction of the current stage's timer, including each new question and Beatbox WATCH/REPEAT transition, and updates only a small bitmap region.
+
+Baby Beatbox uses four original distinct PSG pad sounds for its visual demonstration and correct repeat inputs. Existing result cues and the global mute still take priority.
+
 ### Arcade reactions and clear feedback
 
 Successful steps, mistakes, wins and losses now have distinct short PSG cues and brief text feedback in the existing footer. Ignored taps and ordinary steering stay silent. Completed games trigger a finite baby cheer or a gentle regrouping gesture; both can blend into the next care action. Normal footer controls return after the message expires, while a failed save takes priority and remains visible until saving succeeds. The Bottle Balance green band now matches its actual scoring window. See [arcade feedback](docs/ARCADE_FEEDBACK.md) and [baby result reactions](docs/ARCADE_BABY_REACTIONS.md).
