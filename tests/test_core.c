@@ -41,6 +41,27 @@ static void test_care_hint(void){
  (void)game_care(&s,NAP);
  assert(s.energy==37&&game_care_hint(&s)==-1);
 }
+static void test_room_lullaby(void){
+ Game s,before;
+ game_init(&s);s.mood=70;s.chaos=23;s.energy=50;s.hunger=30;
+ before=s;
+ assert(game_room_soothe(&s));
+ assert(s.mood==76&&s.chaos==15&&s.energy==47&&s.hunger==32);
+ assert(s.rng!=before.rng&&s.days==before.days&&s.dollars==before.dollars);
+ assert(s.corruption==before.corruption&&s.ending_mask==before.ending_mask);
+ s.mood=99;s.chaos=2;assert(game_room_soothe(&s));
+ assert(s.mood==100&&s.chaos==0);
+ before=s;assert(!game_room_soothe(&s));assert(memcmp(&s,&before,sizeof(s))==0);
+ s.hunger=70;s.chaos=40;before=s;
+ assert(!game_room_soothe(&s));assert(memcmp(&s,&before,sizeof(s))==0);
+ s.hunger=20;s.energy=15;before=s;
+ assert(!game_room_soothe(&s));assert(memcmp(&s,&before,sizeof(s))==0);
+ assert(!game_room_soothe(NULL));
+ /* A player cannot repeat the activity indefinitely without other care. */
+ game_init(&s);s.chaos=100;s.energy=16;s.hunger=68;
+ assert(game_room_soothe(&s));assert(s.energy==13&&s.hunger==70);
+ before=s;assert(!game_room_soothe(&s));assert(memcmp(&s,&before,sizeof(s))==0);
+}
 static void test_room_quiet_rest(void){
  Game s,original;
  game_init(&s);
@@ -401,6 +422,7 @@ int main(void){
  Game g,h;Arcade a;int i;
  const char *base="/tmp/my_baby_ai_testslot";
  test_room_quiet_rest();
+ test_room_lullaby();
  test_care_hint();
  test_day_need_cycle();
  test_long_term_rehabilitation();
