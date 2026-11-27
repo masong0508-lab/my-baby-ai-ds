@@ -42,7 +42,10 @@ int game_room_quiet_rest(Game *s,int daylight,int lamp_on);
  * Refuses when too hungry, exhausted, or already completely settled. */
 int game_room_soothe(Game *s);
 /* Transient nursery timing game. Never serialized and no arcade currency. */
-enum { PEEK_IDLE=0, PEEK_WAIT, PEEK_OPEN, PEEK_WON, PEEK_LOST };
+enum { PEEK_IDLE=0, PEEK_WAIT, PEEK_OPEN, PEEK_WON, PEEK_LOST,
+       PEEK_SCARE, PEEK_CORRUPT, PEEK_LOCKED };
+#define PEEK_SCARE_TICKS 40u
+#define PEEK_CORRUPT_TICKS 90u
 typedef struct {
  uint8_t phase,round,misses;
  uint16_t ticks;
@@ -50,6 +53,8 @@ typedef struct {
 int game_peek_start(const Game *s,NurseryPeek *p);
 int game_peek_tick(NurseryPeek *p);
 int game_peek_tap(Game *s,NurseryPeek *p);
+/* Cosmetic horror only: one in 2^20 uniform draws, on a valid BOO. */
+int game_peek_scare_roll(NurseryPeek *p,uint32_t draw);
 unsigned game_glitch_tier(const Game *s);
 int game_unlocked(const Game *s,int id);
 /* One shared source of truth for what a locked cabinet requires.
