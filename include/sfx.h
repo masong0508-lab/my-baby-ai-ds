@@ -7,7 +7,8 @@ typedef enum {
  SFX_UNSEAL,SFX_PULSE,SFX_SCARE,
  /* Short original one-channel musical reactions for ordinary play. */
  SFX_FEED,SFX_CHAT,SFX_PLAY,SFX_NAP,SFX_ROOM_SWITCH,SFX_MOBILE,
- SFX_ARCADE_PROGRESS,SFX_ARCADE_MISS,SFX_ARCADE_WIN,SFX_ARCADE_LOSS
+ SFX_ARCADE_PROGRESS,SFX_ARCADE_MISS,SFX_ARCADE_WIN,SFX_ARCADE_LOSS,
+ SFX_LULLABY
 } SfxCue;
 void sfx_init(void);
 void sfx_play(SfxCue cue);

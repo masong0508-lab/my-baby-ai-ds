@@ -121,6 +121,16 @@ The baby keeps track of its current subject and actual recent care, including wh
 
 Learned preferences fit a **40-byte profile**. When saving is enabled, checksummed companions bind that profile to the exact saved baby while leaving the existing version-1 progress files unchanged. Missing or damaged learning files start neutral preferences and do not block restoring progress. Short-lived event memories still reset on load or a new day. See [neural conversation](docs/NEURAL_CONVERSATION.md), [learning save compatibility](docs/LEARNING_SAVE_COMPATIBILITY.md), and [native conversation tests](docs/NATIVE_CONVERSATION_TESTS.md).
 
+### Nursery lullaby
+
+In ROOM, tap **LULLABY** or press SELECT to sing to the baby. A useful lullaby raises mood by up to 6 and lowers chaos by up to 8, costing 3 energy and adding 2 hunger. It plays a separate gentle melody and a connected regroup animation, and records one social care interaction. The baby refuses if hungry, exhausted, or already completely calm and happy. No extra currency, save fields or automatic actions are involved.
+
+### Peekaboo
+
+In ROOM, tap **PEEKABOO** or press R. Wait until the baby opens its eyes, then tap BOO or press A. Three successful reveals win; two early or missed reveals end the activity. A win raises mood by up to 12 and adds 4 chaos, costing 8 energy and adding 6 hunger. It records one play interaction, plays a result animation and saves if storage is enabled. No arcade currency or win/loss counts change. B cancels without a care cost. The baby needs sufficient energy and reasonable hunger/chaos before starting.
+
+An exceptionally rare horror Easter egg may interrupt a successful BOO: the existing alien reveal lunges immediately, followed by a non-strobing fictional session-corruption screen and a halted game session. Restart the ROM or console to resume play. The nominal trigger is one of 2^20 uniformly distributed draw values, with the runtime draw mixed from input timing and the existing seed. No gameplay RNG is consumed, no save is written, and no cartridge, console, firmware or stored data is damaged. The event is visual and session-local only.
+
 ### Care flow and recent memories
 
 Rapid care taps carry the baby's current arm, head, eyelid and bounce pose into the next gesture over 12 game ticks. This includes tiredness changes and the extra recovery from a quiet crib nap. Each gesture still settles back to idle after its original 56-tick cycle.

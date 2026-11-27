@@ -735,6 +735,10 @@ static void room_screen(const Game *s,int state,const char *message){
   fit(x+45,y+22,i==3&&!day&&!lamp?"BONUS +8":benefit[i],
       INK,13);
  }
+ capsule(8,163,116,12,MINT,TEAL);
+ fit(20,166,"SEL LULLABY",INK,15);
+ capsule(132,163,116,12,LEMON,TEAL);
+ fit(151,166,"R PEEKABOO",INK,15);
  foot(PURPLE);
  capsule(8,178,240,13,NIGHT,TEAL);
  fit(18,182,"B BACK",WHITE,7);
@@ -742,6 +746,72 @@ static void room_screen(const Game *s,int state,const char *message){
  fit(151,182,muted?"Y SND OFF":"Y SND ON",
      muted?ROSE:MINT,9);
  fit(211,182,"A USE",WHITE,6);
+}
+/* A separate full lower-screen activity with readable timing cues.
+ * No text or cursor storage beyond the existing bitmap surface. */
+/* The lost-session display uses only normal bitmap drawing.
+ * No storage or hardware faults, no rapid flashing. */
+static void peek_horror_screen(const Game *s,const NurseryPeek *p){
+ unsigned i;
+ cursor_visible=0;
+ solid(0,0,256,192,NIGHT);
+ if(p->phase==PEEK_SCARE){
+  fit(18,26,"YOU LOOKED.",PINK,36);
+  label(18,66,"IT SAW YOU",WHITE,2,18);
+  fit(18,136,"WARDEN SIGNAL LOST",ROSE,36);
+ }else if(p->phase==PEEK_CORRUPT){
+  if(!s->safe_visuals){
+   for(i=0;i<12u;i++){
+    int x=(int)((i*47u+17u)%180u);
+    solid(x,8+(int)i*14,12+(int)(i*11u%56u),2,
+          i%3u==0u?ROSE:PURPLE);
+   }
+  }
+  panel(12,42,232,110,INK,ROSE);
+  fit(21,52,"WARDEN // LINK FAILURE",PINK,35);
+  fit(21,76,"SESSION IMAGE INVALID",WHITE,35);
+  fit(21,94,"NURSERY PROCESS HALTED",WHITE,35);
+  fit(21,126,"RECOVERY UNAVAILABLE",ROSE,35);
+ }else{
+  fit(18,26,"WARDEN // OFFLINE",ROSE,36);
+  label(18,73,"GAME HALTED",WHITE,2,18);
+  fit(18,132,"RESTART THE GAME TO RECOVER.",MUTED,36);
+ }
+}
+void ui_peek_draw(const Game *s,const NurseryPeek *p,int can_save){
+ char line[40];
+ unsigned i;
+ int result;
+ if(!pixels||!s||!p)return;
+ if(p->phase>=PEEK_SCARE){peek_horror_screen(s,p);return;}
+ cursor_visible=0;screen_accent=AQUA;
+ header("PEEKABOO",s,can_save);
+ solid(0,27,256,149,LILAC);
+ panel(8,31,240,78,WHITE,PURPLE);
+ fit(17,38,"THREE REVEALS TO WIN",PURPLE,36);
+ snprintf(line,sizeof(line),"REVEALS %u/3   MISSES %u/2",
+          (unsigned)p->round,(unsigned)p->misses);
+ fit(17,49,line,INK,36);
+ for(i=0;i<3u;i++)capsule(18+(int)i*73,63,65,9,
+                         i<p->round?MINT:GRAY,TEAL);
+ result=p->phase==PEEK_WON||p->phase==PEEK_LOST;
+ if(p->phase==PEEK_WON){
+  fit(17,82,"BABY LOVED PLAYING!",TEAL,36);
+  fit(17,94,"MOOD UP. PLAY MEMORY RECORDED.",INK,36);
+ }else if(p->phase==PEEK_LOST){
+  fit(17,82,"LET'S TRY AGAIN LATER.",ROSE,36);
+  fit(17,94,"NO CARE COST OR REWARD.",INK,36);
+ }else{
+  fit(17,82,p->phase==PEEK_OPEN?"EYES OPEN! TAP BOO NOW!":
+              "EYES CLOSED. WAIT FOR BOO.",INK,36);
+  fit(17,94,"TWO MISSES END THE GAME.",MUTED,36);
+ }
+ capsule(40,119,176,46,p->phase==PEEK_OPEN?MINT:result?LEMON:WHITE,TEAL);
+ fit(67,137,result?"A RETURN TO ROOM":p->phase==PEEK_OPEN?
+          "A / TAP: BOO!":"WAIT - NOT YET",INK,24);
+ foot(PURPLE);
+ fit(18,182,"B BACK",WHITE,10);
+ fit(110,182,"NO ARCADE COST",WHITE,22);
 }
 /* Five-character art-directed wordmarks can occupy a genuine 2x font,
  * with the full cabinet title displayed in the section above. */
@@ -2262,7 +2332,14 @@ int ui_room_touch(int x,int y){
  }
  if(y>=77&&y<115)return x>=8&&x<124?0:x>=132&&x<248?1:-1;
  if(y>=122&&y<161)return x>=8&&x<124?2:x>=132&&x<248?3:-1;
+ if(y>=163&&y<175)return x>=8&&x<124?8:x>=132&&x<248?9:-1;
  return -1;
+}
+int ui_peek_touch(int x,int y){
+ if(x<0||x>=256||y<0||y>=192)return 0;
+ if(y>=176)return 2;
+ if(x>=40&&x<216&&y>=119&&y<165)return 1;
+ return 0;
 }
 int ui_room_entry_touch(int x,int y){
  return x>=194&&x<243&&y>=34&&y<47;
