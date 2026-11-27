@@ -319,20 +319,23 @@ static void foot(uint16_t color){
  solid(0,176,256,2,screen_accent);
  (void)color;
 }
-void ui_arcade_feedback(ArcadeFeedbackEvent event){
+void ui_arcade_feedback_mode(ArcadeFeedbackEvent event,int practice){
  const char *text;
  uint16_t color;
  switch(event){
  case ARCADE_FEEDBACK_PROGRESS:text="NICE! KEEP GOING.";color=MINT;break;
  case ARCADE_FEEDBACK_MISS:text="OOPS! TRY AGAIN.";color=PINK;break;
- case ARCADE_FEEDBACK_WIN:text="YOU WON! GREAT JOB.";color=LEMON;break;
- case ARCADE_FEEDBACK_LOSS:text="ROUND LOST. TRY AGAIN.";color=WHITE;break;
+ case ARCADE_FEEDBACK_WIN:text=practice?"PRACTICE CLEARED! NO REWARD.":"YOU WON! GREAT JOB.";color=LEMON;break;
+ case ARCADE_FEEDBACK_LOSS:text=practice?"PRACTICE OVER. NO PENALTY.":"ROUND LOST. TRY AGAIN.";color=WHITE;break;
  default:return;
  }
  /* This pass follows the full UI draw and precedes the virtual cursor.
   * No flashes, new surface, or writes into the cabinet's playfield. */
  solid(0,178,256,14,NIGHT);
  fit(10,181,text,color,39);
+}
+void ui_arcade_feedback(ArcadeFeedbackEvent event){
+ ui_arcade_feedback_mode(event,0);
 }
 void ui_save_warning(void){
  /* A game result must not hide that its progress is only in RAM. This
@@ -1346,7 +1349,9 @@ static void arcade_list(const Game *s,int selection){
   fit(71,46,tmp,ROSE,20);
  }else fit(80,46,"READY TO PLAY",TEAL,23);
  snprintf(tmp,sizeof(tmp),"%s",game_names[selection]);
- fit(12,60,tmp,PURPLE,38);
+ fit(12,60,tmp,PURPLE,28);
+ capsule(193,57,55,14,MINT,TEAL);
+ fit(199,61,"Y GUIDE",INK,8);
  for(slot=0;slot<4;slot++){
   uint16_t fill,edge;
   char num[16]; /* int formatting needs up to 11 bytes under -Werror */
@@ -1371,6 +1376,69 @@ static void arcade_list(const Game *s,int selection){
  fit(101,181,game_unlocked(s,selection)?"X OWNED":"X UNLOCK",WHITE,14);
  fit(199,181,"B BACK",WHITE,10);
 }
+/* One illustrated guide for every unique cabinet, no extra sprite
+ * bank. Text matches the actual gesture/button and scoring rules. */
+static const char *const arcade_goal_text[MBAI_GAMES]={
+ "KEEP THE BOTTLE STEADY","COMPLETE FOUR CARE STEPS","SORT SIX RECEIPTS","DODGE SIX ROADBLOCKS",
+ "REPEAT THREE TUNES","MATCH SIX SOCKS","HIT FOUR CALM WINDOWS","CATCH SIX RATTLES",
+ "PASS SIX OFFICE OBSTACLES","CLEAR FIVE DRIFT SECTIONS","SOLVE SIX SUMS","DROP SIX BLOCKS",
+ "CHECK SIX ACCOUNTS","WATER FOUR FLOWERS","TRACE FOUR EVIDENCE SETS","MAKE SIX BALANCED CHOICES"
+};
+static const char *const arcade_instructions[MBAI_GAMES][3]={
+ {"HOLD LEFT OR RIGHT TO STEER.","STAY INSIDE THE GREEN SAFE ZONE.","FILL THE STEADY METER TO WIN."},
+ {"RUB, DRAG CLEAN DIAPER, SWIPE UP.","TAP LEFT TAPE THEN RIGHT TAPE.","BUTTONS: LEFT, RIGHT, DOWN, UP."},
+ {"KEEP A REFUND; SHRED A FAKE BILL.","DRAG THE PAPER TO ITS TRAY.","OR PRESS LEFT KEEP / RIGHT SHRED."},
+ {"CHOOSE A LANE BEFORE THE CONE.","TAP LANES OR LEFT / DOWN / RIGHT.","STAY OUT OF THE BLOCKED LANE."},
+ {"WATCH AND HEAR THREE PAD NOTES.","REPEAT THE ORDER AFTER THE CUE.","UP / RIGHT / DOWN / LEFT = PADS."},
+ {"MATCH THE SOCK TO THE SAMPLE.","TAP A STALL OR LEFT/DOWN/RIGHT.","SIX CORRECT MATCHES CLEAR IT."},
+ {"WAIT FOR THE GREEN TIMING WINDOW.","TAP THE PAD OR PRESS A / UP.","ONLY ONE HIT COUNTS PER CYCLE."},
+ {"WAIT UNTIL THE RATTLE FALLS LOW.","TAP ITS LANE AT THE CATCH LINE.","LEFT / DOWN / RIGHT ALSO WORK."},
+ {"WATCH EACH APPROACHING OBSTACLE.","UP TO JUMP; DOWN TO DUCK.","PICK THE SAFE POSE BEFORE IMPACT."},
+ {"HOLD LEFT / RIGHT TO STEER.","STAY IN THE GREEN BALANCE ZONE.","COMPLETE FIVE STEADY SECTIONS."},
+ {"ADD THE TWO CEREAL NUMBERS.","TAP THE CORRECT ANSWER SLOT.","LEFT / DOWN / RIGHT = ANSWERS."},
+ {"WATCH THE MOVING BLOCK.","TAP DROP OR PRESS A AT THE TARGET.","SIX ACCURATE DROPS CLEAR IT."},
+ {"COMPARE THE TWO ACCOUNT VALUES.","LEFT APPROVE IF THEY MATCH.","RIGHT FLAG IF THEY DIFFER."},
+ {"HOLD THE SELECTED FLOWER TO WATER.","OR PRESS LEFT / DOWN / RIGHT.","FILL FOUR FLOWER METERS."},
+ {"TRACE THE CLUES IN NUMBER ORDER.","KEEP THE STYLUS DOWN FOR A TRACE.","LEFT / UP / RIGHT = CLUE NODES."},
+ {"BALANCE BUDGET AND MORALE.","TAP A POLICY OR LEFT/DOWN/RIGHT.","FINISH BOTH METERS WITHIN 35-80."}
+};
+void ui_arcade_guide_draw(const Game *s,unsigned id,int paused,int practice,int can_save){
+ if(!pixels||!s)return;
+ if(id>=MBAI_GAMES)id=0;
+ cursor_visible=0;screen_accent=AQUA;
+ header(paused?"PAUSE":"GUIDE",s,can_save);
+ solid(0,27,256,149,IVORY);
+ panel(8,31,240,54,WHITE,TEAL);
+ fit(17,36,game_names[id],PURPLE,36);
+ capsule(17,47,36,34,MINT,TEAL);
+ cabinet_thumb((int)id,17,47);
+ fit(65,50,arcade_goal_text[id],INK,30);
+ fit(65,61,paused?(practice?"PRACTICE RUN PAUSED":"NORMAL RUN PAUSED"):
+                  game_unlocked(s,(int)id)?"CABINET UNLOCKED":"PRACTICE IS AVAILABLE",TEAL,30);
+ fit(65,72,"WIN $5; FAVOR EVERY 2ND WIN",MUTED,30);
+ panel(8,89,240,43,WHITE,PURPLE);
+ for(unsigned i=0;i<3u;i++)fit(17,95+(int)i*10,arcade_instructions[id][i],INK,37);
+ capsule(8,136,116,29,paused?MINT:game_unlocked(s,(int)id)?MINT:GRAY,TEAL);
+ capsule(132,136,116,29,LEMON,GOLD);
+ fit(20,143,paused?"A RESUME":game_unlocked(s,(int)id)?"A PLAY":"A LOCKED",INK,16);
+ fit(20,153,paused?"KEEP RUNNING":"NORMAL RUN",MUTED,16);
+ fit(142,143,paused?"X END RUN":"X PRACTICE",INK,16);
+ fit(142,153,paused?"RETURN TO LIST":"NO SAVE EFFECT",MUTED,16);
+ foot(PURPLE);
+ fit(10,181,paused?"B / START RESUME":"B BACK   PRACTICE ALL 16 CABINETS",WHITE,39);
+}
+int ui_arcade_help_touch(int x,int y){
+ return x>=193&&x<248&&y>=57&&y<71;
+}
+int ui_arcade_pause_touch(int x,int y){
+ return x>=112&&x<136&&y>=8&&y<23;
+}
+int ui_arcade_guide_touch(int x,int y){
+ if(x<0||x>=256||y<0||y>=192)return 0;
+ if(y>=176)return 3;
+ if(y>=136&&y<165)return x>=8&&x<124?1:x>=132&&x<248?2:0;
+ return 0;
+}
 static void sparkle(int x,int y,uint16_t color){
  solid(x+3,y,2,9,color);solid(x,y+3,9,2,color);
  solid(x+2,y+2,4,4,WHITE);
@@ -1389,8 +1457,7 @@ static void arcade_wall(uint16_t background){
 /* A quiet status rule instead of an extra dense row of pixel badges. */
 static void cabinet_chrome(const Arcade *a){
  int i;
- int goal=a->id==4?3:a->id==1||a->id==6||a->id==13||
-          a->id==14?4:a->id==9?5:6;
+ int goal=(int)game_arcade_goal(a->id);
  solid(9,73,238,2,GRAY);
  for(i=0;i<goal;i++)
   solid(12+i*12,73,9,2,i<a->round?GREEN:TEAL);
@@ -1581,24 +1648,20 @@ static void beatbox_challenge(const Arcade *a){
  static const char *const pads[4]={"BOOM","CLAP","BEEP","POP"};
  static const uint16_t colors[4]={MINT,PINK,LEMON,SKY};
  char text[40];
- int active=-1;
+ int note_slot=game_arcade_beat_slot(a);
+ int active=note_slot>=0?a->notes[note_slot]:-1;
  arcade_wall(LILAC);
  panel(6,31,244,42,WHITE,PURPLE);
  label(12,35,"BABY BEATBOX",PURPLE,2,12);
  snprintf(text,sizeof(text),"TUNE %u/3  MISS %u/3",a->round+1,a->mistakes);
  fit(12,54,text,DEEP_PINK,36);
- if(!a->phase&&a->hold_frames){
-  int index=(int)(a->elapsed*3u/a->hold_frames);
-  if(index>2)index=2;
-  active=a->notes[index];
- }
  /* A single emphatic WATCH/REPEAT cue avoids squashed microtext. */
  capsule(64,79,128,21,a->phase?MINT:LEMON,TEAL);
  label(a->phase?86:94,83,a->phase?"REPEAT":"WATCH",INK,2,6);
  sprite(111,101,1,spr_baby,18);
  for(int i=0;i<3;i++)
   capsule(143+i*18,103,13,11,a->phase?(i<a->stage?GREEN:GRAY):
-          (i==(int)(a->elapsed*3u/(a->hold_frames?a->hold_frames:1u))?GOLD:GRAY),INK);
+          (i==note_slot?GOLD:GRAY),INK);
  for(int i=0;i<4;i++){
   int x=12+i*62;
   capsule(x,123,48,47,active==i?WHITE:colors[i],active==i?GOLD:PURPLE);
@@ -2335,7 +2398,7 @@ void ui_draw(const Game *s,const Arcade *a,int view,int selection,
  else if(view==10)screen_accent=MINT;
  else if(view==11)screen_accent=AQUA;
  else screen_accent=TEAL;
- if(view==2&&a)screen_title="MINIGAME";
+ if(view==2&&a)screen_title=a->practice?"PRACTICE":"MINIGAME";
  else screen_title=view==0?"CARE":view==1?"ARCADE":
          view==3?"RESET":view==4?"ENDING":view==5?"WELCOME":
          view==6?"ALBUM":view==7?"TOUCH TEST":
@@ -2344,6 +2407,10 @@ void ui_draw(const Game *s,const Arcade *a,int view,int selection,
   * repaint the other two bands. The previous blanket 256x192 clear was
   * 49,152 redundant 16-bit VRAM writes on every animation refresh. */
  header(screen_title,s,can_save);
+ if(view==2){
+  capsule(112,8,24,15,IVORY,TEAL);
+  fit(118,12,"II",INK,2);
+ }
  if(view==0||view==11){
   capsule(80,5,44,16,MINT,TEAL);
   fit(93,10,"CPU",INK,3);
