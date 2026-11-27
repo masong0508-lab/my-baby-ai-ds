@@ -18,7 +18,7 @@ typedef struct {
 } Game;
 typedef struct {
  uint8_t active, id, round, mistakes, direction, reverse, finished;
- uint16_t timer;
+ uint16_t timer,timer_limit;
  /* Per-session state (not serialized in Game saves). */
  int16_t balance;
  int8_t steering;
@@ -28,6 +28,7 @@ typedef struct {
  uint8_t touch_active,progress,taped;
  /* Beatbox three-note memory pattern and presentation phase. */
  uint8_t phase,notes[3];
+ uint8_t practice; /* session only; real Game is never used for practice */
  int16_t touch_start_x,touch_start_y,touch_last_x,touch_last_y;
 } Arcade;
 extern const char *const game_names[MBAI_GAMES];
@@ -70,6 +71,13 @@ int game_good_ending_count(const Game *s);
 /* Persistent ninth, optional BAD ending without changing the save struct. */
 int game_secret_egg(Game *s);
 void game_arcade_start(Game *s,Arcade *a,int id);
+/* All sixteen cabinets can be tried using a separate, normal-difficulty
+ * Game snapshot. Only that snapshot may be passed to the arcade engine.
+ * The live save and its RNG, unlocks, economy and needs are untouched. */
+int game_arcade_practice_start(const Game *live,Game *sandbox,Arcade *a,int id);
+unsigned game_arcade_goal(unsigned id);
+/* Active demonstration index (0..2), or -1 outside the watch phase. */
+int game_arcade_beat_slot(const Arcade *a);
 int game_arcade_expected(const Arcade *a);
 void game_arcade_input(Game *s,Arcade *a,int dir);
 void game_arcade_steer(Arcade *a,int direction);

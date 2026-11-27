@@ -5,8 +5,8 @@
  * both supported runtimes. Statistics count submitted game frames,
  * not host wall-clock speed or independently measured LCD refreshes. */
 #define PERF_CLOCK_HZ 33513982u
-#define PERF_VIEW_COUNT 15u
-#define PERF_SCENE_COUNT 31u
+#define PERF_VIEW_COUNT 16u
+#define PERF_SCENE_COUNT 32u
 #define PERF_INACTIVE PERF_SCENE_COUNT
 typedef struct {
  uint64_t total_ticks;

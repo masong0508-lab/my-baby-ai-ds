@@ -12,6 +12,9 @@ void ui_draw(const Game *s,const Arcade *a,int view,int selected,
  * Only y=178..191 changes, preserving puzzle, hitboxes and status rows.
  * Redraw the normal UI when the caller's feedback timer expires. */
 void ui_arcade_feedback(ArcadeFeedbackEvent event);
+void ui_arcade_feedback_mode(ArcadeFeedbackEvent event,int practice);
+/* Small changing time track; does not repaint the game art. */
+void ui_arcade_clock(const Arcade *a);
 /* Higher-priority footer for a failed save; draw after arcade feedback.
  * Caller retains failure state until a successful write/load/new baby. */
 void ui_save_warning(void);
@@ -95,4 +98,8 @@ void ui_touch_diag_update(unsigned vertices,unsigned polygons);
 void ui_perf_overlay(const PerfScene *stats);
 void ui_virtual_cursor_update(int enabled,int x,int y,int pressed);
 int ui_arcade_navigation(int x,int y); /* 1 play, 2 buy, 3 back */
+int ui_arcade_help_touch(int x,int y);
+int ui_arcade_pause_touch(int x,int y);
+int ui_arcade_guide_touch(int x,int y); /* 1 play/resume, 2 practice/end, 3 back */
+void ui_arcade_guide_draw(const Game *s,unsigned id,int paused,int practice,int can_save);
 #endif

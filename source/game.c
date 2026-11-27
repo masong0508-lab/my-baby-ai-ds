@@ -236,23 +236,26 @@ const char *game_ending_name(int e){
  * Remaining cabinets retain the six-round direction fallback.
  * Arcade state is intentionally not part of the persistent Game save.
  */
+static void arcade_timer(Arcade *a,unsigned ticks){
+ a->timer=a->timer_limit=(uint16_t)ticks;
+}
 static const uint8_t diaper_tasks[4]={3,1,2,0}; /* left,right,down,up */
 static void diaper_next(Game *s,Arcade *a){
  a->target=diaper_tasks[a->stage];
  a->progress=0;a->taped=0;
  a->reverse=(uint8_t)(game_glitch_tier(s)>=2&&a->stage==2);
- a->timer=(uint16_t)(game_glitch_tier(s)>=3?240:360);
+ arcade_timer(a,game_glitch_tier(s)>=3?240:360);
 }
 static void teether_next(Game *s,Arcade *a){
  /* File the refund (LEFT) or shred the bogus bill (RIGHT). */
  a->target=(uint8_t)((next(s)&1u)?1:3);
- a->timer=(uint16_t)(game_glitch_tier(s)>=3?180:240);
+ arcade_timer(a,game_glitch_tier(s)>=3?180:240);
  a->touch_active=0;
 }
 static void kart_next(Game *s,Arcade *a){
  /* The roadblock chooses a lane; steering must happen before it arrives. */
  a->target=(uint8_t)(next(s)%3u);
- a->timer=(uint16_t)(game_glitch_tier(s)>=3?66:90);
+ arcade_timer(a,game_glitch_tier(s)>=3?66:90);
  a->hold_frames=a->timer;
 }
 static void sock_next(Game *s,Arcade *a){
@@ -264,26 +267,26 @@ static void sock_next(Game *s,Arcade *a){
   int j=(int)(next(s)%(unsigned)(i+1));
   uint8_t t=a->notes[i];a->notes[i]=a->notes[j];a->notes[j]=t;
  }
- a->timer=(uint16_t)(game_glitch_tier(s)>=3?150:210);
+ arcade_timer(a,game_glitch_tier(s)>=3?150:210);
 }
 static void nap_begin(Game *s,Arcade *a){
  /* The green lullaby window is broad enough for touchscreen response. */
  a->elapsed=0;a->taped=0;
  a->hold_frames=(uint16_t)(game_glitch_tier(s)>=3?80:100);
- a->timer=(uint16_t)(game_glitch_tier(s)>=3?420:600);
+ arcade_timer(a,game_glitch_tier(s)>=3?420:600);
 }
 static void beatbox_next(Game *s,Arcade *a){
  int i;
  a->stage=0;
  a->phase=0;  /* Watch three notes before repeating the pattern. */
  a->elapsed=0;
- a->timer=(uint16_t)(game_glitch_tier(s)>=3?72:90);
+ arcade_timer(a,game_glitch_tier(s)>=3?72:90);
  a->hold_frames=a->timer; /* Fix animated preview: never divide by zero. */
  for(i=0;i<3;i++)a->notes[i]=(uint8_t)(next(s)&3u);
 }
 static void rattle_next(Game *s,Arcade *a){
  a->target=(uint8_t)(next(s)%3u);
- a->timer=(uint16_t)(game_glitch_tier(s)>=3?108:144);
+ arcade_timer(a,game_glitch_tier(s)>=3?108:144);
  a->hold_frames=a->timer; /* original fall duration for drawing */
  a->elapsed=0;
 }
@@ -291,11 +294,11 @@ static void crawl_next(Game *s,Arcade *a){
  /* A rolling office scanner needs a duck; a floor crate needs a jump. */
  a->target=(uint8_t)((next(s)&1u)?0:2);
  a->stage=1;
- a->timer=(uint16_t)(game_glitch_tier(s)>=3?58:82);
+ arcade_timer(a,game_glitch_tier(s)>=3?58:82);
  a->hold_frames=a->timer;
 }
 static void stroller_begin(Game *s,Arcade *a){
- a->timer=(uint16_t)(game_glitch_tier(s)>=3?510:660);
+ arcade_timer(a,game_glitch_tier(s)>=3?510:660);
  a->balance=0;a->elapsed=0;a->hold_frames=0;a->steering=0;
 }
 static void cereal_next(Game *s,Arcade *a){
@@ -305,19 +308,19 @@ static void cereal_next(Game *s,Arcade *a){
  answer=a->stage+a->direction;
  a->target=(uint8_t)(next(s)%3u);
  for(i=0;i<3;i++)a->notes[i]=(uint8_t)(answer+i-a->target);
- a->timer=(uint16_t)(game_glitch_tier(s)>=3?120:180);
+ arcade_timer(a,game_glitch_tier(s)>=3?120:180);
 }
 static void blocks_next(Game *s,Arcade *a){
  a->target=(uint8_t)(next(s)%3u);
  a->elapsed=0;a->direction=0;
  a->hold_frames=(uint16_t)(game_glitch_tier(s)>=3?11:16);
- a->timer=(uint16_t)(game_glitch_tier(s)>=3?130:190);
+ arcade_timer(a,game_glitch_tier(s)>=3?130:190);
 }
 static void audit_next(Game *s,Arcade *a){
  a->stage=(uint8_t)(20u+next(s)%50u);
  a->direction=(uint8_t)(a->stage+((next(s)&1u)?0u:5u));
  a->target=(uint8_t)(a->stage==a->direction?0:1);
- a->timer=(uint16_t)(game_glitch_tier(s)>=3?125:180);
+ arcade_timer(a,game_glitch_tier(s)>=3?125:180);
 }
 static void garden_next(Game *s,Arcade *a){
  a->target=(uint8_t)(next(s)%3u);
@@ -331,11 +334,11 @@ static void court_next(Game *s,Arcade *a){
   int j=(int)(next(s)%(unsigned)(i+1));
   uint8_t t=a->notes[i];a->notes[i]=a->notes[j];a->notes[j]=t;
  }
- a->timer=(uint16_t)(game_glitch_tier(s)>=3?180:270);
+ arcade_timer(a,game_glitch_tier(s)>=3?180:270);
 }
 static void ceo_begin(Game *s,Arcade *a){
  a->balance=55;a->progress=45;
- a->timer=(uint16_t)(game_glitch_tier(s)>=3?390:540);
+ arcade_timer(a,game_glitch_tier(s)>=3?390:540);
 }
 static void finish(Game *s,Arcade *a,int won);
 static void garden_water(Game *s,Arcade *a,unsigned amount){
@@ -351,14 +354,25 @@ static void garden_water(Game *s,Arcade *a,unsigned amount){
 static void round_next(Game *s,Arcade *a){
  a->direction=(uint8_t)(next(s)&3u);
  a->reverse=(uint8_t)(game_glitch_tier(s)>=2&&a->round%3==2);
- a->timer=(uint16_t)(game_glitch_tier(s)>=3?75:120);
+ arcade_timer(a,game_glitch_tier(s)>=3?75:120);
+}
+unsigned game_arcade_goal(unsigned id){
+ static const uint8_t goals[MBAI_GAMES]={6,4,6,6,3,6,4,6,6,5,6,6,6,4,4,6};
+ return id<MBAI_GAMES?goals[id]:0u;
+}
+int game_arcade_beat_slot(const Arcade *a){
+ unsigned slot;
+ if(!a||!a->active||a->id!=4||a->phase||!a->hold_frames)return -1;
+ slot=(unsigned)a->elapsed*3u/a->hold_frames;
+ return (int)(slot>2u?2u:slot);
 }
 void game_arcade_start(Game *s,Arcade *a,int id){
+ if(!a)return;
  memset(a,0,sizeof(*a));
- if(!game_unlocked(s,id))return;
+ if(!s||!game_unlocked(s,id))return;
  a->active=1;a->id=(uint8_t)id;
  if(id==0){
-  a->timer=600;
+  arcade_timer(a,600u);
   a->reverse=(uint8_t)(game_glitch_tier(s)>=2);
  }else if(id==1)diaper_next(s,a);
  else if(id==2)teether_next(s,a);
@@ -373,12 +387,21 @@ void game_arcade_start(Game *s,Arcade *a,int id){
  else if(id==11)blocks_next(s,a);
  else if(id==12)audit_next(s,a);
  else if(id==13){
-  a->timer=(uint16_t)(game_glitch_tier(s)>=3?390:540);
+  arcade_timer(a,game_glitch_tier(s)>=3?390:540);
   garden_next(s,a);
  }
  else if(id==14)court_next(s,a);
  else if(id==15)ceo_begin(s,a);
  else round_next(s,a);
+}
+int game_arcade_practice_start(const Game *live,Game *sandbox,Arcade *a,int id){
+ if(!live||!sandbox||live==sandbox||!a||id<0||id>=MBAI_GAMES)return 0;
+ *sandbox=*live;
+ sandbox->unlocked|=(uint16_t)(1u<<id);
+ sandbox->corruption=0;
+ game_arcade_start(sandbox,a,id);
+ a->practice=1u;
+ return a->active!=0u;
 }
 int game_arcade_expected(const Arcade *a){
  if(a->id==1)return a->target^(a->reverse?2:0);
@@ -396,12 +419,15 @@ int game_arcade_expected(const Arcade *a){
 static void finish(Game *s,Arcade *a,int won){
  a->active=0;a->finished=(uint8_t)(won?1:2);
  if(won){
-  s->wins++;
+  /* Counters are persistent; never wrap a long-running save to zero. */
+  unsigned new_win=s->wins<UINT32_MAX;
+  if(new_win)s->wins++;
   s->dollars=(uint16_t)(s->dollars<=65530?s->dollars+5:65535);
-  if(!(s->wins&1u)&&s->favors<65535)s->favors++;
+  if(new_win&&!(s->wins&1u)&&s->favors<65535)s->favors++;
   s->mood=clamp(s->mood+4);
  }else{
-  s->losses++;s->mood=clamp(s->mood-8);
+  if(s->losses<UINT32_MAX)s->losses++;
+  s->mood=clamp(s->mood-8);
   s->chaos=clamp(s->chaos+15);s->corruption=clamp(s->corruption+18);
  }
 }
@@ -640,8 +666,8 @@ int game_arcade_court_touch(Game *s,Arcade *a,int touching,int x,int y){
  int i;
  if(!a->active||a->id!=14)return 0;
  if(!touching){
-  int changed=a->stage!=0;
-  if(a->touch_active&&a->stage>0)a->stage=0;
+  int changed=a->touch_active&&a->stage!=0;
+  if(changed)a->stage=0;
   a->touch_active=0;
   return changed;
  }
@@ -819,7 +845,7 @@ void game_arcade_tick(Game *s,Arcade *a){
   if(a->timer)a->timer--;
   if(!a->timer){
    if(!a->phase){
-    a->phase=1;a->timer=(uint16_t)(game_glitch_tier(s)>=3?180:240);
+    a->phase=1;arcade_timer(a,game_glitch_tier(s)>=3?180:240);
    }else{
     a->mistakes++;s->corruption=clamp(s->corruption+3);
     if(a->mistakes>=3)finish(s,a,0);

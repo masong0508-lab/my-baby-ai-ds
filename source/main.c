@@ -34,6 +34,8 @@
 #define SAVE_BASE "fat:/my_baby_ai"
 static Game baby;
 static Arcade arc;
+static Game arcade_practice_state;
+static int arcade_guide_paused;
 static PerfTracker performance;
 static int perf_show;
 static NurseryPeek peek;
@@ -483,12 +485,19 @@ static void end_day(void){
  if(e!=END_OK)view=4;
  persist();
 }
-static void begin_game(void){
- game_arcade_start(&baby,&arc,selected);
+static void arcade_beat_note(void){
+ int slot=game_arcade_beat_slot(&arc);
+ if(slot>=0)sfx_play((SfxCue)(SFX_BEAT_BOOM+arc.notes[slot]));
+}
+static void begin_arcade_run(int practice){
+ if(practice)(void)game_arcade_practice_start(&baby,&arcade_practice_state,&arc,selected);
+ else game_arcade_start(&baby,&arc,selected);
  arcade_feedback_begin(&arcade_feedback,&arc);
  if(arc.active){view=2;message=arc.id==0?"STEADY THE BOTTLE.":arc.id==1?"CHANGE THAT DIAPER!":arc.id==2?"SORT BABY'S TAX BILLS!":arc.id==3?"DODGE CRIB KART CONES!":arc.id==4?"MEMORIZE THE BEAT!":arc.id==5?"MATCH THE BABY SOCKS!":arc.id==6?"TIME THE QUIET LULLABY!":arc.id==7?"CATCH SIX RATTLES!":arc.id==8?"JUMP OR DUCK AT WORK!":arc.id==9?"DRIFT THE STROLLER!":arc.id==10?"SOLVE CEREAL MATH!":arc.id==11?"STACK THOSE BLOCKS!":arc.id==12?"CHECK THE AUDIT NUMBERS!":arc.id==13?"WATER THE RIGHT FLOWER!":arc.id==14?"TRACE THE EVIDENCE!":arc.id==15?"BALANCE THE DAYCARE!":"SIX ROUNDS. THREE STRIKES.";}
  else message="LOCKED: CHECK GOALS ABOVE.";
+ if(arc.active)arcade_beat_note();
 }
+static void begin_game(void){begin_arcade_run(0);}
 /* Scene-specific bitmap refresh. Interactive screens retain fluid redraws;
   * still screens repaint only when state changes or the clock ticks, avoiding
   * needless 256x192 VRAM uploads beside the continuously rendered 3D nursery. */
@@ -508,6 +517,15 @@ static unsigned arcade_redraw_period(const Arcade *a){
  }
 }
 static void leave_game(void){
+ if(arc.practice){
+  /* No live save write, dialogue event, currency change or observed
+   * care history can escape a practice run. The feedback stays visible. */
+  message=arc.finished==1?"PRACTICE CLEARED. NO REWARD.":
+          arc.finished==2?"PRACTICE OVER. NO PENALTY.":"PRACTICE CANCELLED.";
+  if(!arc.finished)arcade_feedback_reset(&arcade_feedback);
+  arc.active=0;view=1;
+  return;
+ }
  if(arc.finished){
   dialogue_memory_event(&memories,arc.finished==1?
                          DIALOGUE_EVENT_ARCADE_WIN:DIALOGUE_EVENT_ARCADE_LOSS,
@@ -754,7 +772,9 @@ int main(void){
     }
    }
   }else if(view==1){
-   if(down&KEY_UP){selected=(selected&~3)|((selected+2)&3);dirty=1;}
+   if((down&KEY_Y)||(tap&&ui_arcade_help_touch(touch.px,touch.py))){
+    arcade_guide_paused=0;view=15;dirty=1;
+   }else if(down&KEY_UP){selected=(selected&~3)|((selected+2)&3);dirty=1;}
    else if(down&KEY_DOWN){selected=(selected&~3)|((selected+2)&3);dirty=1;}
    else if(down&KEY_LEFT){selected=(selected+15)%16;dirty=1;}
    else if(down&KEY_RIGHT){selected=(selected+1)%16;dirty=1;}
@@ -786,11 +806,34 @@ int main(void){
      }
     }
    }
+  }else if(view==15){
+   int picked=tap?ui_arcade_guide_touch(touch.px,touch.py):0;
+   if(arcade_guide_paused){
+    if((down&(KEY_A|KEY_B|KEY_START))||picked==1||picked==3){
+     view=2;arcade_guide_paused=0;arcade_beat_note();dirty=1;
+    }else if((down&KEY_X)||picked==2){
+     arcade_guide_paused=0;leave_game();dirty=1;
+    }
+   }else if((down&KEY_B)||picked==3){view=1;dirty=1;}
+   else if((down&KEY_X)||picked==2){begin_arcade_run(1);dirty=1;}
+   else if((down&KEY_A)||picked==1){
+    if(game_unlocked(&baby,selected))begin_game();
+    dirty=1;
+   }else if(down&KEY_LEFT){selected=(selected+15)%16;dirty=1;}
+   else if(down&KEY_RIGHT){selected=(selected+1)%16;dirty=1;}
   }else if(view==2){
    int direction=-1;
    if(down&KEY_B){leave_game();dirty=1;}
-   else{
+   else if((down&KEY_START)||(tap&&ui_arcade_pause_touch(touch.px,touch.py))){
+    /* Stop the clock and cancel only an unfinished continuous trace.
+     * No paused input may reach the puzzle engine. */
+    if(arc.id==14&&arc.touch_active)arc.stage=0;
+    arc.touch_active=0;
+    sfx_stop();arcade_guide_paused=1;view=15;dirty=1;
+   }else{
     Game before_arcade=baby;
+    Game *run=arc.practice?&arcade_practice_state:&baby;
+    int old_beat_slot=game_arcade_beat_slot(&arc);
     unsigned old_round=arc.round,old_mistakes=arc.mistakes,old_phase=arc.phase;
     if(arc.id==0||arc.id==9){
      int steer=0;
@@ -803,14 +846,14 @@ int main(void){
      if((tap)&&touch.py>=176){leave_game();dirty=1;}
      else{
       game_arcade_steer(&arc,steer);
-      game_arcade_tick(&baby,&arc);
+      game_arcade_tick(run,&arc);
      }
     }else{
      if(arc.id==1){
       int pen_down=vpen.enabled?((held&KEY_A)!=0):pen_ready;
       int pen_x=vpen.enabled?vpen.x:touch.px;
       int pen_y=vpen.enabled?vpen.y:touch.py;
-      if(game_arcade_diaper_touch(&baby,&arc,pen_down,pen_x,pen_y))
+      if(game_arcade_diaper_touch(run,&arc,pen_down,pen_x,pen_y))
        dirty=1;
       /* D-pad fallback remains available if the stylus is unavailable. */
       if(!vpen.enabled){
@@ -823,7 +866,7 @@ int main(void){
       int pen_down=vpen.enabled?((held&KEY_A)!=0):pen_ready;
       int pen_x=vpen.enabled?vpen.x:touch.px;
       int pen_y=vpen.enabled?vpen.y:touch.py;
-      if(game_arcade_teether_touch(&baby,&arc,pen_down,pen_x,pen_y))
+      if(game_arcade_teether_touch(run,&arc,pen_down,pen_x,pen_y))
        dirty=1;
       /* Accessible fallback for controllers without native stylus. */
       if(!vpen.enabled){
@@ -866,7 +909,7 @@ int main(void){
       int pen_down=vpen.enabled?((held&KEY_A)!=0):pen_ready;
       int pen_x=vpen.enabled?vpen.x:touch.px;
       int pen_y=vpen.enabled?vpen.y:touch.py;
-      if(game_arcade_garden_touch(&baby,&arc,pen_down,pen_x,pen_y))
+      if(game_arcade_garden_touch(run,&arc,pen_down,pen_x,pen_y))
        dirty=1;
       if(!vpen.enabled){
        if(down&KEY_LEFT)direction=0;
@@ -877,7 +920,7 @@ int main(void){
       int pen_down=vpen.enabled?((held&KEY_A)!=0):pen_ready;
       int pen_x=vpen.enabled?vpen.x:touch.px;
       int pen_y=vpen.enabled?vpen.y:touch.py;
-      if(game_arcade_court_touch(&baby,&arc,pen_down,pen_x,pen_y))
+      if(game_arcade_court_touch(run,&arc,pen_down,pen_x,pen_y))
        dirty=1;
       if(!vpen.enabled){
        if(down&KEY_LEFT)direction=0;
@@ -904,9 +947,9 @@ int main(void){
      if(tap&&touch.py>=176){leave_game();dirty=1;}
      else{
       if(direction>=0&&arc.active){
-       game_arcade_input(&baby,&arc,direction);dirty=1;
+       game_arcade_input(run,&arc,direction);dirty=1;
       }
-      if(arc.active)game_arcade_tick(&baby,&arc);
+      if(arc.active)game_arcade_tick(run,&arc);
      }
     }
     /* Timed questions and WATCH -> REPEAT must become visible in the
@@ -920,6 +963,11 @@ int main(void){
      int event=arcade_feedback_observe(&arcade_feedback,&arc);
      if(event!=ARCADE_FEEDBACK_NONE){
       react_to_arcade(event,&before_arcade,frame);dirty=1;
+      if(event==ARCADE_FEEDBACK_PROGRESS&&arc.id==4&&old_phase&&direction>=0&&direction<4)
+       sfx_play((SfxCue)(SFX_BEAT_BOOM+direction));
+     }
+     if(game_arcade_beat_slot(&arc)>=0&&game_arcade_beat_slot(&arc)!=old_beat_slot){
+      arcade_beat_note();dirty=1; /* each pad, including repeated notes */
      }
      if(arc.finished){leave_game();dirty=1;}
     }
@@ -1243,7 +1291,9 @@ int main(void){
    repaint=1;
    /* The actual per-frame draw must receive the Room prop selection and
     * lamp/day flags. Startup UI paint is NOT the Room redraw path. */
-   if(view==14)ui_peek_draw(&baby,&peek,storage_ok);
+   if(view==15)ui_arcade_guide_draw(&baby,(unsigned)selected,arcade_guide_paused,
+                                      arcade_guide_paused&&arc.practice,storage_ok);
+   else if(view==14)ui_peek_draw(&baby,&peek,storage_ok);
    else if(view==13)ui_mic_draw(&baby,storage_ok,voice_word,
        voice_mode?voice_capture.state==VOICE_CALIBRATE?
          "MEASURING ROOM NOISE...":voice_capture.state==VOICE_WAIT?
@@ -1279,10 +1329,11 @@ int main(void){
     else if(voice_write_failed)ui_voice_save_warning();
     else if(view==2||(view==1&&(event==ARCADE_FEEDBACK_WIN||
                            event==ARCADE_FEEDBACK_LOSS)))
-     ui_arcade_feedback(event);
+     ui_arcade_feedback_mode(event,arc.practice);
    }
    dirty=0;
   }
+  if(view==2)ui_arcade_clock(&arc);
   if(view==7)ui_touch_diag_update(world_vertex_count(),
                                   world_polygon_count());
   /* Every submitted frame is timed even with the optional display off.

@@ -103,6 +103,17 @@ int main(void){
  cannot_interrupt(SFX_SCARE,SFX_LULLABY);
  cannot_interrupt(SFX_UNSEAL,SFX_LULLABY);
  cannot_interrupt(SFX_PULSE,SFX_LULLABY);
+ {
+  uint32_t signatures[4];
+  for(unsigned i=0;i<4u;i++){
+   SfxCue cue=(SfxCue)(SFX_BEAT_BOOM+i);
+   finish(cue,16);
+   signatures[i]=cue_signature(cue);
+   for(unsigned j=0;j<i;j++)assert(signatures[i]!=signatures[j]);
+   cannot_interrupt(SFX_SCARE,cue);
+   cannot_interrupt(SFX_ARCADE_WIN,cue);
+  }
+ }
  assert(note_changes>=15);
  /* Audio CHAT is synchronized to the rig's three 12-tick mouth pulses:
   * age 0..7 anticipation is silent, 8..43 contains the babble, and

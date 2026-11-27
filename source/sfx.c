@@ -22,7 +22,7 @@ void sfx_set_enabled(int on){
 int sfx_is_enabled(void){return enabled!=0;}
 int sfx_is_playing(void){return current!=0;}
 void sfx_play(SfxCue cue){
- if(!enabled||cue<=SFX_NONE||cue>SFX_LULLABY)return;
+ if(!enabled||cue<=SFX_NONE||cue>SFX_BEAT_POP)return;
  /* Bedtime jingles and care chirps cannot silence the dramatic reveal or
   * cut through a shell-crack/unseal cue. Horror retains absolute priority. */
  if(cue>=SFX_FEED&&(current==SFX_SCARE||
@@ -31,7 +31,7 @@ void sfx_play(SfxCue cue){
   * substep chirp. Deliberate care and a new final result may supersede it.
   * Arcade feedback also stays below the cinematic's low pulse. */
  if(cue>=SFX_ARCADE_PROGRESS&&current==SFX_PULSE)return;
- if((cue==SFX_ARCADE_PROGRESS||cue==SFX_ARCADE_MISS)&&
+ if((cue==SFX_ARCADE_PROGRESS||cue==SFX_ARCADE_MISS||cue>=SFX_BEAT_BOOM)&&
     (current==SFX_ARCADE_WIN||current==SFX_ARCADE_LOSS))return;
  /* Rebound is low-priority: it must never cut short the main contact,
   * shell opening, dramatic pulse, or reveal. */
@@ -136,6 +136,18 @@ void sfx_tick(void){
   duration=48u;
   hz=age<12u?330u:age<24u?392u:age<36u?294u:262u;
   volume=age<36u?12u:48u-age;
+  break;
+ case SFX_BEAT_BOOM:
+  duration=14;hz=164u+age*3u;volume=age<6u?22u:14u-age;
+  break;
+ case SFX_BEAT_CLAP:
+  duration=12;hz=440u+(age&1u)*190u;volume=age<4u?20u:(12u-age)*2u;
+  break;
+ case SFX_BEAT_BEEP:
+  duration=14;hz=784u;volume=age<8u?18u:(14u-age)*2u;
+  break;
+ case SFX_BEAT_POP:
+  duration=10;hz=523u+age*29u;volume=(10u-age)*2u;
   break;
  case SFX_SCARE:
   /* Distinct attack + low distorted synthetic growl in one PSG voice:

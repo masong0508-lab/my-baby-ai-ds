@@ -15,8 +15,9 @@ int main(void){
  perf_init(&p);
  assert(!perf_current(&p));
  assert(perf_scene(0,0)==0u&&perf_scene(14,0)==14u);
- assert(perf_scene(2,0)==15u&&perf_scene(2,15)==30u);
- assert(perf_scene(2,16)==PERF_INACTIVE&&perf_scene(15,0)==PERF_INACTIVE);
+ assert(perf_scene(2,0)==16u&&perf_scene(2,15)==31u);
+ assert(perf_scene(2,16)==PERF_INACTIVE&&perf_scene(16,0)==PERF_INACTIVE);
+ assert(perf_scene(15,0)==15u);
  assert(perf_frame(&p,now,0));
  now=sample(&p,now,0,30);
  const PerfScene *s=perf_current(&p);
@@ -24,7 +25,7 @@ int main(void){
  now=sample(&p,now,0,60);
  assert(s->current10==600&&s->minimum10==300&&s->maximum10==600&&s->average10==450);
  assert(perf_frame(&p,now,perf_scene(2,3)));
- now=sample(&p,now,18,20);
+ now=sample(&p,now,19,20);
  s=perf_current(&p);
  assert(s&&s->current10==200&&s->minimum10==200&&s->average10==200);
  assert(perf_frame(&p,now,0));
