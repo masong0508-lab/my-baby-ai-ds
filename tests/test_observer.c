@@ -62,8 +62,37 @@ static void test_associations(void){
  contains(observer_answer(&p,&s,&g,1,"RECALL BOSS"),"PLEASE LET ME NAP");
  assert(memcmp(&p,&before,sizeof(p))==0&&memcmp(&g,&original,sizeof(g))==0);
 }
+static void test_goal_guidance(void){
+ Game g,original;
+ ObserverProfile p,before;
+ ObserverSession s;
+ game_init(&g);observer_profile_reset(&p,&g);observer_session_reset(&s,&g);
+ original=g;before=p;
+ contains(observer_answer(&p,&s,&g,0,"GOALS"),"CORPORATE CRAWL");
+ contains(s.reply,"2 WINS, 2 DOLLARS, 0 FAVORS");
+ contains(observer_answer(&p,&s,&g,0,"MORE"),"2 WINS, 10 DOLLARS, 1 FAVORS");
+ contains(observer_answer(&p,&s,&g,1,"ARCADE"),"8/16");
+ contains(observer_answer(&p,&s,&g,1,"MORE"),"CORPORATE CRAWL");
+ assert(memcmp(&g,&original,sizeof(g))==0&&memcmp(&p,&before,sizeof(p))==0);
+ g.wins=2;g.dollars=10;
+ original=g;
+ contains(observer_answer(&p,&s,&g,0,"NEXT GOAL"),"READY TO BUY");
+ assert(memcmp(&g,&original,sizeof(g))==0);
+ assert(game_unlock(&g,8));original=g;
+ contains(observer_answer(&p,&s,&g,0,"GOALS"),"STROLLER DRIFT");
+ contains(s.reply,"2 WINS, 12 DOLLARS, 1 FAVORS");
+ assert(memcmp(&g,&original,sizeof(g))==0);
+ g.energy=0;original=g;
+ contains(observer_answer(&p,&s,&g,1,"WHAT SHOULD I DO?"),"PLEASE LET ME NAP");
+ assert(memcmp(&g,&original,sizeof(g))==0);
+ g.energy=75;g.unlocked=UINT16_MAX;original=g;
+ contains(observer_answer(&p,&s,&g,0,"GOALS"),"ALL 16");
+ contains(observer_answer(&p,&s,&g,0,"ARCADE"),"16/16");
+ assert(memcmp(&g,&original,sizeof(g))==0&&memcmp(&p,&before,sizeof(p))==0);
+}
 int main(void){
  test_associations();
+ test_goal_guidance();
  Game g,original;
  ObserverProfile p,before;
  ObserverSession s,paused;
