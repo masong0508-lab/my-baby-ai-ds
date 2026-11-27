@@ -13,6 +13,7 @@ static float triangle_points[3][3];
 static int capture_geometry;
 static uint32_t geometry_hash;
 static unsigned emitted_color=~0u,color_commands,color_vertices,last_color_commands;
+static unsigned verify_title_rings,title_strip_index,title_ring_vertices;
 void test_gl_color(unsigned value){
  assert(value<=0x7fffu&&value!=emitted_color);
  emitted_color=value;color_commands++;
@@ -24,9 +25,54 @@ void test_gl_flush(void){
 }
 void test_gl_begin(int mode){
  primitive_mode=mode;primitive_vertices=0;
+ if(verify_title_rings&&mode==GL_QUAD_STRIP)title_strip_index++;
+}
+/* Compare the actual emitted coordinates AND inherited vertex color
+ * against the original per-vertex equations for the title romper and
+ * head. These fixtures are independent of the renderer's ring cache. */
+static unsigned title_rgb(int r,int g,int b,int shift){
+ r+=shift;g+=shift;b+=shift;
+ r=r<0?0:r>31?31:r;
+ g=g<0?0:g>31?31:g;
+ b=b<0?0:b>31?31:b;
+ return (unsigned)(r|(g<<5)|(b<<10));
+}
+static void verify_title_ring_vertex(float x,float y,float z){
+ if(!verify_title_rings||primitive_mode!=GL_QUAD_STRIP)return;
+ if(title_strip_index>=1u&&title_strip_index<=3u){
+  static const float cx[8]={1,.7071f,0,-.7071f,-1,-.7071f,0,.7071f};
+  static const float cz[8]={0,.7071f,1,.7071f,0,-.7071f,-1,-.7071f};
+  static const float h[4]={-1,-.54f,.54f,1};
+  static const float w[4]={0,.842f,.842f,0};
+  unsigned a=title_strip_index-1u,j=(primitive_vertices/2u)%8u;
+  unsigned ring=a+(primitive_vertices&1u);
+  int shade=(j<3u?2:j<5u?-3:0)+(a==2u?1:-1);
+  assert(primitive_vertices<18u);
+  assert(x==.55f*w[ring]*cx[j]);
+  assert(y==-.75f+.40f*h[ring]);
+  assert(z==-.23f+.39f*w[ring]*cz[j]);
+  assert(emitted_color==title_rgb(21,29,27,shade));
+  title_ring_vertices++;
+ }else if(title_strip_index>=16u&&title_strip_index<=20u){
+  static const float cx[12]={1,.866f,.5f,0,-.5f,-.866f,-1,-.866f,-.5f,0,.5f,.866f};
+  static const float cz[12]={0,.5f,.866f,1,.866f,.5f,0,-.5f,-.866f,-1,-.866f,-.5f};
+  static const float h[6]={-1,-.72f,-.28f,.28f,.72f,1};
+  static const float w[6]={0,.66f,.96f,.96f,.66f,0};
+  static const int light[12]={0,1,2,3,4,5,2,-1,-3,-4,-3,-1};
+  unsigned a=title_strip_index-16u,j=(primitive_vertices/2u)%12u;
+  unsigned ring=a+(primitive_vertices&1u);
+  int shade=light[j]+((primitive_vertices&1u)?(a>=2u?2:-2):(a>=3u?2:a==0u?-3:0));
+  assert(primitive_vertices<26u);
+  assert(x==.745f*w[ring]*cx[j]);
+  assert(y==.045f+.75f*h[ring]);
+  assert(z==-.18f+.53f*w[ring]*cz[j]);
+  assert(emitted_color==title_rgb(31,24,20,shade));
+  title_ring_vertices++;
+ }
 }
 void test_gl_vertex(float x,float y,float z){
  assert(emitted_color<=0x7fffu);color_vertices++;
+ verify_title_ring_vertex(x,y,z);
  if(capture_geometry){
   uint32_t bits;
   memcpy(&bits,&x,sizeof(bits));geometry_hash=(geometry_hash^bits)*16777619u;
@@ -152,7 +198,10 @@ int main(void){
   }
   world_observer_status(0u,100u,0);
  }
+ verify_title_rings=1;title_strip_index=0;title_ring_vertices=0;
  world_draw_title(0);
+ verify_title_rings=0;
+ assert(title_ring_vertices==184u);
  /* The boot hero must have visible shoulders, mittens and shoes while
   * keeping its fast DS title-startup geometry ceiling. */
  assert(world_vertex_count()>=850);
