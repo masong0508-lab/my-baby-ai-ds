@@ -45,6 +45,12 @@ int main(void){
  contains(observer_answer(&p,&s,&g,0,"TRUST"),"NO CARE INTERACTIONS");
  contains(observer_answer(&p,&s,&g,1,"FRIEND"),"WE JUST MET");
  contains(observer_answer(&p,&s,&g,1,"MORE"),"WE JUST MET");
+ contains(observer_answer(&p,&s,&g,1,"MORE?"),"WE JUST MET");
+ contains(observer_answer(&p,&s,&g,1,"ARE WE FRIENDS?"),"WE JUST MET");
+ contains(observer_answer(&p,&s,&g,0,"MORE"),"FOUND. DAY 1.");
+ contains(observer_answer(&p,&s,&g,0,"WHY IS THE SKY BLUE?"),"DO NOT UNDERSTAND");
+ contains(observer_answer(&p,&s,&g,0,"WHAT ARE YOU"),"SALVAGED NURSERY COMPUTER");
+ contains(observer_answer(&p,&s,&g,0,"TELL ME MORE?"),"MONITOR THE NURSERY");
  assert(memcmp(&p,&before,sizeof(p))==0);
  assert(memcmp(&g,&original,sizeof(g))==0);
  for(i=0;i<1000u;i++){
