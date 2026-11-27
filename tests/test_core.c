@@ -41,6 +41,89 @@ static void test_care_hint(void){
  (void)game_care(&s,NAP);
  assert(s.energy==37&&game_care_hint(&s)==-1);
 }
+static void test_peek_horror(void){
+ Game g,original;
+ NurseryPeek p;
+ unsigned hits=0;
+ game_init(&g);original=g;
+ assert(game_peek_start(&g,&p));
+ assert(!game_peek_scare_roll(&p,0u)); /* early tap cannot trigger */
+ while(p.phase==PEEK_WAIT)(void)game_peek_tick(&p);
+ /* Exhaust all 20-bit outcomes. Exactly one may trigger. */
+ for(uint32_t draw=0u;draw<(1u<<20);draw++){
+  NurseryPeek candidate=p;
+  if(game_peek_scare_roll(&candidate,draw)){
+   hits++;assert(candidate.phase==PEEK_SCARE);
+  }else assert(candidate.phase==PEEK_OPEN);
+ }
+ assert(hits==1u);
+ assert(!game_peek_scare_roll(&p,1u));
+ assert(game_peek_scare_roll(&p,1u<<20));
+ assert(p.phase==PEEK_SCARE&&p.ticks==PEEK_SCARE_TICKS);
+ assert(!game_peek_tap(&g,&p)&&!game_peek_scare_roll(&p,0u));
+ for(unsigned i=0;i<PEEK_SCARE_TICKS;i++)(void)game_peek_tick(&p);
+ assert(p.phase==PEEK_CORRUPT&&p.ticks==PEEK_CORRUPT_TICKS);
+ for(unsigned i=0;i<PEEK_CORRUPT_TICKS;i++)(void)game_peek_tick(&p);
+ assert(p.phase==PEEK_LOCKED);
+ for(unsigned i=0;i<1000u;i++){
+  assert(!game_peek_tick(&p)&&!game_peek_tap(&g,&p));
+  assert(p.phase==PEEK_LOCKED);
+ }
+ assert(memcmp(&g,&original,sizeof(g))==0);
+}
+static void test_peekaboo(void){
+ Game g,before;NurseryPeek p;
+ game_init(&g);before=g;
+ assert(game_peek_start(&g,&p)&&p.phase==PEEK_WAIT);
+ assert(memcmp(&g,&before,sizeof(g))==0);
+ /* An early tap is a strike, never a successful reveal. */
+ assert(game_peek_tap(&g,&p)&&p.misses==1u&&p.round==0u);
+ assert(memcmp(&g,&before,sizeof(g))==0);
+ for(unsigned round=0;round<3u;round++){
+  unsigned ticks=0;
+  while(p.phase==PEEK_WAIT&&ticks++<120u)(void)game_peek_tick(&p);
+  assert(p.phase==PEEK_OPEN&&ticks<=120u);
+  assert(game_peek_tap(&g,&p)&&p.round==round+1u);
+  if(round<2u)assert(memcmp(&g,&before,sizeof(g))==0);
+ }
+ assert(p.phase==PEEK_WON&&g.mood==87u&&g.energy==67u&&g.hunger==41u&&g.chaos==16u);
+ assert(g.rng!=before.rng&&g.wins==before.wins&&g.dollars==before.dollars&&g.days==before.days);
+ before=g;assert(!game_peek_tap(&g,&p)&&!game_peek_tick(&p));
+ assert(memcmp(&g,&before,sizeof(g))==0);
+ assert(game_peek_start(&g,&p));
+ assert(game_peek_tap(&g,&p)&&game_peek_tap(&g,&p)&&p.phase==PEEK_LOST);
+ assert(memcmp(&g,&before,sizeof(g))==0);
+ assert(game_peek_start(&g,&p));
+ for(unsigned i=0;i<400u&&p.phase!=PEEK_LOST;i++)(void)game_peek_tick(&p);
+ assert(p.phase==PEEK_LOST&&p.misses==2u);
+ assert(memcmp(&g,&before,sizeof(g))==0);
+ g.hunger=70;before=g;assert(!game_peek_start(&g,&p));
+ assert(memcmp(&g,&before,sizeof(g))==0);
+ g.hunger=20;g.energy=24;assert(!game_peek_start(&g,&p));
+ g.energy=80;g.chaos=75;assert(!game_peek_start(&g,&p));
+ assert(!game_peek_start(NULL,&p)&&!game_peek_start(&g,NULL));
+}
+static void test_room_lullaby(void){
+ Game s,before;
+ game_init(&s);s.mood=70;s.chaos=23;s.energy=50;s.hunger=30;
+ before=s;
+ assert(game_room_soothe(&s));
+ assert(s.mood==76&&s.chaos==15&&s.energy==47&&s.hunger==32);
+ assert(s.rng!=before.rng&&s.days==before.days&&s.dollars==before.dollars);
+ assert(s.corruption==before.corruption&&s.ending_mask==before.ending_mask);
+ s.mood=99;s.chaos=2;assert(game_room_soothe(&s));
+ assert(s.mood==100&&s.chaos==0);
+ before=s;assert(!game_room_soothe(&s));assert(memcmp(&s,&before,sizeof(s))==0);
+ s.hunger=70;s.chaos=40;before=s;
+ assert(!game_room_soothe(&s));assert(memcmp(&s,&before,sizeof(s))==0);
+ s.hunger=20;s.energy=15;before=s;
+ assert(!game_room_soothe(&s));assert(memcmp(&s,&before,sizeof(s))==0);
+ assert(!game_room_soothe(NULL));
+ /* A player cannot repeat the activity indefinitely without other care. */
+ game_init(&s);s.chaos=100;s.energy=16;s.hunger=68;
+ assert(game_room_soothe(&s));assert(s.energy==13&&s.hunger==70);
+ before=s;assert(!game_room_soothe(&s));assert(memcmp(&s,&before,sizeof(s))==0);
+}
 static void test_room_quiet_rest(void){
  Game s,original;
  game_init(&s);
@@ -401,6 +484,9 @@ int main(void){
  Game g,h;Arcade a;int i;
  const char *base="/tmp/my_baby_ai_testslot";
  test_room_quiet_rest();
+ test_room_lullaby();
+ test_peekaboo();
+ test_peek_horror();
  test_care_hint();
  test_day_need_cycle();
  test_long_term_rehabilitation();
