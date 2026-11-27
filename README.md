@@ -112,6 +112,8 @@ The optional **256-byte observation profile** saves taught phrases, observed his
 
 The actual nursery renderer now has shallower rounded eyes, softer cheeks/bib, stronger clothing and room shading, grounded furniture/boots, a physical WARDEN wall terminal, and connected wind-up/lunge acting. Speaking mouths stay within their intended aperture instead of stretching into a dark line across the jaw. CARE/TALK cards have clearer hierarchy and selection. Sampled normal-scene submission maxima are **4,402 vertices / 1,631 polygons**, down from 4,702 / 1,808. These are geometry counts, not FPS measurements.
 
+**FPS telemetry:** Hold **R** and press **SELECT** to show or hide a compact FPS strip. The game samples completed frame submissions against the DS bus clock, with separate current, weighted average, lowest and highest one-second samples for each view and each of the sixteen arcade cabinets. Measurements continue while the overlay is hidden; incomplete windows are discarded on view changes. The values measure submission throughput in the console/emulator's time domain, not physical LCD presentation or emulator host wall-clock speed. Native CI records toybox, nursery, room and arcade-menu FPS in `fps-report.json` once this build passes its tests.
+
 See [story and progression](docs/THE_LAST_NURSERY.md), [observer rules and persistence](docs/SHELTER_OBSERVER.md), [word-model architecture and limits](docs/NARRATIVE_LANGUAGE_MODEL.md), [reference analysis](docs/SNES_REFERENCE_ANALYSIS.md), and [native observer tests](docs/NATIVE_OBSERVER_TESTS.md).
 
 ### Talk, follow up, and teach a conversational style

@@ -198,6 +198,25 @@ static void label(int x,int y,const char *s,uint16_t color,int size,int max){
 static void fit(int x,int y,const char *s,uint16_t color,int max){
  label(x,y,s,color,1,max);
 }
+/* Called only after a base repaint or a new one-second sample.
+ * Erase the virtual stylus backup first so it cannot restore stale FPS
+ * text; the normal final cursor pass restores its new background. */
+void ui_perf_overlay(const PerfScene *stats){
+ char line[44];
+ if(!pixels)return;
+ cursor_erase();
+ solid(0,0,256,7,NIGHT);
+ if(!stats||!stats->total_frames){
+  fit(3,0,"FPS: MEASURING THIS SCREEN...",MINT,42);
+  return;
+ }
+ snprintf(line,sizeof(line),"FPS %u.%u AVG %u.%u LOW %u.%u MAX %u.%u",
+  (unsigned)stats->current10/10u,(unsigned)stats->current10%10u,
+  (unsigned)stats->average10/10u,(unsigned)stats->average10%10u,
+  (unsigned)stats->minimum10/10u,(unsigned)stats->minimum10%10u,
+  (unsigned)stats->maximum10/10u,(unsigned)stats->maximum10%10u);
+ fit(3,0,line,MINT,42);
+}
 static void capsule(int x,int y,int width,int height,uint16_t fill,uint16_t edge){
  solid(x+3,y,width-6,height,fill);
  solid(x,y+3,width,height-6,fill);

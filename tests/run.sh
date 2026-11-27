@@ -9,6 +9,8 @@ cd "$(dirname "$0")/.."
 python3 tests/test_rom_identity.py
 python3 tests/test_plain_homebrew.py
 python3 tests/test_nds_drastic_banner.py
+"${MBAI_HOST_CC:-cc}" -std=c11 -Wall -Wextra -Werror -pedantic -O2 ${MBAI_HOST_FLAGS:-} -Iinclude source/perf.c tests/test_perf.c -o /tmp/my_baby_ai_perf_test
+/tmp/my_baby_ai_perf_test
 "${MBAI_HOST_CC:-cc}" -std=c11 -Wall -Wextra -Werror -pedantic -O2 ${MBAI_HOST_FLAGS:-} -Iinclude source/voice.c tests/test_voice.c -o /tmp/my_baby_ai_voice_test
 /tmp/my_baby_ai_voice_test
 "${MBAI_HOST_CC:-cc}" -std=c11 -Wall -Wextra -Werror -pedantic -O2 ${MBAI_HOST_FLAGS:-} -Iinclude source/voice.c source/voice_save.c source/game.c source/dialogue.c source/save.c tests/test_voice_save.c -o /tmp/my_baby_ai_voice_save_test

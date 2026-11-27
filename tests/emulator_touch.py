@@ -1125,7 +1125,43 @@ def test_actual_game(path: Path, output: Path) -> dict:
     assert replay_movement > 35, (
         f"Toybox controls stayed locked after secret ending ({replay_movement})"
     )
+    # Measure the live ARM9 clock-based submission rate only after the
+    # scripted playthrough, so extra measurement time cannot perturb the
+    # existing graphical checks. Each view gets a fresh sampling window.
+    def measure_fps(name):
+        frames(emu, 150)
+        img = picture(emu, output, "fps_" + name)
+        row = read_text(img, 3, 192, max_chars=42, ink="mint")
+        parts = row.split()
+        assert len(parts) == 8 and parts[::2] == ["FPS", "AVG", "LOW", "MAX"], (
+            f"Native FPS overlay did not report a completed sample: {row!r}")
+        current, average, low, high = map(float, parts[1::2])
+        assert 0 < low <= current <= high <= 70, row
+        assert low <= average <= high, row
+        return {"current": current, "average": average, "low": low, "high": high}
+
+    # R+SELECT toggles telemetry without triggering day advance.
+    emu.input.keypad_add_key(keymask(Keys.KEY_R))
+    emu.input.keypad_add_key(keymask(Keys.KEY_SELECT))
+    frames(emu, 8)
+    emu.input.keypad_rm_key(keymask(Keys.KEY_SELECT))
+    emu.input.keypad_rm_key(keymask(Keys.KEY_R))
+    fps = {"toybox": measure_fps("toybox")}
+    emu.input.keypad_add_key(keymask(Keys.KEY_B))
+    frames(emu, 8)
+    emu.input.keypad_rm_key(keymask(Keys.KEY_B))
+    frames(emu, 8)
+    fps["nursery"] = measure_fps("nursery")
+    stylus_tap(emu, 217, 40)
+    fps["room"] = measure_fps("room")
+    stylus_tap(emu, 128, 183)
+    stylus_tap(emu, 45, 183)
+    fps["arcade_menu"] = measure_fps("arcade_menu")
+    (output / "fps-report.json").write_text(
+        json.dumps({"metric": "submitted frames per emulated DS second",
+                    "scenes": fps}, indent=2) + "\n", encoding="utf-8")
     return {
+        "fps_telemetry": fps,
         "3D_top_screen_distinct_colors": hero_colors,
         "Care_guidance_header_ink_pixels": care_coach_ink,
         "3D_top_screen_full_height_dark_stripes": len(full_height_stripes),

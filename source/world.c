@@ -1136,11 +1136,15 @@ void world_draw(const Game *s,uint32_t frame,int activity){
 /* The character is a synthetic toy shell, never a real child. The same
  * mesh swings its attached limbs as it tumbles; the integer simulation
  * supplies 1/256-world-unit motion, so it stays deterministic on DS. */
-void world_draw_roughhouse(const Game *s,uint32_t frame,const Roughhouse *r){
+static void draw_roughhouse(const Game *s,uint32_t frame,const Roughhouse *r,int prologue){
  int tilt;
  float elevation=0.f,shadow=.92f;
  glMatrixMode(GL_MODELVIEW);glLoadIdentity();
- gluLookAt(.97f,1.05f,3.43f,-.12f,.035f,.17f,0,1,0);
+ /* Fracture prologue uses a deliberately frontal, slightly raised
+  * portrait. Keep ordinary Toybox framing unchanged. This places the
+  * eyes and hair in the focal area instead of losing them to perspective. */
+ if(prologue)gluLookAt(.28f,.86f,3.15f,-.12f,.25f,.17f,0,1,0);
+ else gluLookAt(.97f,1.05f,3.43f,-.12f,.035f,.17f,0,1,0);
  glPolyFmt(POLY_ALPHA(31)|POLY_CULL_NONE);
  frame_vertices=0;frame_polygons=0;
  room(0);
@@ -1181,6 +1185,9 @@ void world_draw_roughhouse(const Game *s,uint32_t frame,const Roughhouse *r){
  glPopMatrix(1);
  teddy();
  glFlush(0);
+}
+void world_draw_roughhouse(const Game *s,uint32_t frame,const Roughhouse *r){
+ draw_roughhouse(s,frame,r,0);
 }
 /* One pointed tooth costs one triangle and follows the curved mouth.
  * Fixed, tiny per-frame geometry: never a texture atlas or CPU rasterizer. */
@@ -1558,7 +1565,7 @@ void world_draw_secret(const Game *s,uint32_t frame,const Roughhouse *r){
  float opened=0.f;
  if(frame<EGG_CRACK_FRAME){
   Roughhouse staged=world_egg_staged_doll(r,frame);
-  world_draw_roughhouse(s,frame,&staged);
+  draw_roughhouse(s,frame,&staged,1);
   return;
  }
  phase=frame<EGG_PUSH_FRAME?1u:frame<EGG_SCARE_FRAME?2u:3u;
