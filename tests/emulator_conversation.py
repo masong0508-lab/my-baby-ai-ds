@@ -62,7 +62,7 @@ def load_reply_contract(source=None):
     authored = source.read_text()
     literal = r'"(?:[^"\\]|\\.)*"'
     entry = re.compile(r'R\(\s*(CONVERSATION_[A-Z_]+)\s*,\s*'
-                       r'(CONVERSATION_[A-Z_]+)\s*,\s*([01])\s*,\s*'
+                       r'(CONVERSATION_[A-Z_]+)\s*,\s*([012])\s*,\s*'
                        rf'((?:{literal}\s*)+)\)', re.DOTALL)
     families = {}
     for match in entry.finditer(authored):
@@ -75,8 +75,8 @@ def load_reply_contract(source=None):
         families.setdefault(topic, set()).add(normalized(reply))
     required_topics = set().union(*REPLY_TOPICS.values())
     for topic in required_topics:
-        assert len(families.get(topic, ())) == 6, (
-            f"Expected six authored style/variant responses for {topic}",
+        assert len(families.get(topic, ())) == 9, (
+            f"Expected nine authored style/variant responses for {topic}",
             families.get(topic))
     contract = {name: set().union(*(families[topic] for topic in topics))
                 for name, topics in REPLY_TOPICS.items()}
