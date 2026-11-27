@@ -498,6 +498,7 @@ const char *observer_answer(ObserverProfile *p,ObserverSession *s,const Game *g,
  unsigned topic;
  if(!p||!s||!g)return "WARDEN UNAVAILABLE.";
  if(speaker>OBSERVER_BABY)speaker=OBSERVER_MONITOR;
+ if(s->speaker!=speaker)s->focus=FOCUS_STATUS;
  s->speaker=(uint8_t)speaker;
  if(!normalize(clean,sizeof(clean),input))
   return say(s,"USE A SHORT PRINTABLE ASCII QUESTION. TRY HELP.");
@@ -548,9 +549,12 @@ const char *observer_answer(ObserverProfile *p,ObserverSession *s,const Game *g,
  if(has(clean,"CALC")||has(clean,"CALCULATE")||
     (*at>='0'&&*at<='9')||((*at=='-'||*at=='+')&&at[1]>='0'&&at[1]<='9'))
   return calculate(s,clean);
- if(strcmp(clean,"MORE")==0||strcmp(clean,"TELL ME MORE")==0||strcmp(clean,"WHY?")==0||strcmp(clean,"WHY")==0){
+ if(strcmp(clean,"MORE")==0||strcmp(clean,"MORE?")==0||strcmp(clean,"TELL ME MORE")==0||strcmp(clean,"TELL ME MORE?")==0||strcmp(clean,"WHY?")==0||strcmp(clean,"WHY")==0){
   switch(s->focus){
   case FOCUS_NEEDS:return needs(s,g);
+  case FOCUS_SELF:
+   if(speaker==OBSERVER_BABY)return fiction(p,s,g,speaker,NARRATIVE_SELF);
+   return say(s,"I MONITOR THE NURSERY AND KEEP OBSERVED CARE RECORDS. ASK MEMORY OR WORLD TO LEARN MORE.");
   case FOCUS_BOND:return bond(p,s,g);
   case FOCUS_MEMORY:return memory(p,s);
   case FOCUS_WORLD:return world(s,"WHY");
@@ -566,7 +570,7 @@ const char *observer_answer(ObserverProfile *p,ObserverSession *s,const Game *g,
   return observer_report(p,s,g);
  if(has(clean,"NEED")||has(clean,"NEEDS")||has(clean,"HUNGRY")||has(clean,"TIRED")||has(clean,"HUNGER")||has(clean,"ENERGY"))
   return needs(s,g);
- if(has(clean,"BOND")||has(clean,"TRUST")||has(clean,"FRIEND")||has(clean,"CARE PATTERN")||has(clean,"DO YOU LIKE ME"))
+ if(has(clean,"BOND")||has(clean,"TRUST")||has(clean,"FRIEND")||has(clean,"FRIENDS")||has(clean,"CARE PATTERN")||has(clean,"DO YOU LIKE ME"))
   return bond(p,s,g);
  if(has(clean,"MEMORY")||has(clean,"REMEMBER")||has(clean,"HISTORY")||has(clean,"LAST EVENT"))
   return memory(p,s);
@@ -584,7 +588,7 @@ const char *observer_answer(ObserverProfile *p,ObserverSession *s,const Game *g,
    "I AM WATCHING THE SEAMS OF ITS TOY-LIKE SHELL. SOMETHING IS HIDDEN INSIDE. NO CONFIRMED OPENING IS IN THIS ARCHIVE.":
    "THE BABY HAS A TOY-LIKE SHELL. MY ARCHIVE CANNOT EXPLAIN WHAT IS INSIDE. NO CONFIRMED OPENING IS IN THE LOG.");
  }
- if(has(clean,"WORLD")||has(clean,"OUTSIDE")||has(clean,"BAN")||has(clean,"BUREAU")||has(clean,"CLINIC")||has(clean,"FOUND")||has(clean,"FORBIDDEN")||has(clean,"SHELTER")||has(clean,"WHERE AM I")||has(clean,"WHY"))
+ if(has(clean,"WORLD")||has(clean,"OUTSIDE")||has(clean,"BAN")||has(clean,"BUREAU")||has(clean,"CLINIC")||has(clean,"FOUND")||has(clean,"FORBIDDEN")||has(clean,"SHELTER")||has(clean,"WHERE AM I"))
   return world(s,clean);
  if(has(clean,"WHO AM I"))return say(s,"YOU ARE THE CARETAKER HIDING AN UNREGISTERED BABY IN THIS NURSERY. I DO NOT KNOW YOUR NAME.");
  if(has(clean,"WHO ARE YOU")||has(clean,"WHAT ARE YOU")||has(clean,"SELF")||has(clean,"WARDEN")){
