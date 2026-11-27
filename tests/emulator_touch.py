@@ -1214,8 +1214,83 @@ def test_actual_game(path: Path, output: Path) -> dict:
     press(Keys.KEY_B)
     press(Keys.KEY_L)
     fps["album"] = measure_fps("album", "ALBUM")
+
+    # Exercise the NEW guide/practice system only after baseline FPS and
+    # story checks. Read the native ROM's rendered titles, questions and
+    # economy; never inject internal engine state or unlock flags.
+    def current_header(expected):
+        screen = emu.screenshot().convert("RGB")
+        actual = read_text(screen, 12, 199, scale=2,
+                           max_chars=len(expected), ink="white")
+        assert actual == expected, (expected, actual)
+        return screen
+
+    def arcade_balance(screen):
+        return (read_text(screen, 214, 192+10, max_chars=5, ink="ink"),
+                read_text(screen, 71, 192+34, max_chars=20, ink="purple"))
+
+    press(Keys.KEY_B)
+    press(Keys.KEY_START)
+    baseline_menu = current_header("ARCADE")
+    before_practice = arcade_balance(baseline_menu)
+    stylus_tap(emu, 220, 63)
+    titles = []
+    for _ in range(16):
+        guide = current_header("GUIDE")
+        title = read_text(guide, 17, 192+36, max_chars=36, ink="purple")
+        titles.append(title)
+        press(Keys.KEY_RIGHT)
+    expected_titles = {"BOTTLE BALANCE", "DIAPER DASH", "TAX RETURN TEETHER",
+                       "CRIB KART", "BABY BEATBOX", "SOCK MARKET",
+                       "NAPTIME NEGOTIATOR", "RATTLE RESCUE", "CORPORATE CRAWL",
+                       "STROLLER DRIFT", "CEREAL CIPHER", "TANTRUM BLOCKS",
+                       "BABY'S FIRST AUDIT", "GLITCH GARDENING",
+                       "COURTROOM CRAYONS", "CEO OF DAYCARE"}
+    assert set(titles) == expected_titles, titles
+    for _ in range(16):
+        guide = current_header("GUIDE")
+        if read_text(guide, 17, 192+36, max_chars=36, ink="purple") == "CEREAL CIPHER":
+            break
+        press(Keys.KEY_RIGHT)
+    else:
+        raise AssertionError("Could not browse to Cereal Cipher")
+    picture(emu, output, "arcade_cereal_guide")
+    stylus_tap(emu, 190, 149)  # PRACTICE, even though cabinet is locked.
+    practice = current_header("PRACTICE")
+    assert read_text(practice, 12, 192+35, scale=2,
+                     max_chars=13, ink="purple") == "CEREAL CIPHER"
+    question = read_text(practice, 83, 192+91, max_chars=18, ink="purple")
+    press(Keys.KEY_START)
+    current_header("PAUSE")
+    frames(emu, 420)  # Longer than a normal Cereal question's timer.
+    current_header("PAUSE")
+    picture(emu, output, "arcade_practice_paused")
+    stylus_tap(emu, 65, 149)
+    resumed = current_header("PRACTICE")
+    assert read_text(resumed, 83, 192+91, max_chars=18, ink="purple") == question
+    assert read_text(resumed, 12, 192+54, max_chars=22, ink="deep_pink").startswith("SOLVED 0/6")
+    for round_index in range(6):
+        practice = current_header("PRACTICE")
+        equation = read_text(practice, 83, 192+91, max_chars=18, ink="purple")
+        left, plus, right, equal, unknown = equation.split()
+        assert plus == "+" and equal == "=" and unknown == "?", equation
+        answer = int(left) + int(right)
+        values = [int(read_text(practice, 41+i*82, 192+139,
+                                max_chars=2, ink="ink")) for i in range(3)]
+        assert values.count(answer) == 1, values
+        stylus_tap(emu, 46+values.index(answer)*82, 150)
+    practice_result = current_header("ARCADE")
+    assert arcade_balance(practice_result) == before_practice, (
+        "Practice reward leaked into the live economy", before_practice,
+        arcade_balance(practice_result))
+    assert read_text(practice_result, 10, 192+181,
+                     max_chars=39, ink="lemon") == "PRACTICE CLEARED! NO REWARD."
+    picture(emu, output, "arcade_practice_success_no_reward")
     write_fps_report()
     return {
+        "arcade_guides_verified": len(titles),
+        "paid_practice_completed_without_reward": True,
+        "arcade_pause_preserved_question": True,
         "fps_telemetry": fps,
         "3D_top_screen_distinct_colors": hero_colors,
         "Care_guidance_header_ink_pixels": care_coach_ink,
