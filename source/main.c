@@ -23,6 +23,7 @@
 #include "virtual_stylus.h"
 #include "roughhouse.h"
 #include "sfx.h"
+#include "perf.h"
 #if defined(__BLOCKSDS__)
 /* BlocksDS main loop convention: traditional foreground VBlank loop. */
 #define GAME_LOOP_ACTIVE() 1
@@ -33,6 +34,8 @@
 #define SAVE_BASE "fat:/my_baby_ai"
 static Game baby;
 static Arcade arc;
+static PerfTracker performance;
+static int perf_show;
 static ArcadeFeedback arcade_feedback;
 static uint8_t save_write_failed;
 static uint8_t learning_write_failed;
@@ -488,11 +491,14 @@ int main(void){
  /* Sound starts only AFTER the title is visibly present. Small hardware
   * PSG cues are synthesized at the ARM9 game tick; no sample bank/heap. */
  sfx_init();
+ /* BlocksDS uses ARM9 timers 0/1; current libnds maps this same API
+  * to its managed Calico tick clock. Do not touch reserved timer 2/3. */
+ perf_init(&performance);cpuStartTiming(0);
  /* Stay in RAM-only mode until the player explicitly requests save access.
   * New and old .nds game saves remain compatible when FAT is available. */
  while(GAME_LOOP_ACTIVE()){
   int down,held,tap,previous=view,virtual_move=0,guard_requested=0;
-  int raw_touch;
+  int raw_touch,repaint=0,perf_changed;
   touchPosition touch={0};
   swiWaitForVBlank();
   scanKeys();
@@ -511,6 +517,11 @@ int main(void){
   ui_touch_observe(raw_touch,touch.px,touch.py,gesture.total_presses);
   /* Compare against the proven button-scanning pattern from the user's
    * Mandex DS bare-metal port. This fallback needs no working ARM7 stylus. */
+  if((down&KEY_SELECT)&&(held&KEY_R)&&!(held&KEY_L)){
+   perf_show=!perf_show;
+   down&=~(KEY_SELECT|KEY_R); /* no day advance or safe-visual toggle */
+   dirty=1;
+  }
   if((down&KEY_SELECT)&&(held&KEY_L)){
    virtual_stylus_toggle(&vpen);
    down &= ~(KEY_SELECT|KEY_L); /* not "end day" or "album" */
@@ -1122,6 +1133,7 @@ int main(void){
   /* Keep bitmap VRAM writes off the hot path unless UI state changed. */
   if(dirty||previous!=view||
      (view==2&&frame%arcade_redraw_period(&arc)==0u)){
+   repaint=1;
    /* The actual per-frame draw must receive the Room prop selection and
     * lamp/day flags. Startup UI paint is NOT the Room redraw path. */
    if(view==13)ui_mic_draw(&baby,storage_ok,voice_word,
@@ -1165,6 +1177,12 @@ int main(void){
   }
   if(view==7)ui_touch_diag_update(world_vertex_count(),
                                   world_polygon_count());
+  /* Every submitted frame is timed even with the optional display off.
+   * This includes VBlank wait, logic and geometry/bitmap submission. */
+  perf_changed=perf_frame(&performance,cpuGetTiming(),three_d_ready?
+                 perf_scene((unsigned)view,arc.id):PERF_INACTIVE);
+  if(perf_show&&(repaint||perf_changed))
+   ui_perf_overlay(perf_current(&performance));
   /* Overlay a tiny cursor only when virtual pen is enabled. The bottom BG
    * needn't be fully repainted on every frame, avoiding DraStic flicker. */
   ui_virtual_cursor_update(vpen.enabled,vpen.x,vpen.y,
