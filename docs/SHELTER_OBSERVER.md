@@ -53,7 +53,7 @@ Select BABY and type `TEACH TINY BOSS`. Typed TEACH addressed to WARDEN
 directs the player to select BABY. The same teaching API can be called by
 the explicit UI lesson action.
 
-Four phrase slots each store at most **24 characters**. Input is uppercased,
+Eight phrase slots each store at most **24 characters**. Input is uppercased,
 leading/trailing whitespace is removed and interior whitespace is collapsed.
 Letters, digits, spaces and the terminal's available punctuation are
 accepted. Unsupported glyphs such as brackets, braces, backslash and
@@ -62,11 +62,11 @@ bitmap display. Stored phrases are data: teaching `REPAIR` and later
 asking `SAY REPAIR` only repeats the word.
 
 New phrases start at confidence 1. Teaching the same normalized phrase
-again raises confidence up to 15 without consuming another slot. A fifth
+again raises confidence up to 15 without consuming another slot. A ninth
 distinct phrase is refused without changing any existing lesson. SAY, SAY
-1–4, WHAT DID I TEACH, and natural aliases such as SAY WHAT I TAUGHT
-retrieve the stored words. PHRASES lists occupied slots and LESSON 1–4
-reports the exact practice confidence. Select BABY and type FORGET 1–4 to
+1–8, WHAT DID I TEACH, and natural aliases such as SAY WHAT I TAUGHT
+retrieve the stored words. PHRASES 1 and PHRASES 2 list four slots per page and LESSON 1–8
+reports the exact practice confidence. Select BABY and type FORGET 1–8 to
 preview deletion; FORGET 1 YES (substitute the intended slot) explicitly
 confirms the removal. New lessons reuse vacant slots; other lessons,
 history and the existing save layout are retained.
@@ -116,17 +116,17 @@ their own recorded counts and last-event entry.
 
 ## Size and persistence
 
-`ObserverProfile` is **152 bytes**. It contains bounded counts, exposure,
-bracer integrity, the last observed event, known-reveal state, and four
+`ObserverProfile` is **256 bytes**. It contains bounded counts, exposure,
+bracer integrity, the last observed event, known-reveal state, and eight
 phrases with confidence. `ObserverSession` is **192 bytes**, including the
 160-byte reply buffer, timers, focus, duplicate-event guards and local
 variation state. The engine uses no heap or per-frame generation.
 
-`observer_save.c` writes an optional **172-byte**, version-1 record:
-16 bytes of magic/version/size and exact-Game binding, the 152-byte profile,
+`observer_save.c` writes an optional **276-byte**, version-2 record:
+16 bytes of magic/version/size and exact-Game binding, the 256-byte profile,
 and a four-byte integrity digest. The selected path is
 `BASE.watch.0` or `BASE.watch.1`, based on the successfully saved Game's
-sequence parity. Both sequence and the full-Game digest must match.
+sequence parity. Both sequence and the full-Game digest must match. Valid 172-byte version-1 records are upgraded in memory, preserving the first four lessons and all history; the four new slots start empty.
 
 Integration order is ordinary `save_write` first, then optional `.mind`
 and `.watch` writers independently. No v1 Game fields or bytes change.
