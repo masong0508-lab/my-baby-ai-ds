@@ -101,6 +101,15 @@ static uint32_t diag_geometry_fingerprint(void){
  }
  return h;
 }
+static void verify_perf_strip(void){
+ PerfScene sample={0};
+ sample.total_frames=30;sample.current10=300;sample.average10=298;
+ sample.minimum10=275;sample.maximum10=600;
+ ui_perf_overlay(&sample);
+ verify_text(3,0,"FPS 30.0 AVG 29.8 LOW 27.5 MAX 60.0",36,
+             TEST_RGB(22,30,23),1);
+ verify_coverage();
+}
 static uint32_t fingerprint(void){
  uint32_t h=2166136261u;
  unsigned i;
@@ -714,6 +723,8 @@ int main(void){
  assert(ui_home_navigation(130,183)==0);
  /* Room entry lives inside the CARE speech panel, never on Toybox,
   * FEED or CHAT. Native and virtual stylus use the SAME hitboxes. */
+ ui_draw(&g,&a,0,0,0,0,1,"FPS TEST");
+ verify_perf_strip();
  assert(ui_room_entry_touch(220,40));
  assert(!ui_room_entry_touch(220,55));
  assert(!ui_room_entry_touch(120,40));
