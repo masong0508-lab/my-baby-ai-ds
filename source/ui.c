@@ -735,6 +735,9 @@ static void room_screen(const Game *s,int state,const char *message){
   fit(x+45,y+22,i==3&&!day&&!lamp?"BONUS +8":benefit[i],
       INK,13);
  }
+ capsule(8,163,240,12,MINT,TEAL);
+ fit(14,166,"SEL LULLABY",INK,12);
+ fit(99,166,"MOOD +6 / CHAOS -8",TEAL,23);
  foot(PURPLE);
  capsule(8,178,240,13,NIGHT,TEAL);
  fit(18,182,"B BACK",WHITE,7);
@@ -2262,6 +2265,7 @@ int ui_room_touch(int x,int y){
  }
  if(y>=77&&y<115)return x>=8&&x<124?0:x>=132&&x<248?1:-1;
  if(y>=122&&y<161)return x>=8&&x<124?2:x>=132&&x<248?3:-1;
+ if(y>=163&&y<175&&x>=8&&x<248)return 8;
  return -1;
 }
 int ui_room_entry_touch(int x,int y){
