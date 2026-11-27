@@ -55,18 +55,39 @@ static void face(float a,float b,float c,float d,float e,float f,
  glVertex3f(a,b,c);glVertex3f(d,e,f);glVertex3f(g,i,j);glVertex3f(k,l,m);
 }
 static unsigned frame_vertices,frame_polygons;
+/* The room's opaque, independent quads all use the same model matrix
+ * and polygon attributes. Keep adjacent quads in a single hardware
+ * primitive batch without reordering a vertex or changing a color.
+ * State: 0 outside room; 1 room scope, no batch; 2 open quad batch.
+ * Curved strips, triangles and animated transforms are hard barriers. */
+static unsigned room_quad_batch;
+static void room_quad_begin(void){
+ if(room_quad_batch!=2u){
+  glBegin(GL_QUADS);
+  if(room_quad_batch)room_quad_batch=2u;
+ }
+}
+static void room_quad_end(void){
+ if(!room_quad_batch)glEnd();
+}
+static void room_quad_barrier(void){
+ if(room_quad_batch==2u){
+  glEnd();
+  room_quad_batch=1u;
+ }
+}
 static void block(float x,float y,float z,float width,float height,float depth,
                   int r,int g,int b){
  float l=x-width*.5f,rr=x+width*.5f,bot=y-height*.5f,top=y+height*.5f;
  float bk=z-depth*.5f,fr=z+depth*.5f;
- glBegin(GL_QUADS);
+ room_quad_begin();
  color(r,g,b,2);face(l,bot,fr,rr,bot,fr,rr,top,fr,l,top,fr);
  color(r,g,b,-3);face(rr,bot,bk,l,bot,bk,l,top,bk,rr,top,bk);
  color(r,g,b,-2);face(l,bot,bk,l,bot,fr,l,top,fr,l,top,bk);
  color(r,g,b,-6);face(rr,bot,fr,rr,bot,bk,rr,top,bk,rr,top,fr);
  color(r,g,b,4);face(l,top,fr,rr,top,fr,rr,top,bk,l,top,bk);
  color(r,g,b,-8);face(l,bot,bk,rr,bot,bk,rr,bot,fr,l,bot,fr);
- glEnd();
+ room_quad_end();
  frame_vertices+=24;
  frame_polygons+=6;
 }
@@ -75,37 +96,37 @@ static void block(float x,float y,float z,float width,float height,float depth,
  */
 static void flat_floor(float x,float y,float z,float sx,float sz,
                        int r,int g,int b){
- glBegin(GL_QUADS);
+ room_quad_begin();
  color(r,g,b,0);
  face(x-sx*.5f,y,z-sz*.5f,
       x+sx*.5f,y,z-sz*.5f,
       x+sx*.5f,y,z+sz*.5f,
       x-sx*.5f,y,z+sz*.5f);
- glEnd();
+ room_quad_end();
  frame_vertices+=4;frame_polygons++;
 }
 static void wall_sticker(float x,float y,float z,float sx,float sy,
                          int r,int g,int b){
- glBegin(GL_QUADS);
+ room_quad_begin();
  color(r,g,b,0);
  face(x-sx*.5f,y-sy*.5f,z,
       x+sx*.5f,y-sy*.5f,z,
       x+sx*.5f,y+sy*.5f,z,
       x-sx*.5f,y+sy*.5f,z);
- glEnd();
+ room_quad_end();
  frame_vertices+=4;frame_polygons++;
 }
 /* Simple graphic on the inside left wall; the normal back-wall decal
  * cannot be rotated there. One quad per field, not a six-faced box. */
 static void side_wall_mark(float x,float y,float z,float sz,float sy,
                            int r,int g,int b){
- glBegin(GL_QUADS);
+ room_quad_begin();
  color(r,g,b,0);
  face(x,y-sy*.5f,z-sz*.5f,
       x,y-sy*.5f,z+sz*.5f,
       x,y+sy*.5f,z+sz*.5f,
       x,y+sy*.5f,z-sz*.5f);
- glEnd();
+ room_quad_end();
  frame_vertices+=4;frame_polygons++;
 }
 /* DS-native four-corner lighting. The hardware interpolates vertex
@@ -116,7 +137,7 @@ static void nursery_light_planes(void){
  /* The window side stays cool while the lamp end warms the lower wall.
   * These are broad architectural gradients, not floating light strips.
   * All three surfaces are separated from their wall/floor boxes. */
- glBegin(GL_QUADS);
+ room_quad_begin();
  color(tour_lamp_on?29:23,tour_lamp_on?24:22,21,0);
  glVertex3f(-3.29f,-1.07f,-3.131f);
  color(23,22,25,0);glVertex3f(3.30f,-1.07f,-3.131f);
@@ -124,22 +145,22 @@ static void nursery_light_planes(void){
  glVertex3f(3.30f,2.53f,-3.131f);
  color(tour_daylight?25:24,tour_daylight?25:21,25,0);
  glVertex3f(-3.29f,2.53f,-3.131f);
- glEnd();
- glBegin(GL_QUADS);
+ room_quad_end();
+ room_quad_begin();
  color(23,19,17,0);glVertex3f(-3.28f,-1.237f,3.28f);
  color(22,20,21,0);glVertex3f(3.28f,-1.237f,3.28f);
  color(20,19,23,0);glVertex3f(3.28f,-1.237f,-3.09f);
  color(tour_lamp_on?28:22,23,tour_daylight?24:20,0);
  glVertex3f(-3.28f,-1.237f,-3.09f);
- glEnd();
- glBegin(GL_QUADS);
+ room_quad_end();
+ room_quad_begin();
  color(tour_lamp_on?23:19,24,21,0);
  glVertex3f(-3.340f,-1.07f,3.28f);
  color(19,23,22,0);glVertex3f(-3.340f,2.53f,3.28f);
  color(22,25,25,0);glVertex3f(-3.340f,2.53f,-3.10f);
  color(tour_lamp_on?27:22,25,22,0);
  glVertex3f(-3.340f,-1.07f,-3.10f);
- glEnd();
+ room_quad_end();
  frame_vertices+=12;frame_polygons+=3;
 }
 /* Three broad quads make one clipped-corner contact footprint. No alpha
@@ -148,7 +169,7 @@ static void nursery_light_planes(void){
 static void floor_contact(float x,float y,float z,float rx,float rz,
                            int r,int g,int b){
  const float edge=rx*.7071f,depth=rz*.7071f;
- glBegin(GL_QUADS);
+ room_quad_begin();
  color(r,g,b,0);
  face(x-edge,y,z-rz,x+edge,y,z-rz,
       x+edge,y,z+rz,x-edge,y,z+rz);
@@ -156,7 +177,7 @@ static void floor_contact(float x,float y,float z,float rx,float rz,
       x-edge,y,z+rz,x-rx,y,z+depth);
  face(x+edge,y,z-rz,x+rx,y,z-depth,
       x+rx,y,z+depth,x+edge,y,z+rz);
- glEnd();
+ room_quad_end();
  frame_vertices+=12;frame_polygons+=3;
 }
 static void baby_contact(float x,float z,float scale){
@@ -170,11 +191,11 @@ static void crib_rail(float x,float y,float z,float width,float height,
                       float depth,int r,int g,int b){
  float lx=x-width*.5f,rx=x+width*.5f,lo=y-height*.5f,hi=y+height*.5f;
  float fr=z+depth*.5f,bk=z-depth*.5f;
- glBegin(GL_QUADS);
+ room_quad_begin();
  color(r,g,b,2);face(lx,lo,fr,rx,lo,fr,rx,hi,fr,lx,hi,fr);
  color(r,g,b,-4);face(rx,lo,fr,rx,lo,bk,rx,hi,bk,rx,hi,fr);
  color(r,g,b,4);face(lx,hi,fr,rx,hi,fr,rx,hi,bk,lx,hi,bk);
- glEnd();
+ room_quad_end();
  frame_vertices+=12;frame_polygons+=3;
 }
 /* GL_QUAD_STRIP shares ring vertices between adjacent polygons. This
@@ -201,6 +222,7 @@ static void ellipse(float x,float y,float z,float rx,float ry,float rz,
  shades[1][0]=packed_color(red,green,blue,3);
  shades[1][1]=packed_color(red,green,blue,-2);
  shades[1][2]=shades[0][0];
+ room_quad_barrier();
  for(a=0;a<3;a++){
   const unsigned *palette=shades[a==2];
   glBegin(GL_QUAD_STRIP);
@@ -369,6 +391,7 @@ static void decor_relief(float x,float y,float z,float rx,float ry,float depth,
  static const float dy[12]={0,.5f,.866f,1,.866f,.5f,0,-.5f,-.866f,-1,-.866f,-.5f};
  static const int shade[12]={-2,0,2,3,3,2,0,-2,-3,-4,-4,-3};
  unsigned i,j;
+ room_quad_barrier();
  glBegin(GL_TRIANGLES);
  for(i=0;i<12u;i++){
   j=(i+1u)%12u;
@@ -421,6 +444,8 @@ unsigned world_polygon_count(void){return frame_polygons;}
  * Twelve DS-native quads total: no texture, buffer or heap allocation. */
 static void crib_mobile(int tilt){
  int i;
+ /* Never let a static primitive cross an animated matrix change. */
+ room_quad_barrier();
  for(i=0;i<4;i++){
   float arm=-.38f+(float)i*.26f;
   glPushMatrix();
@@ -467,7 +492,7 @@ static void crib_quilt(void){
  const float left=1.665f,right=2.895f,front=-.815f,back=-2.165f;
  const float bottom=-.53f,top=-.43f;
  int x,z;
- glBegin(GL_QUADS);
+ room_quad_begin();
  color(31,20,24,2);face(left,bottom,front,right,bottom,front,right,top,front,left,top,front);
  color(31,20,24,-3);face(right,bottom,back,left,bottom,back,left,top,back,right,top,back);
  color(31,20,24,-2);face(left,bottom,back,left,bottom,front,left,top,front,left,top,back);
@@ -484,11 +509,12 @@ static void crib_quilt(void){
   color(31,(x+z)&1?23:26,(x+z)&1?25:28,-1);
   glVertex3f(b,top,c);glVertex3f(a,top,c);
  }
- glEnd();
+ room_quad_end();
  frame_vertices+=44;frame_polygons+=11;
 }
 static void room(int mobile_tilt){
  int i;
+ room_quad_batch=1u;
  /* Floor/walls/skirting have real thickness and meet at the corners. */
  block(0,-1.43,0,7.0,.25,7.0,24,19,14);
  block(0,.67,-3.29,7.0,4.05,.18,29,28,25);
@@ -641,6 +667,8 @@ static void room(int mobile_tilt){
  block(2.56,-.70,1.54,.30,.32,.31,19,24,26);
  block(-2.34,-1.05,1.68,.46,.36,.39,24,21,16);
  ellipse(-2.68,-1.00,1.03,.22,.22,.20,20,26,21);
+ room_quad_barrier();
+ room_quad_batch=0u;
 }
 static void teddy(void){
  /* Readable stuffed-bear silhouette: chest, light muzzle, dark stitched face.
