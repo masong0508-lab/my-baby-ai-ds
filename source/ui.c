@@ -194,6 +194,21 @@ static void char_at(int x,int y,char value,uint16_t color,int scale){
  if(ch>='a'&&ch<='z')ch-=32;
  if(ch<32||ch>=128||scale<=0)return;
  bits=glyph[ch-32];
+ /* Fast path for fully visible 1x text. The native halfword writes
+  * match the clipped general path; eliminate per-run fill setup on
+  * the most common terminal, care and arcade text size. */
+ if(pixels&&scale==1&&x>=0&&x<=W-5&&y>=0&&y<=H-7){
+  for(j=0;j<7;j++){
+   uint8_t row=bits[j];
+   volatile uint16_t *dst=pixels+(unsigned)(y+j)*W+x;
+   if(row&16u)dst[0]=color;
+   if(row&8u)dst[1]=color;
+   if(row&4u)dst[2]=color;
+   if(row&2u)dst[3]=color;
+   if(row&1u)dst[4]=color;
+  }
+  return;
+ }
  for(j=0;j<7;j++){
   uint8_t row=bits[j];
   i=0;
@@ -234,13 +249,19 @@ static void capsule(int x,int y,int width,int height,uint16_t fill,uint16_t edge
  solid(x+3,y+height-1,width-6,1,edge);
 }
 static void meter(int x,int y,int value,uint16_t fill){
- int v=value;
+ int v=value,bar;
  if(v<0)v=0;
  if(v>100)v=100;
- solid(x,y,71,8,WHITE);
- outline(x,y,71,8,PURPLE);
- solid(x+2,y+2,(v*67)/100,4,fill);
- solid(x+2,y+2,(v*67)/100,1,WHITE);
+ bar=v*67/100;
+ /* Disjoint spans preserve the original white highlight and 3-row
+  * colored fill. Every pixel of the 71x8 meter is painted once. */
+ solid(x,y,71,1,PURPLE);solid(x,y+7,71,1,PURPLE);
+ solid(x,y+1,1,6,PURPLE);solid(x+70,y+1,1,6,PURPLE);
+ solid(x+1,y+1,69,2,WHITE);
+ solid(x+1,y+6,69,1,WHITE);
+ solid(x+1,y+3,1,3,WHITE);
+ solid(x+2,y+3,bar,3,fill);
+ solid(x+2+bar,y+3,68-bar,3,WHITE);
 }
 /* A stat reads numerically as well as by color at native 256x192.
  * The small ivory counter is the same size in every health row. */
@@ -317,15 +338,23 @@ static void icon_bottle(int x,int y){
  solid(x+15,y+16,3,1,TEAL);
 }
 static void icon_chat(int x,int y){
- capsule(x+3,y+3,23,18,PURPLE,WHITE);
- solid(x+7,y+20,6,5,PURPLE);
- solid(x+8,y+10,3,3,LEMON);solid(x+14,y+10,3,3,LEMON);
- solid(x+20,y+10,3,3,LEMON);
+ /* Connected speech bubble, stepped tail, two-tone face and dots. */
+ capsule(x+3,y+3,25,18,PURPLE,WHITE);
+ solid(x+7,y+19,7,3,PURPLE);
+ solid(x+7,y+22,4,2,PURPLE);
+ solid(x+7,y+24,2,1,PURPLE);
+ solid(x+7,y+6,17,2,LILAC);
+ solid(x+8,y+11,3,3,LEMON);solid(x+14,y+11,3,3,LEMON);
+ solid(x+20,y+11,3,3,LEMON);
 }
 static void icon_play(int x,int y){
- capsule(x+3,y+4,24,17,TEAL,WHITE);
- solid(x+8,y+7,4,11,WHITE);solid(x+5,y+11,10,4,WHITE);
- solid(x+19,y+8,3,3,LEMON);solid(x+23,y+13,3,3,PINK);
+ /* Stepped gamepad silhouette, distinct controls and grip accents. */
+ solid(x+7,y+4,18,2,TEAL);
+ capsule(x+3,y+6,26,16,TEAL,WHITE);
+ solid(x+5,y+19,5,4,TEAL);solid(x+22,y+19,5,4,TEAL);
+ solid(x+8,y+8,3,10,WHITE);solid(x+5,y+11,9,3,WHITE);
+ solid(x+19,y+9,3,3,LEMON);solid(x+23,y+13,3,3,PINK);
+ solid(x+15,y+16,4,1,MINT);
 }
 static void icon_nap(int x,int y){
  /* Little padded bed in perspective: rounded pillow, blanket folds
