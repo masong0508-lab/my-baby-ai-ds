@@ -13,6 +13,8 @@ void ui_draw(const Game *s,const Arcade *a,int view,int selected,
  * Redraw the normal UI when the caller's feedback timer expires. */
 void ui_arcade_feedback(ArcadeFeedbackEvent event);
 void ui_arcade_feedback_mode(ArcadeFeedbackEvent event,int practice);
+/* Small changing time track; does not repaint the game art. */
+void ui_arcade_clock(const Arcade *a);
 /* Higher-priority footer for a failed save; draw after arcade feedback.
  * Caller retains failure state until a successful write/load/new baby. */
 void ui_save_warning(void);
