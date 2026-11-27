@@ -38,6 +38,9 @@ const char *game_care(Game *s,Care action);
 int game_care_hint(const Game *s);
 /* Adds calm/energy only when Room Tour crib is moonlit and lamp off. */
 int game_room_quiet_rest(Game *s,int daylight,int lamp_on);
+/* A useful lullaby costs a little energy and hunger, not money.
+ * Refuses when too hungry, exhausted, or already completely settled. */
+int game_room_soothe(Game *s);
 unsigned game_glitch_tier(const Game *s);
 int game_unlocked(const Game *s,int id);
 /* One shared source of truth for what a locked cabinet requires.
