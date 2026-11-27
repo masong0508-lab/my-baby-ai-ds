@@ -470,6 +470,7 @@ static void practice_all(void){
   assert(game_arcade_goal((unsigned)id)==goal[id]);
   assert(game_arcade_practice_start(&live,&sandbox,&a,id));
   assert(a.active&&a.practice&&a.id==id&&sandbox.corruption==0);
+  assert(a.timer_limit==a.timer&&a.timer>0);
   assert(game_unlocked(&sandbox,id));
   assert(memcmp(&live,&original,sizeof(live))==0);
   for(unsigned tick=0;tick<2500u&&a.active;tick++)
@@ -488,7 +489,7 @@ static void practice_all(void){
  while(a.elapsed<60u)game_arcade_tick(&sandbox,&a);
  assert(game_arcade_beat_slot(&a)==2);
  while(!a.phase)game_arcade_tick(&sandbox,&a);
- assert(game_arcade_beat_slot(&a)==-1);
+ assert(game_arcade_beat_slot(&a)==-1&&a.timer_limit==240u&&a.timer==240u);
  /* Normal play is still locked and never inherits practice mode. */
  game_arcade_start(&live,&a,8);assert(!a.active&&!a.practice);
  game_arcade_start(&live,&a,0);assert(a.active&&!a.practice);
