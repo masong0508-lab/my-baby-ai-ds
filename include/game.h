@@ -18,7 +18,7 @@ typedef struct {
 } Game;
 typedef struct {
  uint8_t active, id, round, mistakes, direction, reverse, finished;
- uint16_t timer;
+ uint16_t timer,timer_limit;
  /* Per-session state (not serialized in Game saves). */
  int16_t balance;
  int8_t steering;
