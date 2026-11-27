@@ -101,6 +101,34 @@ static uint32_t diag_geometry_fingerprint(void){
  }
  return h;
 }
+/* Verify the optimized capsule preserves its exact original edge and
+ * corner silhouette in the unoverlaid header's left margin. */
+static void verify_header_capsule(void){
+ const uint16_t night=TEST_RGB(8,9,18),purple=TEST_RGB(18,11,23);
+ const uint16_t ivory=TEST_RGB(31,30,27);
+ assert(screen[5*256+167]==night);
+ assert(screen[5*256+170]==purple);
+ assert(screen[6*256+170]==ivory);
+ assert(screen[8*256+167]==purple);
+ assert(screen[8*256+168]==ivory);
+ assert(screen[21*256+167]==night);
+ assert(screen[21*256+170]==purple);
+}
+/* Compare actual visible meter pixels to the old design, including
+ * zero, full, intermediate and saturated input through the home UI. */
+static void verify_hunger_meter(unsigned value){
+ const uint16_t white=TEST_RGB(31,31,31),purple=TEST_RGB(18,11,23);
+ const uint16_t rose=TEST_RGB(30,13,22);
+ unsigned bar=(value>100u?100u:value)*67u/100u;
+ /* The numeric overlay owns x>=109 in rows 71..77; the unobscured
+  * left 48 columns must be exactly the previous bar/edge pattern. */
+ for(unsigned y=0;y<8u;y++)for(unsigned x=0;x<48u;x++){
+  uint16_t expected=white;
+  if(!x||!y||y==7u)expected=purple;
+  else if(y>=3u&&y<=5u&&x>=2u&&x<bar+2u)expected=rose;
+  assert(screen[(70u+y)*256u+61u+x]==expected);
+ }
+}
 static uint32_t fingerprint(void){
  uint32_t h=2166136261u;
  unsigned i;
@@ -714,6 +742,17 @@ int main(void){
  assert(ui_home_navigation(130,183)==0);
  /* Room entry lives inside the CARE speech panel, never on Toybox,
   * FEED or CHAT. Native and virtual stylus use the SAME hitboxes. */
+ ui_draw(&g,&a,0,0,0,0,1,"GEOMETRY TEST");
+ verify_header_capsule();verify_coverage();
+ {
+  Game meter_game=g;
+  for(unsigned hunger=0;hunger<=100u;hunger++){
+   meter_game.hunger=(uint8_t)hunger;
+   ui_draw(&meter_game,&a,0,0,0,0,1,"GEOMETRY TEST");
+   verify_hunger_meter(hunger);
+  }
+  verify_coverage();
+ }
  assert(ui_room_entry_touch(220,40));
  assert(!ui_room_entry_touch(220,55));
  assert(!ui_room_entry_touch(120,40));
