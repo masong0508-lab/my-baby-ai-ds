@@ -27,6 +27,7 @@ void test_gl_flush(void){
  last_color_commands=color_commands;
  emitted_color=~0u;color_commands=0;color_vertices=0;
 }
+void test_gl_matrix_barrier(void){assert(!primitive_open);}
 void test_gl_begin(int mode){
  assert(!primitive_open);
  primitive_open=1;frame_batches++;
