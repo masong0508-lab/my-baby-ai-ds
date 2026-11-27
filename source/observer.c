@@ -255,8 +255,7 @@ const char *observer_notice(const ObserverProfile *p,const ObserverSession *s){
 int observer_teach(ObserverProfile *p,const char *text){
  char clean[OBSERVER_PHRASE_CHARS+1u];
  unsigned i,slot;
- int result;
- if(!p||!normalize(clean,sizeof(clean),text)||!clean[0])return 0;
+ if(!observer_profile_valid(p)||!normalize(clean,sizeof(clean),text)||!clean[0])return 0;
  for(i=0;clean[i];i++)if(!phrase_character((unsigned char)clean[i]))return 0;
  for(i=0;i<OBSERVER_PHRASES;i++){
   if(p->phrases[i].confidence&&strcmp(clean,p->phrases[i].text)==0){
@@ -264,15 +263,30 @@ int observer_teach(ObserverProfile *p,const char *text){
    p->teachings=sat_add(p->teachings,1u);return 2;
   }
  }
- slot=p->phrase_next;
- result=p->phrase_count<OBSERVER_PHRASES?1:3;
+ /* A new lesson must never erase a familiar word. Reuse only an
+  * explicitly vacant slot, preserving all other confidence values. */
+ if(p->phrase_count==OBSERVER_PHRASES)return 3;
+ slot=OBSERVER_PHRASES;
+ for(i=0;i<OBSERVER_PHRASES;i++){
+  unsigned candidate=(p->phrase_next+i)%OBSERVER_PHRASES;
+  if(!p->phrases[candidate].confidence){slot=candidate;break;}
+ }
+ if(slot==OBSERVER_PHRASES)return 0;
  memset(&p->phrases[slot],0,sizeof(p->phrases[slot]));
  memcpy(p->phrases[slot].text,clean,strlen(clean)+1u);
  p->phrases[slot].confidence=1;
- if(p->phrase_count<OBSERVER_PHRASES)p->phrase_count++;
+ p->phrase_count++;
  p->phrase_next=(uint8_t)((slot+1u)%OBSERVER_PHRASES);
  p->teachings=sat_add(p->teachings,1u);
- return result;
+ return 1;
+}
+int observer_forget_phrase(ObserverProfile *p,unsigned slot){
+ if(!observer_profile_valid(p)||slot>=OBSERVER_PHRASES||
+    !p->phrases[slot].confidence)return 0;
+ memset(&p->phrases[slot],0,sizeof(p->phrases[slot]));
+ p->phrase_count--;
+ p->phrase_next=p->phrase_count?(uint8_t)slot:0u;
+ return 1;
 }
 const char *observer_report(const ObserverProfile *p,ObserverSession *s,
                             const Game *g){
@@ -545,10 +559,34 @@ const char *observer_answer(ObserverProfile *p,ObserverSession *s,const Game *g,
   result=observer_teach(p,clean+6);
   s->focus=FOCUS_TEACH;
   if(!result)return say(s,"TEACH 1 TO 24 LETTERS, DIGITS OR KEYBOARD PUNCTUATION. SPACES ARE ALLOWED. I CANNOT READ THAT LESSON.");
+  if(result==3)return say(s,"ALL FOUR LESSONS ARE FULL. I KEPT THEM ALL. ASK PHRASES TO REVIEW THEM OR FORGET 1 TO FREE A SLOT.");
   record(p,g,OBSERVER_EVENT_TEACH,0u,0u);
   return say(s,result==2?"PHRASE REINFORCED. ASK SAY TO HEAR IT. REPEATED TEACHING CAN MAKE THE BABY QUOTE IT DURING PLAY.":
-   result==3?"PHRASE LEARNED. THE OLDEST OF FOUR SLOTS WAS REPLACED. ASK WHAT DID I TEACH TO REVIEW THEM.":
    "PHRASE LEARNED. ASK SAY TO HEAR IT. TEACH IT AGAIN TO REINFORCE IT.");
+ }
+ if(strcmp(clean,"FORGET")==0||strncmp(clean,"FORGET ",7u)==0){
+  unsigned slot;
+  s->focus=FOCUS_TEACH;
+  if(speaker!=OBSERVER_BABY)return say(s,"SELECT BABY TO MANAGE ITS TAUGHT PHRASES.");
+  if(strlen(clean)<8u||clean[7]<'1'||clean[7]>'4')
+   return say(s,"USE FORGET 1, 2, 3 OR 4. ASK PHRASES TO SEE THE SLOTS.");
+  slot=(unsigned)(clean[7]-'1');
+  if(clean[8]&&strcmp(clean+8," YES")!=0)
+   return say(s,"USE FORGET 1 TO REVIEW, OR FORGET 1 YES TO CONFIRM. REPLACE 1 WITH THE SLOT NUMBER.");
+  if(!p->phrases[slot].confidence)return say(s,"LESSON %u IS ALREADY EMPTY.",slot+1u);
+  if(!clean[8])return say(s,"FORGET LESSON %u: %s? TYPE FORGET %u YES TO REMOVE ONLY THIS PHRASE.",slot+1u,p->phrases[slot].text,slot+1u);
+  if(observer_forget_phrase(p,slot)){
+   s->echo_ready=0;
+   return say(s,"LESSON %u FORGOTTEN. THE OTHER LESSONS ARE SAFE. YOU CAN TEACH A NEW PHRASE.",slot+1u);
+  }
+  return say(s,"LESSON NOT CHANGED.");
+ }
+ if(strncmp(clean,"LESSON ",7u)==0&&strlen(clean)==8u&&clean[7]>='1'&&clean[7]<='4'){
+  unsigned slot=(unsigned)(clean[7]-'1');
+  s->focus=FOCUS_TEACH;
+  if(!p->phrases[slot].confidence)return say(s,"LESSON %u IS EMPTY.",slot+1u);
+  return say(s,"LESSON %u: %s. PRACTICE %u/15. %s",slot+1u,p->phrases[slot].text,(unsigned)p->phrases[slot].confidence,
+   p->phrases[slot].confidence>=3u?"I MAY SAY IT DURING HEALTHY PLAY.":"TEACH IT AGAIN TO HELP ME REMEMBER.");
  }
  if(strcmp(clean,"REPAIR")==0||strcmp(clean,"REPAIR SHELTER")==0||strcmp(clean,"REPAIR WARDEN")==0){
   if(speaker!=OBSERVER_MONITOR)return say(s,"WARDEN HANDLES REPAIRS. SELECT WARDEN AND TYPE REPAIR.");
@@ -579,7 +617,7 @@ const char *observer_answer(ObserverProfile *p,ObserverSession *s,const Game *g,
   return say(s,"THAT PHRASE IS NOT IN A TAUGHT SLOT. TRY SAY OR WHAT DID I TEACH.");
  }
  if(has(clean,"TEACH")||has(clean,"PHRASES"))return phrases(p,s);
- if(has(clean,"HELP"))return say(s,"ASK STATUS, NEEDS, MEMORY, WORLD, ATTACKS, BOND, PLAY OR DREAM. TRY TEACH HELLO, SAY, CALC 2+3. WARDEN: REPAIR.");
+ if(has(clean,"HELP"))return say(s,"ASK STATUS, NEEDS, MEMORY, WORLD, ATTACKS, BOND, PLAY OR DREAM. TRY TEACH HELLO, SAY, PHRASES, FORGET 1, CALC 2+3.");
  at=clean;
  if(strncmp(at,"WHAT IS ",8u)==0)at+=8;
  if(has(clean,"CALC")||has(clean,"CALCULATE")||
