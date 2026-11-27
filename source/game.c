@@ -353,9 +353,20 @@ static void round_next(Game *s,Arcade *a){
  a->reverse=(uint8_t)(game_glitch_tier(s)>=2&&a->round%3==2);
  a->timer=(uint16_t)(game_glitch_tier(s)>=3?75:120);
 }
+unsigned game_arcade_goal(unsigned id){
+ static const uint8_t goals[MBAI_GAMES]={6,4,6,6,3,6,4,6,6,5,6,6,6,4,4,6};
+ return id<MBAI_GAMES?goals[id]:0u;
+}
+int game_arcade_beat_slot(const Arcade *a){
+ unsigned slot;
+ if(!a||!a->active||a->id!=4||a->phase||!a->hold_frames)return -1;
+ slot=(unsigned)a->elapsed*3u/a->hold_frames;
+ return (int)(slot>2u?2u:slot);
+}
 void game_arcade_start(Game *s,Arcade *a,int id){
+ if(!a)return;
  memset(a,0,sizeof(*a));
- if(!game_unlocked(s,id))return;
+ if(!s||!game_unlocked(s,id))return;
  a->active=1;a->id=(uint8_t)id;
  if(id==0){
   a->timer=600;
@@ -380,6 +391,15 @@ void game_arcade_start(Game *s,Arcade *a,int id){
  else if(id==15)ceo_begin(s,a);
  else round_next(s,a);
 }
+int game_arcade_practice_start(const Game *live,Game *sandbox,Arcade *a,int id){
+ if(!live||!sandbox||live==sandbox||!a||id<0||id>=MBAI_GAMES)return 0;
+ *sandbox=*live;
+ sandbox->unlocked|=(uint16_t)(1u<<id);
+ sandbox->corruption=0;
+ game_arcade_start(sandbox,a,id);
+ a->practice=1u;
+ return a->active!=0u;
+}
 int game_arcade_expected(const Arcade *a){
  if(a->id==1)return a->target^(a->reverse?2:0);
  if(a->id==7||a->id==2)return a->target;
@@ -396,12 +416,15 @@ int game_arcade_expected(const Arcade *a){
 static void finish(Game *s,Arcade *a,int won){
  a->active=0;a->finished=(uint8_t)(won?1:2);
  if(won){
-  s->wins++;
+  /* Counters are persistent; never wrap a long-running save to zero. */
+  unsigned new_win=s->wins<UINT32_MAX;
+  if(new_win)s->wins++;
   s->dollars=(uint16_t)(s->dollars<=65530?s->dollars+5:65535);
-  if(!(s->wins&1u)&&s->favors<65535)s->favors++;
+  if(new_win&&!(s->wins&1u)&&s->favors<65535)s->favors++;
   s->mood=clamp(s->mood+4);
  }else{
-  s->losses++;s->mood=clamp(s->mood-8);
+  if(s->losses<UINT32_MAX)s->losses++;
+  s->mood=clamp(s->mood-8);
   s->chaos=clamp(s->chaos+15);s->corruption=clamp(s->corruption+18);
  }
 }
@@ -640,8 +663,8 @@ int game_arcade_court_touch(Game *s,Arcade *a,int touching,int x,int y){
  int i;
  if(!a->active||a->id!=14)return 0;
  if(!touching){
-  int changed=a->stage!=0;
-  if(a->touch_active&&a->stage>0)a->stage=0;
+  int changed=a->touch_active&&a->stage!=0;
+  if(changed)a->stage=0;
   a->touch_active=0;
   return changed;
  }
