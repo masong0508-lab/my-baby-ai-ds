@@ -6,6 +6,8 @@
 void test_gl_begin(int mode);
 void test_gl_vertex(float x,float y,float z);
 void test_gl_end(void);
+void test_gl_color(unsigned value);
+void test_gl_flush(void);
 #define RGB15(r,g,b) ((unsigned)((r)|((g)<<5)|((b)<<10)))
 #define GL_TRIANGLES 0
 #define GL_QUADS 1
@@ -39,7 +41,7 @@ void test_gl_end(void);
 #define glRotateYi(n) ((void)(n))
 #define glBegin(mode) test_gl_begin(mode)
 #define glEnd() test_gl_end()
-#define glColor(value) ((void)(value))
+#define glColor(value) test_gl_color(value)
 #define glVertex3f(x,y,z) test_gl_vertex((x),(y),(z))
-#define glFlush(...) ((void)0)
+#define glFlush(...) test_gl_flush()
 #endif
