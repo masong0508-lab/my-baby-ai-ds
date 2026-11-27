@@ -173,12 +173,16 @@ static void ellipse(float x,float y,float z,float rx,float ry,float rz,
                     int red,int green,int blue){
  int a,i,j;
  for(a=0;a<3;a++){
+  /* Hoist ring scale/height out of the angular loop. The emitted
+   * coordinates and per-vertex shading remain identical. */
+  const float ax=rx*w[a],az=rz*w[a],ay=y+ry*h[a];
+  const float bx=rx*w[a+1],bz=rz*w[a+1],by=y+ry*h[a+1];
   glBegin(GL_QUAD_STRIP);
   for(i=0;i<=8;i++){
    j=i&7;
    color(red,green,blue,(j<3?2:j<5?-3:0)+(a==2?1:-1));
-   glVertex3f(x+rx*w[a]*cx[j],y+ry*h[a],z+rz*w[a]*cz[j]);
-   glVertex3f(x+rx*w[a+1]*cx[j],y+ry*h[a+1],z+rz*w[a+1]*cz[j]);
+   glVertex3f(x+ax*cx[j],ay,z+az*cz[j]);
+   glVertex3f(x+bx*cx[j],by,z+bz*cz[j]);
   }
   glEnd();
  }
@@ -199,15 +203,15 @@ static void soft_head(float x,float y,float z,float rx,float ry,float rz,
  static const int light[12]={0,1,2,3,4,5,2,-1,-3,-4,-3,-1};
  int a,i,j;
  for(a=0;a<5;a++){
+  const float ax=rx*radius[a],az=rz*radius[a],ay=y+ry*v[a];
+  const float bx=rx*radius[a+1],bz=rz*radius[a+1],by=y+ry*v[a+1];
   glBegin(GL_QUAD_STRIP);
   for(i=0;i<=12;i++){
    j=i%12;
    color(red,green,blue,light[j]+(a>=3?2:a==0?-3:0));
-   glVertex3f(x+rx*radius[a]*ring_x[j],
-              y+ry*v[a],z+rz*radius[a]*ring_z[j]);
+   glVertex3f(x+ax*ring_x[j],ay,z+az*ring_z[j]);
    color(red,green,blue,light[j]+(a>=2?2:-2));
-   glVertex3f(x+rx*radius[a+1]*ring_x[j],
-              y+ry*v[a+1],z+rz*radius[a+1]*ring_z[j]);
+   glVertex3f(x+bx*ring_x[j],by,z+bz*ring_z[j]);
   }
   glEnd();
  }
@@ -309,6 +313,29 @@ static void face_oval(float x,float y,float z,float rx,float ry,
  }
  glEnd();
  frame_vertices+=24;frame_polygons+=8;
+}
+/* 12-sided shallow relief for decorations backed by a solid surface.
+ * A gently raised center with shaded perimeter gives real depth and
+ * smoother silhouettes, without an invisible back half or degenerate
+ * ellipsoid poles. 36 vertices/12 nondegenerate triangles instead of
+ * 54 vertices/24 quad-strip polygons. */
+static void decor_relief(float x,float y,float z,float rx,float ry,float depth,
+                         int red,int green,int blue){
+ static const float dx[12]={1,.866f,.5f,0,-.5f,-.866f,-1,-.866f,-.5f,0,.5f,.866f};
+ static const float dy[12]={0,.5f,.866f,1,.866f,.5f,0,-.5f,-.866f,-1,-.866f,-.5f};
+ static const int shade[12]={-2,0,2,3,3,2,0,-2,-3,-4,-4,-3};
+ unsigned i,j;
+ glBegin(GL_TRIANGLES);
+ for(i=0;i<12u;i++){
+  j=(i+1u)%12u;
+  color(red,green,blue,3);glVertex3f(x,y,z+depth);
+  color(red,green,blue,shade[i]);
+  glVertex3f(x+rx*dx[i],y+ry*dy[i],z);
+  color(red,green,blue,shade[j]);
+  glVertex3f(x+rx*dx[j],y+ry*dy[j],z);
+ }
+ glEnd();
+ frame_vertices+=36;frame_polygons+=12;
 }
 /* One shared inset-eye treatment for the nursery and boot portrait.
  * The opening and iris narrow together, so a blink needs no rectangular
@@ -456,7 +483,7 @@ static void room(int mobile_tilt){
  wall_sticker(-1.41f,1.75f,-2.976f,.39f,.08f,10,16,27);
  /* One recognizable moon disk and a few rain streaks, with bright pink
   * glitch eyes hiding OUTSIDE, not random floating indoor particles. */
- ellipse(-1.35f,1.54f,-2.964f,
+ decor_relief(-1.35f,1.54f,-2.964f,
          tour_daylight?.17f:.14f,tour_daylight?.17f:.14f,.016f,
          31,tour_daylight?26:29,tour_daylight?9:22);
  wall_sticker(-2.18f,1.32f,-2.954f,.016f,.24f,15,22,29);
@@ -473,10 +500,10 @@ static void room(int mobile_tilt){
  /* Picture frame, yellow stars and faux painting. */
  block(.53,1.93,-3.03,.85,.75,.11,21,17,13);
  block(.53,1.93,-2.96,.69,.57,.03,27,27,23);
- ellipse(.48,1.94,-2.925,.18,.22,.015,24,22,15);
+ decor_relief(.48f,1.94f,-2.925f,.18f,.22f,.015f,24,22,15);
  block(1.62,1.84,-3.03,.76,.81,.11,21,17,13);
  block(1.62,1.84,-2.96,.60,.64,.02,21,27,23);
- ellipse(1.62,1.85,-2.92,.19,.16,.02,27,24,17);
+ decor_relief(1.62f,1.85f,-2.92f,.19f,.16f,.02f,27,24,17);
  /* Dresser, three actual drawers and bottle atop it. */
  block(-2.55,-.48,-.48,1.20,1.36,.94,27,24,20);
  block(-2.55,.23,-.48,1.36,.16,1.11,29,26,22);
@@ -487,7 +514,7 @@ static void room(int mobile_tilt){
    * Two FRONT quads at 0.068/0.095 world-Z replace each old 6-face box. */
   wall_sticker(-2.55f,drawer_y,.068f,1.03f,.305f,21,18,16);
   wall_sticker(-2.55f,drawer_y,.095f,.970f,.243f,30,27,23);
-  ellipse(-2.55f,drawer_y,.128f,.073f,.054f,.038f,27,13,18);
+  decor_relief(-2.55f,drawer_y,.128f,.073f,.054f,.038f,27,13,18);
  }
  block(-2.55,.42,-.48,.14,.28,.14,29,23,21);
  ellipse(-2.55,.65,-.48,.34,.16,.32,
@@ -956,12 +983,16 @@ static void baby_model(const Game *s,uint32_t frame,int action,
  soft_head(0,.54f,.045f,.61f,.615f,.45f,30,22,19);
  ellipse(-.575f,.49f,.065f,.105f,.145f,.09f,31,23,19);
  ellipse(.575f,.49f,.065f,.105f,.145f,.09f,31,23,19);
+ /* Small inset, warm inner-ear contours remain attached to the head
+  * through every neck, gaze and roughhouse pose. */
+ face_oval(-.590f,.495f,.155f,.043f,.080f,26,16,14,2);
+ face_oval(.590f,.495f,.155f,.043f,.080f,26,16,14,2);
  /* Chestnut cap and two small swept tufts; old long side hair removed. */
  hair_cap(0,.54f,.035f,.625f,.63f,.465f,16,11,8);
  hair_fringe(-.19f,.948f,.44f,.29f,.105f,.045f);
  hair_fringe(.16f,.959f,.438f,.28f,.095f,-.04f);
  hair_fringe(-.015f,1.008f,.436f,.16f,.077f,-.025f);
- ellipse(-.39f,1.018f,.365f,.075f,.069f,.029f,29,14,20);
+ decor_relief(-.39f,1.018f,.365f,.075f,.069f,.029f,29,14,20);
  /* Front-facing rounded surfaces follow the skin, with a softly shaded
   * rim instead of four stacked full ellipsoids. Closed eyes retain the
   * same gentle crease and the full face stays on the neck transform. */
