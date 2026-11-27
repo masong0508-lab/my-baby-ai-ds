@@ -51,6 +51,18 @@ int main(void){
  contains(observer_answer(&p,&s,&g,0,"WHY IS THE SKY BLUE?"),"DO NOT UNDERSTAND");
  contains(observer_answer(&p,&s,&g,0,"WHAT ARE YOU"),"SALVAGED NURSERY COMPUTER");
  contains(observer_answer(&p,&s,&g,0,"TELL ME MORE?"),"MONITOR THE NURSERY");
+ /* Follow-ups retain the selected lore subject, even after thanks. */
+ contains(observer_answer(&p,&s,&g,0,"CLINIC"),"SHUTTERED CLINIC");
+ contains(observer_answer(&p,&s,&g,0,"THANK YOU"),"YOU'RE WELCOME");
+ contains(observer_answer(&p,&s,&g,0,"MORE"),"BEFORE YOU FOUND IT");
+ contains(observer_answer(&p,&s,&g,0,"WORLD"),"LAST NURSERY");
+ contains(observer_answer(&p,&s,&g,0,"WHY?"),"NO LIVE RECORDS");
+ contains(observer_answer(&p,&s,&g,0,"BAN"),"CLASSIFIED");
+ contains(observer_answer(&p,&s,&g,0,"MORE"),"JUSTIFICATION IS CLASSIFIED");
+ contains(observer_answer(&p,&s,&g,0,"SHELL"),"NO CONFIRMED OPENING");
+ contains(observer_answer(&p,&s,&g,0,"MORE"),"NO VERIFIED SHELL OPENING");
+ contains(observer_answer(&p,&s,&g,0,"TOYBOX"),"0 SLAPS, 0 KICKS");
+ contains(observer_answer(&p,&s,&g,0,"MORE"),"0 SLAPS, 0 KICKS");
  assert(memcmp(&p,&before,sizeof(p))==0);
  assert(memcmp(&g,&original,sizeof(g))==0);
  for(i=0;i<1000u;i++){
@@ -117,9 +129,11 @@ int main(void){
  assert(!observer_record_event(&p,&s,&g,OBSERVER_EVENT_ARCADE_WIN,2u));
  assert(p.arcade_wins==1u);
  contains(observer_answer(&p,&s,&g,0,"MEMORY"),"WON TAX RETURN TEETHER");
+ contains(observer_answer(&p,&s,&g,1,"MEMORY"),"WE WON TAX RETURN TEETHER");
  g.losses++;assert(observer_record_event(&p,&s,&g,OBSERVER_EVENT_ARCADE_LOSS,1u));
  assert(!observer_record_event(&p,&s,&g,OBSERVER_EVENT_ARCADE_LOSS,1u));
  assert(p.arcade_losses==1u);
+ contains(observer_answer(&p,&s,&g,1,"MEMORY"),"WE LOST");
  assert(!observer_record_event(&p,&s,&g,OBSERVER_EVENT_ARCADE_WIN,MBAI_GAMES));
  assert(!observer_record_event(&p,&s,&g,OBSERVER_EVENT_DAY,0u));
  g.days++;assert(observer_record_event(&p,&s,&g,OBSERVER_EVENT_DAY,0u));
@@ -129,6 +143,7 @@ int main(void){
  assert(observer_record_event(&p,&s,&g,OBSERVER_EVENT_QUIET_REST,0u));
  assert(!observer_record_event(&p,&s,&g,OBSERVER_EVENT_QUIET_REST,0u));
  assert(p.quiet_rests==1u);
+ contains(observer_answer(&p,&s,&g,1,"MEMORY"),"QUIET CRIB");
 
  /* Three sincere teach calls establish confidence; taught commands are
   * only words. Quote a real learned phrase during later healthy play. */
@@ -270,6 +285,8 @@ int main(void){
  assert(!observer_record_event(&p,&s,&g,OBSERVER_EVENT_REVEAL,0u));
  contains(observer_answer(&p,&s,&g,0,"MEMORY"),"ALIEN EGG");
  contains(observer_answer(&p,&s,&g,0,"SHELL"),"THE SHELL OPENED");
+ contains(observer_answer(&p,&s,&g,0,"MORE"),"CONFIRMED EVENT");
+ contains(observer_answer(&p,&s,&g,1,"MEMORY"),"SHELL OPENING");
  observer_profile_reset(&p,&g);
  assert(observer_stage(&p)==OBSERVER_REVEALED&&p.known_reveal);
  assert(p.last_event==OBSERVER_EVENT_NONE&&p.care[0]==0u&&p.attacks==0u);
