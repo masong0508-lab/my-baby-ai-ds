@@ -22,7 +22,7 @@ void sfx_set_enabled(int on){
 int sfx_is_enabled(void){return enabled!=0;}
 int sfx_is_playing(void){return current!=0;}
 void sfx_play(SfxCue cue){
- if(!enabled||cue<=SFX_NONE||cue>SFX_ARCADE_LOSS)return;
+ if(!enabled||cue<=SFX_NONE||cue>SFX_LULLABY)return;
  /* Bedtime jingles and care chirps cannot silence the dramatic reveal or
   * cut through a shell-crack/unseal cue. Horror retains absolute priority. */
  if(cue>=SFX_FEED&&(current==SFX_SCARE||
@@ -130,6 +130,12 @@ void sfx_tick(void){
   /* Quiet descending resolution, separate from the ordinary miss. */
   duration=20;hz=age<6u?392u:age<12u?311u:262u;
   volume=age<12u?18u:(20u-age)*2u;
+  break;
+ case SFX_LULLABY:
+  /* A gentle four-note rocking melody, distinct from the nap cue. */
+  duration=48u;
+  hz=age<12u?330u:age<24u?392u:age<36u?294u:262u;
+  volume=age<36u?12u:48u-age;
   break;
  case SFX_SCARE:
   /* Distinct attack + low distorted synthetic growl in one PSG voice:

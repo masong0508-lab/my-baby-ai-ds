@@ -1128,9 +1128,19 @@ def test_actual_game(path: Path, output: Path) -> dict:
     # Measure the live ARM9 clock-based submission rate only after the
     # scripted playthrough, so extra measurement time cannot perturb the
     # existing graphical checks. Each view gets a fresh sampling window.
-    def measure_fps(name):
+    def write_fps_report():
+        (output / "fps-report.json").write_text(
+            json.dumps({"metric": "submitted frames per emulated DS second",
+                        "scenes": fps}, indent=2) + "\n", encoding="utf-8")
+
+    fps = {}
+    def measure_fps(name, expected_title):
         frames(emu, 150)
         img = picture(emu, output, "fps_" + name)
+        # Verify the actual displayed view, not just that a number exists.
+        title = read_text(img, 12, 199, scale=2,
+                          max_chars=len(expected_title), ink="white")
+        assert title == expected_title, (name, title, expected_title)
         row = read_text(img, 3, 192, max_chars=42, ink="mint")
         parts = row.split()
         assert len(parts) == 8 and parts[::2] == ["FPS", "AVG", "LOW", "MAX"], (
@@ -1138,7 +1148,14 @@ def test_actual_game(path: Path, output: Path) -> dict:
         current, average, low, high = map(float, parts[1::2])
         assert 0 < low <= current <= high <= 70, row
         assert low <= average <= high, row
-        return {"current": current, "average": average, "low": low, "high": high}
+        sample = {"current": current, "average": average, "low": low, "high": high}
+        # Save and print each verified scene immediately. If a later
+        # navigation or screenshot assertion fails, the earlier measurements
+        # remain auditable in the logs and the partial FPS report.
+        fps[name] = sample
+        write_fps_report()
+        print("FPS_SAMPLE " + json.dumps({"scene": name, **sample}), flush=True)
+        return sample
 
     # R+SELECT toggles telemetry without triggering day advance.
     emu.input.keypad_add_key(keymask(Keys.KEY_R))
@@ -1146,20 +1163,58 @@ def test_actual_game(path: Path, output: Path) -> dict:
     frames(emu, 8)
     emu.input.keypad_rm_key(keymask(Keys.KEY_SELECT))
     emu.input.keypad_rm_key(keymask(Keys.KEY_R))
-    fps = {"toybox": measure_fps("toybox")}
+    measure_fps("toybox", "TOYBOX")
     emu.input.keypad_add_key(keymask(Keys.KEY_B))
     frames(emu, 8)
     emu.input.keypad_rm_key(keymask(Keys.KEY_B))
     frames(emu, 8)
-    fps["nursery"] = measure_fps("nursery")
+    fps["nursery"] = measure_fps("nursery", "CARE")
     stylus_tap(emu, 217, 40)
-    fps["room"] = measure_fps("room")
+    fps["room"] = measure_fps("room", "ROOM")
     stylus_tap(emu, 128, 183)
     stylus_tap(emu, 45, 183)
-    fps["arcade_menu"] = measure_fps("arcade_menu")
-    (output / "fps-report.json").write_text(
-        json.dumps({"metric": "submitted frames per emulated DS second",
-                    "scenes": fps}, indent=2) + "\n", encoding="utf-8")
+    fps["arcade_menu"] = measure_fps("arcade_menu", "ARCADE")
+
+    def press(key):
+        emu.input.keypad_add_key(keymask(key))
+        frames(emu, 8)
+        emu.input.keypad_rm_key(keymask(key))
+        frames(emu, 8)
+
+    # Select a known cabinet and verify its title before sampling.
+    stylus_tap(emu, 176, 91)
+    cabinet = emu.screenshot().convert("RGB")
+    if read_text(cabinet, 12, 199, scale=2, max_chars=8, ink="white") != "MINIGAME":
+        press(Keys.KEY_A)
+    # Cabinet heading is PURPLE (RGB15 18,11,23), not the dark-ink
+    # heuristic used for ordinary black body text. Verify its exact
+    # production palette and capture the failure evidence if needed.
+    for _ in range(24):
+        cabinet = emu.screenshot().convert("RGB")
+        heading = read_text(cabinet, 14, 192+35, scale=2,
+                            max_chars=11, ink="purple")
+        if heading == "DIAPER DASH":
+            break
+        frames(emu, 2)
+    else:
+        picture(emu, output, "fps_unexpected_cabinet")
+        raise AssertionError(f"Expected DIAPER DASH, got {heading!r}")
+    fps["diaper_dash"] = measure_fps("diaper_dash", "MINIGAME")
+    press(Keys.KEY_B)
+    press(Keys.KEY_B)
+    stylus_tap(emu, 57, 39)
+    fps["talk"] = measure_fps("talk", "TALK")
+    press(Keys.KEY_B)
+    stylus_tap(emu, 100, 13)
+    fps["warden"] = measure_fps("warden", "MONITOR")
+    press(Keys.KEY_B)
+    stylus_tap(emu, 103, 39)
+    fps["microphone_lab"] = measure_fps("microphone_lab", "MIC LAB")
+    press(Keys.KEY_B)
+    press(Keys.KEY_B)
+    press(Keys.KEY_L)
+    fps["album"] = measure_fps("album", "ALBUM")
+    write_fps_report()
     return {
         "fps_telemetry": fps,
         "3D_top_screen_distinct_colors": hero_colors,

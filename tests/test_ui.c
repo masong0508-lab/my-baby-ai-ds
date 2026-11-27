@@ -110,6 +110,34 @@ static void verify_perf_strip(void){
              TEST_RGB(22,30,23),1);
  verify_coverage();
 }
+/* Verify the optimized capsule preserves its exact original edge and
+ * corner silhouette in the unoverlaid header's left margin. */
+static void verify_header_capsule(void){
+ const uint16_t night=TEST_RGB(8,9,18),purple=TEST_RGB(18,11,23);
+ const uint16_t ivory=TEST_RGB(31,30,27);
+ assert(screen[5*256+167]==night);
+ assert(screen[5*256+170]==purple);
+ assert(screen[6*256+170]==ivory);
+ assert(screen[8*256+167]==purple);
+ assert(screen[8*256+168]==ivory);
+ assert(screen[21*256+167]==night);
+ assert(screen[21*256+170]==purple);
+}
+/* Compare actual visible meter pixels to the old design, including
+ * zero, full, intermediate and saturated input through the home UI. */
+static void verify_hunger_meter(unsigned value){
+ const uint16_t white=TEST_RGB(31,31,31),purple=TEST_RGB(18,11,23);
+ const uint16_t rose=TEST_RGB(30,13,22);
+ unsigned bar=(value>100u?100u:value)*67u/100u;
+ /* The numeric overlay owns x>=109 in rows 71..77; the unobscured
+  * left 48 columns must be exactly the previous bar/edge pattern. */
+ for(unsigned y=0;y<8u;y++)for(unsigned x=0;x<48u;x++){
+  uint16_t expected=white;
+  if(!x||!y||y==7u)expected=purple;
+  else if(y>=3u&&y<=5u&&x>=2u&&x<bar+2u)expected=rose;
+  assert(screen[(70u+y)*256u+61u+x]==expected);
+ }
+}
 static uint32_t fingerprint(void){
  uint32_t h=2166136261u;
  unsigned i;
@@ -725,6 +753,17 @@ int main(void){
   * FEED or CHAT. Native and virtual stylus use the SAME hitboxes. */
  ui_draw(&g,&a,0,0,0,0,1,"FPS TEST");
  verify_perf_strip();
+ ui_draw(&g,&a,0,0,0,0,1,"GEOMETRY TEST");
+ verify_header_capsule();verify_coverage();
+ {
+  Game meter_game=g;
+  for(unsigned hunger=0;hunger<=100u;hunger++){
+   meter_game.hunger=(uint8_t)hunger;
+   ui_draw(&meter_game,&a,0,0,0,0,1,"GEOMETRY TEST");
+   verify_hunger_meter(hunger);
+  }
+  verify_coverage();
+ }
  assert(ui_room_entry_touch(220,40));
  assert(!ui_room_entry_touch(220,55));
  assert(!ui_room_entry_touch(120,40));
@@ -742,6 +781,11 @@ int main(void){
  assert(ui_room_touch(180,139)==3); /* crib */
  assert(ui_room_touch(129,139)==-1); /* column gap */
  assert(ui_room_touch(30,117)==-1); /* row gap */
+ assert(ui_room_touch(8,163)==8&&ui_room_touch(123,174)==8);
+ assert(ui_room_touch(132,163)==9&&ui_room_touch(247,174)==9);
+ assert(ui_room_touch(128,166)==-1);
+ assert(ui_room_touch(7,163)==-1&&ui_room_touch(248,174)==-1);
+ assert(ui_room_touch(120,162)==-1&&ui_room_touch(120,175)==-1);
  assert(ui_room_touch(128,183)==4); /* return */
  assert(ui_room_touch(180,183)==5); /* native stylus sound toggle */
  assert(ui_room_touch(222,183)==6); /* native stylus USE */
@@ -751,6 +795,28 @@ int main(void){
  assert(ui_room_touch(0,0)==-1);
  assert(ui_room_touch(256,95)==-1);
  assert(ui_room_touch(40,192)==-1);
+ assert(ui_peek_touch(40,119)==1&&ui_peek_touch(215,164)==1);
+ assert(ui_peek_touch(39,119)==0&&ui_peek_touch(216,164)==0);
+ assert(ui_peek_touch(128,183)==2&&ui_peek_touch(256,183)==0);
+ {
+  NurseryPeek peek={0};uint32_t wait,open,win;
+  peek.phase=PEEK_WAIT;ui_peek_draw(&g,&peek,1);verify_coverage();wait=fingerprint();
+  peek.phase=PEEK_OPEN;ui_peek_draw(&g,&peek,1);verify_coverage();open=fingerprint();
+  peek.phase=PEEK_WON;peek.round=3;ui_peek_draw(&g,&peek,1);verify_coverage();win=fingerprint();
+  assert(wait!=open&&open!=win&&wait!=win);
+  {
+   Game before=g;
+   uint32_t scare,corrupt,locked;
+   peek.phase=PEEK_SCARE;ui_peek_draw(&g,&peek,1);
+   verify_coverage();scare=fingerprint();
+   peek.phase=PEEK_CORRUPT;ui_peek_draw(&g,&peek,1);
+   verify_coverage();corrupt=fingerprint();
+   peek.phase=PEEK_LOCKED;ui_peek_draw(&g,&peek,1);
+   verify_coverage();locked=fingerprint();
+   assert(scare!=corrupt&&corrupt!=locked&&scare!=locked&&locked!=open);
+   assert(memcmp(&g,&before,sizeof(g))==0);
+  }
+ }
  {
   uint32_t night,day,lamp_off,light_on,teddy;
   ui_draw(&g,&a,10,16,0,0,1,"ROOM TOUR");

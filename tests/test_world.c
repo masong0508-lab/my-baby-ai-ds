@@ -8,21 +8,86 @@
  * A rigid model transform preserves triangle area. This catches repeated
  * hand-cap poles without pretending the host shim emulates DS pixels. */
 static int primitive_mode;
-static unsigned primitive_vertices,submitted_hand_caps;
+static unsigned primitive_vertices,submitted_hand_caps,moon_relief_centers,teddy_nose_centers,quilt_joint_vertices;
 static float triangle_points[3][3];
 static int capture_geometry;
 static uint32_t geometry_hash;
+static unsigned emitted_color=~0u,color_commands,color_vertices,last_color_commands;
+static unsigned verify_title_rings,title_strip_index,title_ring_vertices;
+void test_gl_color(unsigned value){
+ assert(value<=0x7fffu&&value!=emitted_color);
+ emitted_color=value;color_commands++;
+}
+void test_gl_flush(void){
+ assert(color_commands>0u&&color_vertices==world_vertex_count());
+ last_color_commands=color_commands;
+ emitted_color=~0u;color_commands=0;color_vertices=0;
+}
 void test_gl_begin(int mode){
  primitive_mode=mode;primitive_vertices=0;
+ if(verify_title_rings&&mode==GL_QUAD_STRIP)title_strip_index++;
+}
+/* Compare the actual emitted coordinates AND inherited vertex color
+ * against the original per-vertex equations for the title romper and
+ * head. These fixtures are independent of the renderer's ring cache. */
+static unsigned title_rgb(int r,int g,int b,int shift){
+ r+=shift;g+=shift;b+=shift;
+ r=r<0?0:r>31?31:r;
+ g=g<0?0:g>31?31:g;
+ b=b<0?0:b>31?31:b;
+ return (unsigned)(r|(g<<5)|(b<<10));
+}
+static void verify_title_ring_vertex(float x,float y,float z){
+ if(!verify_title_rings||primitive_mode!=GL_QUAD_STRIP)return;
+ if(title_strip_index>=1u&&title_strip_index<=3u){
+  static const float cx[8]={1,.7071f,0,-.7071f,-1,-.7071f,0,.7071f};
+  static const float cz[8]={0,.7071f,1,.7071f,0,-.7071f,-1,-.7071f};
+  static const float h[4]={-1,-.54f,.54f,1};
+  static const float w[4]={0,.842f,.842f,0};
+  unsigned a=title_strip_index-1u,j=(primitive_vertices/2u)%8u;
+  unsigned ring=a+(primitive_vertices&1u);
+  int shade=(j<3u?2:j<5u?-3:0)+(a==2u?1:-1);
+  assert(primitive_vertices<18u);
+  assert(x==.55f*w[ring]*cx[j]);
+  assert(y==-.75f+.40f*h[ring]);
+  assert(z==-.23f+.39f*w[ring]*cz[j]);
+  assert(emitted_color==title_rgb(21,29,27,shade));
+  title_ring_vertices++;
+ }else if(title_strip_index>=16u&&title_strip_index<=20u){
+  static const float cx[12]={1,.866f,.5f,0,-.5f,-.866f,-1,-.866f,-.5f,0,.5f,.866f};
+  static const float cz[12]={0,.5f,.866f,1,.866f,.5f,0,-.5f,-.866f,-1,-.866f,-.5f};
+  static const float h[6]={-1,-.72f,-.28f,.28f,.72f,1};
+  static const float w[6]={0,.66f,.96f,.96f,.66f,0};
+  static const int light[12]={0,1,2,3,4,5,2,-1,-3,-4,-3,-1};
+  unsigned a=title_strip_index-16u,j=(primitive_vertices/2u)%12u;
+  unsigned ring=a+(primitive_vertices&1u);
+  int shade=light[j]+((primitive_vertices&1u)?(a>=2u?2:-2):(a>=3u?2:a==0u?-3:0));
+  assert(primitive_vertices<26u);
+  assert(x==.745f*w[ring]*cx[j]);
+  assert(y==.045f+.75f*h[ring]);
+  assert(z==-.18f+.53f*w[ring]*cz[j]);
+  assert(emitted_color==title_rgb(31,24,20,shade));
+  title_ring_vertices++;
+ }
 }
 void test_gl_vertex(float x,float y,float z){
+ assert(emitted_color<=0x7fffu);color_vertices++;
+ verify_title_ring_vertex(x,y,z);
  if(capture_geometry){
   uint32_t bits;
   memcpy(&bits,&x,sizeof(bits));geometry_hash=(geometry_hash^bits)*16777619u;
   memcpy(&bits,&y,sizeof(bits));geometry_hash=(geometry_hash^bits)*16777619u;
   memcpy(&bits,&z,sizeof(bits));geometry_hash=(geometry_hash^bits)*16777619u;
  }
+ /* Quilt pieces must actually meet at one exact top-plane junction. */
+ if(primitive_mode==GL_QUADS&&x>2.279999f&&x<2.280001f&&
+    y>-.430001f&&y<-.429999f&&z>-1.715001f&&z<-1.714999f)
+  quilt_joint_vertices++;
  if(primitive_mode==GL_TRIANGLES){
+  if(x>-1.280001f&&x<-1.279999f&&y>-.575001f&&y<-.574999f&&
+     z>.856999f&&z<.857001f)teddy_nose_centers++;
+  if(x>-1.350001f&&x<-1.349999f&&y>1.539999f&&y<1.540001f&&
+     z>-2.948001f&&z<-2.947999f)moon_relief_centers++;
   unsigned n=primitive_vertices%3u;
   triangle_points[n][0]=x;triangle_points[n][1]=y;triangle_points[n][2]=z;
   if(n==2u){
@@ -110,6 +175,15 @@ static uint32_t baby_geometry(const Game *s,int action,unsigned age){
 int main(void){
  Game s;Roughhouse r;int i;unsigned worst_v=0,worst_p=0;
  game_init(&s);world_init();
+ /* A full circle's twelve real front triangles share a raised center.
+  * The existing triangle-area assertion checks every new triangle. */
+ moon_relief_centers=0;teddy_nose_centers=0;quilt_joint_vertices=0;
+ world_draw(&s,128u,0);
+ assert(moon_relief_centers==12u);
+ assert(teddy_nose_centers==12u);
+ assert(quilt_joint_vertices==4u);
+ assert(last_color_commands<world_vertex_count());
+ printf("Nursery command sample: %u color writes, %u submitted vertices\n",last_color_commands,world_vertex_count());
  /* WARDEN's physical screen clamps damaged/unknown status without
   * changing the baby or exceeding the normal scene budget. */
  {
@@ -124,7 +198,10 @@ int main(void){
   }
   world_observer_status(0u,100u,0);
  }
+ verify_title_rings=1;title_strip_index=0;title_ring_vertices=0;
  world_draw_title(0);
+ verify_title_rings=0;
+ assert(title_ring_vertices==184u);
  /* The boot hero must have visible shoulders, mittens and shoes while
   * keeping its fast DS title-startup geometry ceiling. */
  assert(world_vertex_count()>=850);
