@@ -6,7 +6,8 @@
  * not host wall-clock speed or independently measured LCD refreshes. */
 #define PERF_CLOCK_HZ 33513982u
 #define PERF_VIEW_COUNT 16u
-#define PERF_SCENE_COUNT 32u
+#define PERF_OPTIONS_SCENE 32u
+#define PERF_SCENE_COUNT 33u
 #define PERF_INACTIVE PERF_SCENE_COUNT
 typedef struct {
  uint64_t total_ticks;
