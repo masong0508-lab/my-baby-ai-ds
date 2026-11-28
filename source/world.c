@@ -46,6 +46,10 @@ static unsigned last_vertex_color=~0u;
 #define ROOM_FIFO_CACHE 1
 #define ROOM_FIFO_WORDS 8192u
 static uint32_t room_fifo[ROOM_FIFO_WORDS] __attribute__((aligned(32)));
+/* The same recorder is reused for separate matrix-free local meshes.
+ * No allocation, no nested recording, and no camera commands in lists. */
+static uint32_t *room_fifo_target=room_fifo;
+static unsigned room_fifo_capacity=ROOM_FIFO_WORDS;
 static unsigned room_fifo_used,room_fifo_group,room_fifo_slot;
 static int room_fifo_recording,room_fifo_overflow,room_fifo_valid;
 static int room_fifo_ambient,room_fifo_daylight,room_fifo_lamp;
@@ -54,17 +58,17 @@ static int room_fifo_warning;
 static unsigned room_fifo_vertices,room_fifo_polygons,room_fifo_last_color;
 static void room_fifo_command(unsigned command,unsigned count,uint32_t a,uint32_t b){
  if(!room_fifo_recording||room_fifo_overflow)return;
- if(room_fifo_used+count+(room_fifo_slot==0u)>ROOM_FIFO_WORDS){
+ if(room_fifo_used+count+(room_fifo_slot==0u)>room_fifo_capacity){
   room_fifo_overflow=1;return;
  }
  if(!room_fifo_slot){
   room_fifo_group=room_fifo_used++;
-  room_fifo[room_fifo_group]=0; /* unused command bytes are FIFO_NOP */
+  room_fifo_target[room_fifo_group]=0; /* unused command bytes are FIFO_NOP */
  }
- room_fifo[room_fifo_group]|=(uint32_t)command<<(8u*room_fifo_slot);
+ room_fifo_target[room_fifo_group]|=(uint32_t)command<<(8u*room_fifo_slot);
  room_fifo_slot=(room_fifo_slot+1u)&3u;
- if(count)room_fifo[room_fifo_used++]=a;
- if(count==2u)room_fifo[room_fifo_used++]=b;
+ if(count)room_fifo_target[room_fifo_used++]=a;
+ if(count==2u)room_fifo_target[room_fifo_used++]=b;
 }
 static void room_fifo_begin(int mode){
  room_fifo_command(FIFO_BEGIN,1u,(uint32_t)mode,0);
@@ -737,6 +741,7 @@ static void room(int mobile_tilt){
  }else{
   unsigned before_v=frame_vertices,before_p=frame_polygons;
   room_fifo_valid=0;
+  room_fifo_target=room_fifo;room_fifo_capacity=ROOM_FIFO_WORDS;
   room_fifo_used=1u;room_fifo_slot=0u;room_fifo_overflow=0;
   room_fifo_recording=last_vertex_color==~0u;
   room_static();
@@ -772,7 +777,7 @@ static void room(int mobile_tilt){
  room_quad_barrier();
  room_quad_batch=0u;
 }
-static void teddy(void){
+static void teddy_upper(void){
  /* Readable stuffed-bear silhouette: chest, light muzzle, dark stitched face.
   * Limbs overlap the body, with their axes angled outward. */
  /* Keep the plush clearly beside the baby, not centered in front of its
@@ -794,14 +799,70 @@ static void teddy(void){
  soft_mark(x+.082f,y+.436f,z+.287f,.018f,.017f,30,25,19);
  soft_mark(x-.035f,y+.247f,z+.311f,.055f,.016f,8,5,4);
  soft_mark(x+.035f,y+.247f,z+.311f,.055f,.016f,8,5,4);
- tilted_ellipse(x-.28f,y+.015f,z+.06f,.14f,.18f,.15f,-26,28,17,5);
- tilted_ellipse(x+.28f,y+.015f,z+.06f,.14f,.18f,.15f,26,28,17,5);
+}
+static void teddy_lower(void){
+ const float x=-1.28f,y=-.87f,z=.52f;
  ellipse(x-.175f,y-.285f,z+.09f,.13f,.13f,.17f,27,16,5);
  ellipse(x+.175f,y-.285f,z+.09f,.13f,.13f,.17f,27,16,5);
  /* Bright fabric patches separate the toy from the similarly colored floor. */
  face_oval(x,y-.09f,z+.246f,.085f,.085f,30,25,18,-3);
  face_oval(x-.175f,y-.285f,z+.263f,.039f,.0325f,30,25,18,-3);
  face_oval(x+.175f,y-.285f,z+.263f,.039f,.0325f,30,25,18,-3);
+}
+#if defined(ROOM_FIFO_CACHE)
+/* Teddy's head, chest and feet contain no local matrix changes. Cache
+ * those two runs separately; the two rotated arms and parent bow stay
+ * in the same original order and use the live matrix stack. */
+static uint32_t teddy_upper_fifo[2048] __attribute__((aligned(32)));
+static uint32_t teddy_lower_fifo[1024] __attribute__((aligned(32)));
+typedef struct {
+ unsigned valid,vertices,polygons,last_color;
+ int ambient;
+} TeddyFifo;
+static TeddyFifo teddy_upper_meta,teddy_lower_meta;
+static void teddy_part(TeddyFifo *cache,uint32_t *buffer,unsigned capacity,
+                       void (*draw)(void)){
+ unsigned before_v,before_p;
+ if(cache->valid&&cache->ambient==nursery_ambient){
+  glCallList(buffer);
+  glEnd();
+  frame_vertices+=cache->vertices;
+  frame_polygons+=cache->polygons;
+  last_vertex_color=cache->last_color;
+  return;
+ }
+ before_v=frame_vertices;before_p=frame_polygons;
+ cache->valid=0;
+ room_fifo_target=buffer;room_fifo_capacity=capacity;
+ room_fifo_used=1u;room_fifo_slot=0u;room_fifo_overflow=0;
+ room_fifo_recording=1;
+ /* Make the first packed color independent of the preceding baby mesh. */
+ last_vertex_color=~0u;
+ draw();
+ room_fifo_recording=0;
+ if(!room_fifo_overflow&&room_fifo_used>1u){
+  buffer[0]=room_fifo_used-1u;
+  cache->ambient=nursery_ambient;
+  cache->vertices=frame_vertices-before_v;
+  cache->polygons=frame_polygons-before_p;
+  cache->last_color=last_vertex_color;cache->valid=1;
+ }
+}
+#endif
+static void teddy(void){
+ const float x=-1.28f,y=-.87f,z=.52f;
+#if defined(ROOM_FIFO_CACHE)
+ teddy_part(&teddy_upper_meta,teddy_upper_fifo,2048u,teddy_upper);
+#else
+ teddy_upper();
+#endif
+ tilted_ellipse(x-.28f,y+.015f,z+.06f,.14f,.18f,.15f,-26,28,17,5);
+ tilted_ellipse(x+.28f,y+.015f,z+.06f,.14f,.18f,.15f,26,28,17,5);
+#if defined(ROOM_FIFO_CACHE)
+ teddy_part(&teddy_lower_meta,teddy_lower_fifo,1024u,teddy_lower);
+#else
+ teddy_lower();
+#endif
 }
 /* Articulated shoulders. The sleeve, forearm, hand all share ONE local
  * shoulder transform; no independent bobbing parts and no new polygons.
