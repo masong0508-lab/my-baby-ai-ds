@@ -107,9 +107,12 @@ class MotionPlayer(Player):
             else:
                 self.key(Keys.KEY_LEFT)
                 self.selected = (self.selected - 1) % 16
-        image = self.menu()
-        assert text_at(image, 12, 60, 38) == CABINETS[cabinet][0]
-        return image
+        self.menu()
+        # Require the newly selected card, not just the unchanged menu
+        # header/resource counters during an in-progress bitmap repaint.
+        return self.wait("selected " + CABINETS[cabinet][0], lambda im:
+                         text_at(im, 12, 60, 38) == CABINETS[cabinet][0],
+                         limit=60, stride=1)
 
     def start(self, cabinet):
         self.select(cabinet)
@@ -154,6 +157,13 @@ def complete_bottle(player):
             assert checked_band, "Safe band never became readable"
             assert devices == {"keypad", "stylus"}, devices
             player.win("bottle_recovery_win")
+            # A held steering control must not navigate the menu when
+            # the final stability tick automatically ends the cabinet.
+            player.step(8)
+            settled = player.menu()
+            assert text_at(settled, 12, 60, 38) == CABINETS[0][0], (
+                "Bottle steering leaked into menu navigation")
+            player.capture("bottle_menu_selection_preserved", settled)
             return {"loss_and_restart": True, "outside_band_decay": outside_decay,
                     "safe_band_checked": checked_band, "controls": sorted(devices),
                     "visible_steady_samples": samples}
