@@ -149,7 +149,7 @@ static void assert_baby_pose_bounds_to(WorldBabyPose p,int reach_max){
  assert(p.forward_right>=0&&p.forward_right<=14);
  assert(p.lean>=-3&&p.lean<=5);
  assert(p.neck>=-16&&p.neck<=16);
- assert(p.yaw>=-2&&p.yaw<=3);
+ assert(p.yaw>=-3&&p.yaw<=3); /* includes eased idle sway */
  assert(p.lid>=0&&p.lid<=256);
  assert(p.bounce>=0&&p.bounce<=4608);
 }
