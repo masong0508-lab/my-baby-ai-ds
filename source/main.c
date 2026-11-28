@@ -43,6 +43,7 @@ static int arcade_menu_release;
 static unsigned arcade_practice_mode=ARCADE_PRACTICE_STANDARD;
 static PerfTracker performance;
 static int perf_show;
+static int options_selected,idle_motion=1;
 static NurseryPeek peek;
 static ArcadeFeedback arcade_feedback;
 static uint8_t save_write_failed;
@@ -780,11 +781,12 @@ int main(void){
    }
   }else if(view==1){
    if(arcade_menu_release){
-    /* Discard the ending gesture, including delayed ARM7 coordinates.
-     * Require a neutral poll before accepting a new menu action. */
-    if(!(held&(KEY_LEFT|KEY_RIGHT|KEY_UP|KEY_DOWN|KEY_A|KEY_B|KEY_START|KEY_L|KEY_R|KEY_X|KEY_Y|KEY_TOUCH)))
-     arcade_menu_release=0;
-   }else if((down&KEY_Y)||(tap&&ui_arcade_help_touch(touch.px,touch.py))){
+    /* Fence only a carried-over continuous steering gesture. A fresh A
+     * restart must work even when it is the first poll after pen release. */
+    if(!(held&(KEY_LEFT|KEY_RIGHT|KEY_TOUCH)))arcade_menu_release=0;
+    else {down&=~(KEY_LEFT|KEY_RIGHT);tap=0;}
+   }
+   if((down&KEY_Y)||(tap&&ui_arcade_help_touch(touch.px,touch.py))){
     arcade_guide_paused=0;view=15;dirty=1;
    }else if(down&KEY_UP){selected=(selected&~3)|((selected+2)&3);dirty=1;}
    else if(down&KEY_DOWN){selected=(selected&~3)|((selected+2)&3);dirty=1;}
@@ -1142,9 +1144,31 @@ int main(void){
    }
   }else if(view==7){
    if(down&(KEY_B|KEY_SELECT|KEY_START)){view=5;dirty=1;}
+  }else if(view==16){
+   int picked=tap?ui_options_touch(touch.px,touch.py):-1;
+   if((down&(KEY_B|KEY_START))||picked==4){view=10;dirty=1;}
+   else if((down&KEY_X)||picked==5){
+    WorldBabyPose from=world_baby_pose(&baby,frame,pose,pose_age,pose?&care_motion:0);
+    pose=PLAY+1;pose_age=0;
+    world_baby_motion_start(&care_motion,from,&baby,frame,pose);
+    dirty=1; /* Preview only: no need, currency or dialogue changes. */
+   }else if(down&KEY_UP){options_selected=(options_selected+3)&3;dirty=1;}
+   else if(down&KEY_DOWN){options_selected=(options_selected+1)&3;dirty=1;}
+   else if((down&KEY_A)||(picked>=0&&picked<4)){
+    if(picked>=0&&picked<4)options_selected=picked;
+    switch(options_selected){
+     case 0:sfx_set_enabled(!sfx_is_enabled());break;
+     case 1:perf_show=!perf_show;break;
+     case 2:baby.safe_visuals^=1;persist();break;
+     case 3:idle_motion=!idle_motion;world_set_idle_motion(idle_motion);break;
+    }
+    dirty=1;
+   }
   }else if(view==10){
    int picked=-1;
-   if(down&KEY_X){
+   if((down&KEY_L)||(tap&&ui_room_touch(touch.px,touch.py)==10)){
+    view=16;options_selected=0;dirty=1;
+   }else if(down&KEY_X){
     save_live_baby();dirty=1;
    }else if(down&KEY_Y){
     /* Same global mute as Toybox, now accessible without entering the
@@ -1295,7 +1319,7 @@ int main(void){
      world_draw_secret(&baby,EGG_SCARE_FRAME+PEEK_SCARE_TICKS-peek.ticks,&rag);
    }else if(view==14&&peek.phase==PEEK_WAIT)
     world_draw_care(&baby,frame,NAP+1,24u);
-   else if(view==0||view==10||view==11||view==12||view==13)
+   else if(view==0||view==10||view==11||view==12||view==13||view==16)
     world_draw_nursery(&baby,frame,pose,pose_age,
                        room_focus,room_previous,room_camera_age,
                        room_daylight,room_lamp,room_prop_age,
@@ -1333,6 +1357,8 @@ int main(void){
            view==10?((room_focus&3)|(room_daylight?8:0)|
                     (room_lamp?16:0)|(sfx_is_enabled()?0:32)):
            view==11?talk_selected:
+           view==16?((sfx_is_enabled()?1:0)|(perf_show?2:0)|
+                    (baby.safe_visuals?4:0)|(idle_motion?8:0)|(options_selected<<4)):
            selected,last_ending,reset_step,storage_ok,message);
    if(view==1)ui_arcade_record_draw(game_arcade_session_best(&arcade_session,(unsigned)selected,ARCADE_NORMAL));
    {
