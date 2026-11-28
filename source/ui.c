@@ -1792,6 +1792,64 @@ static void beatbox_challenge(const Arcade *a){
  snprintf(text,sizeof(text),"%s  %u SEC   B BACK",a->phase?"REPEAT":"LISTEN",(a->timer+59)/60);
  fit(11,181,text,WHITE,39);
 }
+/* One small saved-under patch, not a second framebuffer. The moving
+ * diaper stays inside the playfield; header, progress and footer never
+ * get obscured. The base mat remains untouched between input samples. */
+#define DIAPER_GHOST_W 36
+#define DIAPER_GHOST_H 22
+static uint16_t diaper_ghost_bg[DIAPER_GHOST_W*DIAPER_GHOST_H];
+static int diaper_ghost_visible,diaper_ghost_x,diaper_ghost_y;
+static int diaper_live_valid,diaper_live_stage;
+static unsigned diaper_live_progress,diaper_live_seconds;
+static void diaper_ghost_restore(void){
+ if(!diaper_ghost_visible)return;
+ for(int y=0;y<DIAPER_GHOST_H;y++)
+  for(int x=0;x<DIAPER_GHOST_W;x++)
+   pixels[(diaper_ghost_y+y)*W+diaper_ghost_x+x]=diaper_ghost_bg[y*DIAPER_GHOST_W+x];
+ diaper_ghost_visible=0;
+}
+static void diaper_ghost_update(const Arcade *a){
+ int wanted=a->stage==1&&a->touch_active&&a->touch_start_x<77&&a->touch_start_y>=143;
+ int x=(int)a->touch_last_x-18,y=(int)a->touch_last_y-12;
+ if(x<0)x=0;
+ if(x>W-DIAPER_GHOST_W)x=W-DIAPER_GHOST_W;
+ if(y<76)y=76;
+ if(y>176-DIAPER_GHOST_H)y=176-DIAPER_GHOST_H;
+ if(wanted==diaper_ghost_visible&&(!wanted||(x==diaper_ghost_x&&y==diaper_ghost_y)))return;
+ cursor_erase();
+ diaper_ghost_restore();
+ if(!wanted)return;
+ diaper_ghost_x=x;diaper_ghost_y=y;
+ for(int j=0;j<DIAPER_GHOST_H;j++)
+  for(int i=0;i<DIAPER_GHOST_W;i++)
+   diaper_ghost_bg[j*DIAPER_GHOST_W+i]=pixels[(y+j)*W+x+i];
+ sprite(x,y,2,spr_diaper,11);
+ diaper_ghost_visible=1;
+}
+static void diaper_footer(const Arcade *a){
+ char text[40];
+ /* Footer background is already established by foot(). Restore only
+  * the old glyph row, including the blank tail when seconds shrink. */
+ solid(11,181,240,7,NIGHT);
+ snprintf(text,sizeof(text),"MISS %u/3   %u SEC   B BACK",a->mistakes,(a->timer+59)/60);
+ fit(11,181,text,WHITE,40);
+}
+void ui_diaper_live(const Arcade *a,int normal_footer){
+ unsigned seconds;
+ if(!pixels||!a||a->id!=1||!diaper_live_valid||a->stage!=diaper_live_stage)return;
+ if(a->stage==0&&a->progress!=diaper_live_progress){
+  cursor_erase();
+  bar(74,158,108,a->progress,90,PINK);
+  diaper_live_progress=a->progress;
+ }
+ diaper_ghost_update(a);
+ seconds=(a->timer+59u)/60u;
+ if(normal_footer&&seconds!=diaper_live_seconds){
+  cursor_erase();
+  diaper_footer(a);
+  diaper_live_seconds=seconds;
+ }
+}
 static void diaper_challenge(const Arcade *a){
  static const char *const steps[4]={
   "RUB OVER THE MESS!",
@@ -1818,8 +1876,6 @@ static void diaper_challenge(const Arcade *a){
   bar(74,158,108,a->progress,90,PINK);
  }else if(a->stage==1){
   sprite(16,143,2,spr_diaper,11);
-  if(a->touch_active&&a->touch_start_x<77&&a->touch_start_y>=143)
-   sprite(a->touch_last_x-18,a->touch_last_y-12,2,spr_diaper,11);
   sparkle(178,117,LEMON);
   fit(12,135,"DRAG",DEEP_PINK,5);
  }else if(a->stage==2){
@@ -1831,8 +1887,10 @@ static void diaper_challenge(const Arcade *a){
   fit(163,127,"2",INK,4);
  }
  foot(PURPLE);
- snprintf(text,sizeof(text),"MISS %u/3   %u SEC   B BACK",a->mistakes,(a->timer+59)/60);
- fit(11,181,text,WHITE,40);
+ diaper_footer(a);
+ diaper_live_valid=1;diaper_live_stage=a->stage;
+ diaper_live_progress=a->progress;diaper_live_seconds=(a->timer+59u)/60u;
+ diaper_ghost_update(a);
 }
 static void rattle_challenge(const Arcade *a){
  char text[40];
@@ -2508,8 +2566,9 @@ void ui_draw(const Game *s,const Arcade *a,int view,int selection,
  };
  const char *screen_title;
  if(!pixels||!s)return;
- /* Full redraw intentionally invalidates the old virtual-cursor backing. */
+ /* Full redraw intentionally invalidates old saved-under patches. */
  cursor_visible=0;
+ diaper_live_valid=0;diaper_ghost_visible=0;
  if(view==2&&a&&a->id<16)screen_accent=accents[a->id];
  else if(view==0)screen_accent=AQUA;
  else if(view==1)screen_accent=LEMON;
