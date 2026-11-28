@@ -79,6 +79,9 @@ int world_baby_arm_reach(int action);
 int world_baby_neck_tilt(int action,uint32_t age);
 /* Gentle 0..256 integer inhale/exhale on the attached torso. */
 int world_baby_breath(uint32_t frame);
+/* Visual-only idle sway, with a session-local reduced-motion switch. */
+int world_baby_idle_sway(uint32_t frame,int mood,int energy);
+void world_set_idle_motion(int enabled);
 /* Low-energy eyelid response and bounded hunger/chaos idle fidget. */
 int world_baby_drowsy_lid(int energy);
 int world_baby_need_fidget(int hunger,int chaos,uint32_t frame);

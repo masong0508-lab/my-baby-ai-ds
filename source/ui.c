@@ -144,8 +144,13 @@ static const uint8_t glyph[96][7]={
  ['\''-32]={4,4,8,0,0,0,0},
 };
 void ui_init(void *vram){pixels=(volatile uint16_t *)vram;}
+/* ARM9 bitmap VRAM accepts aligned word writes. A word contains exactly
+ * two identical RGB555 pixels. The may_alias type permits word writes
+ * over the 16-bit backing array, including the host framebuffer fixture. */
+typedef uint32_t UiPixelPair __attribute__((__may_alias__));
 static void solid(int x,int y,int rw,int rh,uint16_t color){
  int a,b;int x2=x+rw,y2=y+rh;
+ const uint32_t pair=(uint32_t)color|((uint32_t)color<<16);
  if(x<0)x=0;
  if(y<0)y=0;
  if(x2>W)x2=W;
@@ -153,12 +158,19 @@ static void solid(int x,int y,int rw,int rh,uint16_t color){
  if(!pixels||x>=x2||y>=y2)return;
  for(b=y;b<y2;b++){
   volatile uint16_t *row=pixels+(unsigned)b*W;
-  /* Four halfword stores per loop branch. Keep VRAM's native access
-   * width and use scalar tail writes for short/clipped spans. */
-  for(a=x;a+3<x2;a+=4){
-   row[a]=color;row[a+1]=color;row[a+2]=color;row[a+3]=color;
+  a=x;
+  /* Align the actual pointer, not just x. Preserve the odd first
+   * and last pixels so clipped sprites never overwrite neighbors. */
+  if(((uintptr_t)(row+a)&3u)!=0u)row[a++]=color;
+  if(a+1<x2){
+   volatile UiPixelPair *words=(volatile UiPixelPair *)(row+a);
+   for(;a+7<x2;a+=8){
+    words[0]=pair;words[1]=pair;words[2]=pair;words[3]=pair;
+    words+=4;
+   }
+   for(;a+1<x2;a+=2)*words++=pair;
   }
-  for(;a<x2;a++)row[a]=color;
+  if(a<x2)row[a]=color;
  }
 }
 static void outline(int x,int y,int width,int height,uint16_t color){
@@ -767,6 +779,25 @@ void ui_voice_save_warning(void){
 /* First-class interactive Room mode. Cards match the actual nursery
  * landmarks seen on the TOP hardware 3D screen. All four actions are
  * available through native touch, virtual stylus and D-pad fallback. */
+static void options_screen(int state){
+ static const char *const names[4]={"SOUND","FPS DISPLAY","QUIET VISUALS","IDLE ANIMATION"};
+ static const char *const explanations[4]={"MUTE MUSIC AND SOUND CUES","SHOW MEASURED FRAME RATE",
+  "REDUCE GLITCH EFFECTS","LESS IDLE MOTION, SAME GAME"};
+ int selected=(state>>4)&3;
+ solid(0,27,256,149,LILAC);
+ fit(12,33,"TOUCH A ROW OR PRESS A TO CHANGE",PURPLE,38);
+ for(int i=0;i<4;i++){
+  int y=44+i*30,on=(state&(1<<i))!=0;
+  panel(8,y,240,25,i==selected?MINT:WHITE,i==selected?GREEN:PURPLE);
+  fit(18,y+6,names[i],INK,24);
+  fit(18,y+15,explanations[i],MUTED,32);
+  capsule(185,y+3,53,14,on?MINT:GRAY,TEAL);
+  fit(193,y+6,i==3?(on?"FULL":"LESS"):(on?"ON":"OFF"),INK,6);
+ }
+ foot(PURPLE);
+ fit(12,181,"B BACK",WHITE,7);
+ fit(136,181,"X PREVIEW MOVE",MINT,16);
+}
 static void room_screen(const Game *s,int state,const char *message){
  int selected=state&3;
  int day=(state&8)!=0,lamp=(state&16)!=0;
@@ -777,6 +808,8 @@ static void room_screen(const Game *s,int state,const char *message){
  };
  int i,x,y;
  (void)s;
+ capsule(68,5,64,16,MINT,TEAL);
+ fit(76,10,"OPTIONS",INK,7);
  solid(0,27,256,149,LILAC);
  panel(8,31,240,41,WHITE,PURPLE);
  fit(18,36,"A LITTLE ROOM WITH BIG SECRETS",PURPLE,36);
@@ -1759,6 +1792,64 @@ static void beatbox_challenge(const Arcade *a){
  snprintf(text,sizeof(text),"%s  %u SEC   B BACK",a->phase?"REPEAT":"LISTEN",(a->timer+59)/60);
  fit(11,181,text,WHITE,39);
 }
+/* One small saved-under patch, not a second framebuffer. The moving
+ * diaper stays inside the playfield; header, progress and footer never
+ * get obscured. The base mat remains untouched between input samples. */
+#define DIAPER_GHOST_W 36
+#define DIAPER_GHOST_H 22
+static uint16_t diaper_ghost_bg[DIAPER_GHOST_W*DIAPER_GHOST_H];
+static int diaper_ghost_visible,diaper_ghost_x,diaper_ghost_y;
+static int diaper_live_valid,diaper_live_stage;
+static unsigned diaper_live_progress,diaper_live_seconds;
+static void diaper_ghost_restore(void){
+ if(!diaper_ghost_visible)return;
+ for(int y=0;y<DIAPER_GHOST_H;y++)
+  for(int x=0;x<DIAPER_GHOST_W;x++)
+   pixels[(diaper_ghost_y+y)*W+diaper_ghost_x+x]=diaper_ghost_bg[y*DIAPER_GHOST_W+x];
+ diaper_ghost_visible=0;
+}
+static void diaper_ghost_update(const Arcade *a){
+ int wanted=a->stage==1&&a->touch_active&&a->touch_start_x<77&&a->touch_start_y>=143;
+ int x=(int)a->touch_last_x-18,y=(int)a->touch_last_y-12;
+ if(x<0)x=0;
+ if(x>W-DIAPER_GHOST_W)x=W-DIAPER_GHOST_W;
+ if(y<76)y=76;
+ if(y>176-DIAPER_GHOST_H)y=176-DIAPER_GHOST_H;
+ if(wanted==diaper_ghost_visible&&(!wanted||(x==diaper_ghost_x&&y==diaper_ghost_y)))return;
+ cursor_erase();
+ diaper_ghost_restore();
+ if(!wanted)return;
+ diaper_ghost_x=x;diaper_ghost_y=y;
+ for(int j=0;j<DIAPER_GHOST_H;j++)
+  for(int i=0;i<DIAPER_GHOST_W;i++)
+   diaper_ghost_bg[j*DIAPER_GHOST_W+i]=pixels[(y+j)*W+x+i];
+ sprite(x,y,2,spr_diaper,11);
+ diaper_ghost_visible=1;
+}
+static void diaper_footer(const Arcade *a){
+ char text[40];
+ /* Footer background is already established by foot(). Restore only
+  * the old glyph row, including the blank tail when seconds shrink. */
+ solid(11,181,240,7,NIGHT);
+ snprintf(text,sizeof(text),"MISS %u/3   %u SEC   B BACK",a->mistakes,(a->timer+59)/60);
+ fit(11,181,text,WHITE,40);
+}
+void ui_diaper_live(const Arcade *a,int normal_footer){
+ unsigned seconds;
+ if(!pixels||!a||a->id!=1||!diaper_live_valid||a->stage!=diaper_live_stage)return;
+ if(a->stage==0&&a->progress!=diaper_live_progress){
+  cursor_erase();
+  bar(74,158,108,a->progress,90,PINK);
+  diaper_live_progress=a->progress;
+ }
+ diaper_ghost_update(a);
+ seconds=(a->timer+59u)/60u;
+ if(normal_footer&&seconds!=diaper_live_seconds){
+  cursor_erase();
+  diaper_footer(a);
+  diaper_live_seconds=seconds;
+ }
+}
 static void diaper_challenge(const Arcade *a){
  static const char *const steps[4]={
   "RUB OVER THE MESS!",
@@ -1785,8 +1876,6 @@ static void diaper_challenge(const Arcade *a){
   bar(74,158,108,a->progress,90,PINK);
  }else if(a->stage==1){
   sprite(16,143,2,spr_diaper,11);
-  if(a->touch_active&&a->touch_start_x<77&&a->touch_start_y>=143)
-   sprite(a->touch_last_x-18,a->touch_last_y-12,2,spr_diaper,11);
   sparkle(178,117,LEMON);
   fit(12,135,"DRAG",DEEP_PINK,5);
  }else if(a->stage==2){
@@ -1798,8 +1887,10 @@ static void diaper_challenge(const Arcade *a){
   fit(163,127,"2",INK,4);
  }
  foot(PURPLE);
- snprintf(text,sizeof(text),"MISS %u/3   %u SEC   B BACK",a->mistakes,(a->timer+59)/60);
- fit(11,181,text,WHITE,40);
+ diaper_footer(a);
+ diaper_live_valid=1;diaper_live_stage=a->stage;
+ diaper_live_progress=a->progress;diaper_live_seconds=(a->timer+59u)/60u;
+ diaper_ghost_update(a);
 }
 static void rattle_challenge(const Arcade *a){
  char text[40];
@@ -2475,8 +2566,9 @@ void ui_draw(const Game *s,const Arcade *a,int view,int selection,
  };
  const char *screen_title;
  if(!pixels||!s)return;
- /* Full redraw intentionally invalidates the old virtual-cursor backing. */
+ /* Full redraw intentionally invalidates old saved-under patches. */
  cursor_visible=0;
+ diaper_live_valid=0;diaper_ghost_visible=0;
  if(view==2&&a&&a->id<16)screen_accent=accents[a->id];
  else if(view==0)screen_accent=AQUA;
  else if(view==1)screen_accent=LEMON;
@@ -2492,7 +2584,7 @@ void ui_draw(const Game *s,const Arcade *a,int view,int selection,
  else screen_title=view==0?"CARE":view==1?"ARCADE":
          view==3?"RESET":view==4?"ENDING":view==5?"WELCOME":
          view==6?"ALBUM":view==7?"TOUCH TEST":
-         view==8?"TOYBOX":view==10?"ROOM":view==11?"TALK":"INCUBATOR";
+         view==8?"TOYBOX":view==10?"ROOM":view==11?"TALK":view==16?"OPTIONS":"INCUBATOR";
  /* Every screen paints its own content band (y=27..175), and header/foot
   * repaint the other two bands. The previous blanket 256x192 clear was
   * 49,152 redundant 16-bit VRAM writes on every animation refresh. */
@@ -2538,6 +2630,7 @@ void ui_draw(const Game *s,const Arcade *a,int view,int selection,
  case 9:egg_scene_screen(selection);break;
  case 10:room_screen(s,selection,message);break;
  case 11:conversation_screen(selection,message);break;
+ case 16:options_screen(selection);break;
  }
 }
 /* Three separated footer targets prevent accidental skip during the
@@ -2567,8 +2660,18 @@ int ui_roughhouse_touch(int x,int y){
 }
 /* Return 0..3 for the four actual prop cards, 4 for BACK, -1 for
  * whitespace. All hitboxes are visibly filled in room_screen(). */
+int ui_options_touch(int x,int y){
+ if(x<0||x>=256||y<0||y>=192)return -1;
+ if(y>=176)return x<128?4:5;
+ if(x>=8&&x<248&&y>=44&&y<164){
+  int offset=y-44;
+  if(offset%30<25)return offset/30;
+ }
+ return -1;
+}
 int ui_room_touch(int x,int y){
  if(x<0||x>=256||y<0||y>=192)return -1;
+ if(x>=68&&x<132&&y>=5&&y<21)return 10; /* OPTIONS */
  if(x>=198&&x<244&&y>=49&&y<63)return 7; /* SAVE */
  if(y>=176){
   /* Footer labels are ACTUAL touch buttons (not invisible instructions).

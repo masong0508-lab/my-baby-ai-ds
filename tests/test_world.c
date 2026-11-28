@@ -149,7 +149,7 @@ static void assert_baby_pose_bounds_to(WorldBabyPose p,int reach_max){
  assert(p.forward_right>=0&&p.forward_right<=14);
  assert(p.lean>=-3&&p.lean<=5);
  assert(p.neck>=-16&&p.neck<=16);
- assert(p.yaw>=-2&&p.yaw<=3);
+ assert(p.yaw>=-3&&p.yaw<=3); /* includes eased idle sway */
  assert(p.lid>=0&&p.lid<=256);
  assert(p.bounce>=0&&p.bounce<=4608);
 }
@@ -921,6 +921,28 @@ int main(void){
  }
  /* No abrupt chest pop at wrap, no idle breathing during Toybox
   * collisions, and no new render geometry at the breath peak. */
+ /* A smooth, needs-dependent idle head sway, independent of simulation. */
+ assert(world_baby_idle_sway(0u,90,80)==0);
+ assert(world_baby_idle_sway(60u,90,80)==3);
+ assert(world_baby_idle_sway(120u,90,80)==0);
+ assert(world_baby_idle_sway(180u,90,80)==-3);
+ assert(world_baby_idle_sway(60u,30,10)==1);
+ for(unsigned t=1;t<=480u;t++){
+  int now=world_baby_idle_sway(t,90,80);
+  int before=world_baby_idle_sway(t-1u,90,80);
+  assert(now>=-3&&now<=3&&now-before<=1&&before-now<=1);
+  assert(now==world_baby_idle_sway(t+240u,90,80));
+ }
+ {
+  Game idle=s;
+  idle.mood=90;idle.energy=80;idle.hunger=35;idle.chaos=12;
+  world_set_idle_motion(1);
+  assert(world_baby_pose(&idle,60u,0,0u,0).yaw==3);
+  world_set_idle_motion(0);
+  assert(world_baby_pose(&idle,60u,0,0u,0).yaw==0);
+  assert(world_baby_pose(&idle,60u,3,18u,0).yaw==-2);
+  world_set_idle_motion(1);
+ }
  assert(world_baby_breath(0u)==0);
  assert(world_baby_breath(64u)==256);
  assert(world_baby_breath(128u)==0);

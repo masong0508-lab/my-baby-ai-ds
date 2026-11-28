@@ -15,6 +15,7 @@ void perf_init(PerfTracker *p){
  p->scene=PERF_INACTIVE;
 }
 unsigned perf_scene(unsigned view,unsigned cabinet){
+ if(view==16u)return PERF_OPTIONS_SCENE;
  if(view>=PERF_VIEW_COUNT)return PERF_INACTIVE;
  if(view==2u)return cabinet<16u?PERF_VIEW_COUNT+cabinet:PERF_INACTIVE;
  return view;

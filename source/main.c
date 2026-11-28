@@ -37,9 +37,33 @@ static Arcade arc;
 static Game arcade_practice_state;
 static ArcadeSession arcade_session;
 static int arcade_guide_paused;
+/* A continuous steering gesture must never become a menu selection when
+ * a cabinet completes while the player is still holding the controls. */
+static int arcade_menu_release;
 static unsigned arcade_practice_mode=ARCADE_PRACTICE_STANDARD;
 static PerfTracker performance;
 static int perf_show;
+/* Complete bitmap redraws are composed in normal ARM9 RAM, then copied
+ * at the next VBlank. Never expose a partially painted card to the LCD.
+ * Exactly one 96 KiB scratch surface, reused by every full-screen view.
+ * Small live updates retain the existing direct-VRAM fast path. */
+static uint16_t ui_staging[256u*192u] __attribute__((aligned(32)));
+static uint16_t *ui_vram;
+static int ui_pending;
+static void ui_stage_begin(void){
+ ui_init(ui_staging);
+ ui_pending=1;
+}
+static void ui_stage_present(void){
+ if(!ui_pending)return;
+ /* DMA does not see dirty ARM9 data-cache lines. DMA3 is used only for
+  * this synchronous bitmap copy before any new geometry submission. */
+ DC_FlushRange(ui_staging,sizeof(ui_staging));
+ dmaCopyWords(3,ui_staging,ui_vram,sizeof(ui_staging));
+ ui_init(ui_vram);
+ ui_pending=0;
+}
+static int options_selected,idle_motion=1;
 static NurseryPeek peek;
 static ArcadeFeedback arcade_feedback;
 static uint8_t save_write_failed;
@@ -507,12 +531,7 @@ static void begin_game(void){begin_arcade_run(0);}
 static unsigned arcade_redraw_period(const Arcade *a){
  switch(a->id){
  case 0:case 3:case 6:case 7:case 8:case 9:case 11:return 3u;
- case 1:
-  /* Avoid repainting Diaper Dash's large 256x192 changing mat every
-   * fourth frame while idle. Native DeSmuME captured blank pink panels
-   * halfway through these unnecessary VRAM writes. Active drag/wipe
-   * still refreshes frequently; dirty steps render immediately. */
-  return a->touch_active?5u:60u;
+ case 1:return 60u; /* Diaper Dash uses its own incremental update. */
  case 4:return 4u;
  case 2:return a->touch_active?4u:60u;
  case 5:case 10:case 12:case 13:case 14:case 15:return 60u;
@@ -527,7 +546,7 @@ static void leave_game(void){
   message=arc.finished==1?"PRACTICE CLEARED. NO REWARD.":
           arc.finished==2?"PRACTICE OVER. NO PENALTY.":"PRACTICE CANCELLED.";
   if(!arc.finished)arcade_feedback_reset(&arcade_feedback);
-  arc.active=0;view=1;
+  arc.active=0;view=1;arcade_menu_release=1;
   return;
  }
  if(arc.finished){
@@ -545,7 +564,7 @@ static void leave_game(void){
   message="BACK TO THE ARCADE.";
   arcade_feedback_reset(&arcade_feedback);
  }
- arc.active=0;view=1;
+ arc.active=0;view=1;arcade_menu_release=1;
 }
 /* Result acting uses the same retargetable rig as ordinary care. Keep the
  * pre-result needs, so a loss's chaos change cannot move the captured neck
@@ -583,7 +602,8 @@ int main(void){
  vramSetBankC(VRAM_C_SUB_BG);
  {
   int layer=bgInitSub(3,BgType_Bmp16,BgSize_B16_256x256,0,0);
-  ui_init(bgGetGfxPtr(layer));
+  ui_vram=(uint16_t *)bgGetGfxPtr(layer);
+  ui_init(ui_vram);
  }
  /* Always show a visible title before touching the filesystem or heavy 3D.
   * Some older emulators hang during their emulated DLDI/FAT setup. */
@@ -601,6 +621,7 @@ int main(void){
   int raw_touch,repaint=0,perf_changed;
   touchPosition touch={0};
   swiWaitForVBlank();
+  ui_stage_present();
   scanKeys();
   down=keysDown();held=keysHeld();
   /* Footer feedback changes only on events and expiry, preserving the
@@ -776,6 +797,12 @@ int main(void){
     }
    }
   }else if(view==1){
+   if(arcade_menu_release){
+    /* Fence only a carried-over continuous steering gesture. A fresh A
+     * restart must work even when it is the first poll after pen release. */
+    if(!(held&(KEY_LEFT|KEY_RIGHT|KEY_TOUCH)))arcade_menu_release=0;
+    else {down&=~(KEY_LEFT|KEY_RIGHT);tap=0;}
+   }
    if((down&KEY_Y)||(tap&&ui_arcade_help_touch(touch.px,touch.py))){
     arcade_guide_paused=0;view=15;dirty=1;
    }else if(down&KEY_UP){selected=(selected&~3)|((selected+2)&3);dirty=1;}
@@ -1134,9 +1161,31 @@ int main(void){
    }
   }else if(view==7){
    if(down&(KEY_B|KEY_SELECT|KEY_START)){view=5;dirty=1;}
+  }else if(view==16){
+   int picked=tap?ui_options_touch(touch.px,touch.py):-1;
+   if((down&(KEY_B|KEY_START))||picked==4){view=10;dirty=1;}
+   else if((down&KEY_X)||picked==5){
+    WorldBabyPose from=world_baby_pose(&baby,frame,pose,pose_age,pose?&care_motion:0);
+    pose=PLAY+1;pose_age=0;
+    world_baby_motion_start(&care_motion,from,&baby,frame,pose);
+    dirty=1; /* Preview only: no need, currency or dialogue changes. */
+   }else if(down&KEY_UP){options_selected=(options_selected+3)&3;dirty=1;}
+   else if(down&KEY_DOWN){options_selected=(options_selected+1)&3;dirty=1;}
+   else if((down&KEY_A)||(picked>=0&&picked<4)){
+    if(picked>=0&&picked<4)options_selected=picked;
+    switch(options_selected){
+     case 0:sfx_set_enabled(!sfx_is_enabled());break;
+     case 1:perf_show=!perf_show;break;
+     case 2:baby.safe_visuals^=1;persist();break;
+     case 3:idle_motion=!idle_motion;world_set_idle_motion(idle_motion);break;
+    }
+    dirty=1;
+   }
   }else if(view==10){
    int picked=-1;
-   if(down&KEY_X){
+   if((down&KEY_L)||(tap&&ui_room_touch(touch.px,touch.py)==10)){
+    view=16;options_selected=0;dirty=1;
+   }else if(down&KEY_X){
     save_live_baby();dirty=1;
    }else if(down&KEY_Y){
     /* Same global mute as Toybox, now accessible without entering the
@@ -1287,7 +1336,7 @@ int main(void){
      world_draw_secret(&baby,EGG_SCARE_FRAME+PEEK_SCARE_TICKS-peek.ticks,&rag);
    }else if(view==14&&peek.phase==PEEK_WAIT)
     world_draw_care(&baby,frame,NAP+1,24u);
-   else if(view==0||view==10||view==11||view==12||view==13)
+   else if(view==0||view==10||view==11||view==12||view==13||view==16)
     world_draw_nursery(&baby,frame,pose,pose_age,
                        room_focus,room_previous,room_camera_age,
                        room_daylight,room_lamp,room_prop_age,
@@ -1297,8 +1346,9 @@ int main(void){
   }
   /* Keep bitmap VRAM writes off the hot path unless UI state changed. */
   if(dirty||previous!=view||
-     (view==2&&frame%arcade_redraw_period(&arc)==0u)){
+     (view==2&&arc.id!=1&&frame%arcade_redraw_period(&arc)==0u)){
    repaint=1;
+   ui_stage_begin();
    /* The actual per-frame draw must receive the Room prop selection and
     * lamp/day flags. Startup UI paint is NOT the Room redraw path. */
    if(view==15){
@@ -1325,6 +1375,8 @@ int main(void){
            view==10?((room_focus&3)|(room_daylight?8:0)|
                     (room_lamp?16:0)|(sfx_is_enabled()?0:32)):
            view==11?talk_selected:
+           view==16?((sfx_is_enabled()?1:0)|(perf_show?2:0)|
+                    (baby.safe_visuals?4:0)|(idle_motion?8:0)|(options_selected<<4)):
            selected,last_ending,reset_step,storage_ok,message);
    if(view==1)ui_arcade_record_draw(game_arcade_session_best(&arcade_session,(unsigned)selected,ARCADE_NORMAL));
    {
@@ -1346,7 +1398,12 @@ int main(void){
    }
    dirty=0;
   }
-  if(view==2)ui_arcade_clock(&arc);
+  if(view==2){
+   if(arc.id==1)ui_diaper_live(&arc,
+     !save_write_failed&&!learning_write_failed&&!observer_write_failed&&
+     !voice_write_failed&&arcade_feedback_current(&arcade_feedback)==ARCADE_FEEDBACK_NONE);
+   ui_arcade_clock(&arc);
+  }
   if(view==7)ui_touch_diag_update(world_vertex_count(),
                                   world_polygon_count());
   /* Every submitted frame is timed even with the optional display off.

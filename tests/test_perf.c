@@ -16,7 +16,8 @@ int main(void){
  assert(!perf_current(&p));
  assert(perf_scene(0,0)==0u&&perf_scene(14,0)==14u);
  assert(perf_scene(2,0)==16u&&perf_scene(2,15)==31u);
- assert(perf_scene(2,16)==PERF_INACTIVE&&perf_scene(16,0)==PERF_INACTIVE);
+ assert(perf_scene(2,16)==PERF_INACTIVE&&perf_scene(17,0)==PERF_INACTIVE);
+ assert(perf_scene(16,0)==32u);
  assert(perf_scene(15,0)==15u);
  assert(perf_frame(&p,now,0));
  now=sample(&p,now,0,30);
@@ -41,6 +42,12 @@ int main(void){
  now=sample(&p,now,0,15);
  s=perf_current(&p);
  assert(s->current10==150&&s->minimum10==150&&s->average10==350);
+ assert(perf_frame(&p,now,perf_scene(16,0)));
+ now=sample(&p,now,32u,60);
+ s=perf_current(&p);
+ assert(s&&s->current10==600&&s->total_frames==60u);
+ assert(perf_frame(&p,now,0));
+ assert(perf_current(&p)->average10==350);
  assert(!perf_frame(NULL,now,0));
  perf_init(NULL);
  puts("PASS: per-scene submitted FPS, independent arcade samples, rollover, min/max and weighted average");
