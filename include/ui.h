@@ -15,6 +15,9 @@ void ui_arcade_feedback(ArcadeFeedbackEvent event);
 void ui_arcade_feedback_mode(ArcadeFeedbackEvent event,int practice);
 /* Small changing time track; does not repaint the game art. */
 void ui_arcade_clock(const Arcade *a);
+/* Diaper Dash: redraw only changed wipe/drag/time pixels. Caller paints a
+ * full view on entry, stage/score changes, or feedback/warning transitions. */
+void ui_diaper_live(const Arcade *a,int normal_footer);
 /* Higher-priority footer for a failed save; draw after arcade feedback.
  * Caller retains failure state until a successful write/load/new baby. */
 void ui_save_warning(void);
