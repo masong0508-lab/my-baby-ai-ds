@@ -69,9 +69,11 @@ def status(image, cabinet):
     state = {"round": done, "mistakes": mistakes}
     if cabinet == 6:
         state["marker_x"] = marker(image, 147, 20, 239, 4)
-        state["cue"] = text_at(image, 82, 134, 19)
+        # Read only the text itself: the teal crib border is within the
+        # old 19-character OCR span and is not part of the readiness cue.
+        state["cue"] = text_at(image, 82, 134, 14)
         if state["cue"] not in ("WAIT FOR GREEN", "SWEET DREAMS!"):
-            state["cue"] = text_at(image, 82, 134, 19, ink="teal")
+            state["cue"] = text_at(image, 82, 134, 8, ink="teal")
         assert state["cue"] in ("WAIT FOR GREEN", "TAP NOW!", "SWEET DREAMS!"), state
     return state
 
