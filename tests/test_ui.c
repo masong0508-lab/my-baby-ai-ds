@@ -925,6 +925,46 @@ int main(void){
  assert(ui_nursery_touch(25,143)==PLAY);
  assert(ui_nursery_touch(25,140)==-1);
  assert(ui_nursery_touch(25,175)==-1);
+ /* Incremental Diaper Dash must match a full native bitmap repaint
+  * pixel-for-pixel, including an invalid drag release and clipped edges. */
+ {
+  static uint16_t live_pixels[256*192];
+  Game live=g;
+  Arcade trial;
+  game_arcade_start(&live,&trial,1);
+  trial.stage=0;trial.progress=0;
+  ui_draw(&live,&trial,2,1,0,0,1,"DIAPER");
+  for(unsigned progress_value=9;progress_value<90;progress_value+=11){
+   trial.progress=(uint8_t)progress_value;
+   trial.timer-=61u;
+   ui_diaper_live(&trial,1);ui_arcade_clock(&trial);
+   memcpy(live_pixels,screen,sizeof(live_pixels));
+   ui_draw(&live,&trial,2,1,0,0,1,"DIAPER");
+   assert(!memcmp(live_pixels,screen,sizeof(live_pixels)));
+  }
+  trial.stage=1;trial.round=1;trial.touch_active=0;
+  ui_draw(&live,&trial,2,1,0,0,1,"DIAPER");
+  trial.touch_active=1;trial.touch_start_x=36;trial.touch_start_y=150;
+  for(int step=0;step<5;step++){
+   static const int xs[]={36,125,255,1,145};
+   static const int ys[]={150,130,28,175,140};
+   trial.touch_last_x=(int16_t)xs[step];trial.touch_last_y=(int16_t)ys[step];
+   ui_diaper_live(&trial,1);
+   memcpy(live_pixels,screen,sizeof(live_pixels));
+   ui_draw(&live,&trial,2,1,0,0,1,"DIAPER");
+   assert(!memcmp(live_pixels,screen,sizeof(live_pixels)));
+  }
+  trial.touch_active=0;
+  ui_diaper_live(&trial,1);
+  memcpy(live_pixels,screen,sizeof(live_pixels));
+  ui_draw(&live,&trial,2,1,0,0,1,"DIAPER");
+  assert(!memcmp(live_pixels,screen,sizeof(live_pixels)));
+  ui_arcade_feedback(ARCADE_FEEDBACK_PROGRESS);
+  memcpy(live_pixels,screen,sizeof(live_pixels));
+  trial.timer-=61u;ui_diaper_live(&trial,0);
+  assert(!memcmp(live_pixels+176*256,screen+176*256,16*256*sizeof(uint16_t)));
+  verify_coverage();
+ }
  assert(ui_arcade_navigation(11,181)==1);
  assert(ui_arcade_navigation(112,181)==2);
  assert(ui_arcade_navigation(221,181)==3);
