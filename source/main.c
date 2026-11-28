@@ -37,6 +37,9 @@ static Arcade arc;
 static Game arcade_practice_state;
 static ArcadeSession arcade_session;
 static int arcade_guide_paused;
+/* A continuous steering gesture must never become a menu selection when
+ * a cabinet completes while the player is still holding the controls. */
+static int arcade_menu_release;
 static unsigned arcade_practice_mode=ARCADE_PRACTICE_STANDARD;
 static PerfTracker performance;
 static int perf_show;
@@ -527,7 +530,7 @@ static void leave_game(void){
   message=arc.finished==1?"PRACTICE CLEARED. NO REWARD.":
           arc.finished==2?"PRACTICE OVER. NO PENALTY.":"PRACTICE CANCELLED.";
   if(!arc.finished)arcade_feedback_reset(&arcade_feedback);
-  arc.active=0;view=1;
+  arc.active=0;view=1;arcade_menu_release=1;
   return;
  }
  if(arc.finished){
@@ -545,7 +548,7 @@ static void leave_game(void){
   message="BACK TO THE ARCADE.";
   arcade_feedback_reset(&arcade_feedback);
  }
- arc.active=0;view=1;
+ arc.active=0;view=1;arcade_menu_release=1;
 }
 /* Result acting uses the same retargetable rig as ordinary care. Keep the
  * pre-result needs, so a loss's chaos change cannot move the captured neck
@@ -776,7 +779,12 @@ int main(void){
     }
    }
   }else if(view==1){
-   if((down&KEY_Y)||(tap&&ui_arcade_help_touch(touch.px,touch.py))){
+   if(arcade_menu_release){
+    /* Discard the ending gesture, including delayed ARM7 coordinates.
+     * Require a neutral poll before accepting a new menu action. */
+    if(!(held&(KEY_LEFT|KEY_RIGHT|KEY_UP|KEY_DOWN|KEY_A|KEY_B|KEY_START|KEY_L|KEY_R|KEY_X|KEY_Y|KEY_TOUCH)))
+     arcade_menu_release=0;
+   }else if((down&KEY_Y)||(tap&&ui_arcade_help_touch(touch.px,touch.py))){
     arcade_guide_paused=0;view=15;dirty=1;
    }else if(down&KEY_UP){selected=(selected&~3)|((selected+2)&3);dirty=1;}
    else if(down&KEY_DOWN){selected=(selected&~3)|((selected+2)&3);dirty=1;}
