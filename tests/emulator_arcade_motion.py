@@ -227,6 +227,9 @@ def test_bottle(player):
     else:
         raise AssertionError("Deliberate Bottle spills never ended the game")
     player.steer(0)
+    # Give the actual release an input poll before issuing a new press.
+    # Do not bypass the post-result guard or alter cabinet scoring.
+    player.step(8)
     assert seen == {1, 2}, seen
     player.capture("bottle_loss_without_reward", player.menu())
     player.capture("bottle_restart_clears_spills", player.start(0))
