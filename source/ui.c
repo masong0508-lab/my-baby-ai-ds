@@ -144,8 +144,13 @@ static const uint8_t glyph[96][7]={
  ['\''-32]={4,4,8,0,0,0,0},
 };
 void ui_init(void *vram){pixels=(volatile uint16_t *)vram;}
+/* ARM9 bitmap VRAM accepts aligned word writes. A word contains exactly
+ * two identical RGB555 pixels. The may_alias type permits word writes
+ * over the 16-bit backing array, including the host framebuffer fixture. */
+typedef uint32_t UiPixelPair __attribute__((__may_alias__));
 static void solid(int x,int y,int rw,int rh,uint16_t color){
  int a,b;int x2=x+rw,y2=y+rh;
+ const uint32_t pair=(uint32_t)color|((uint32_t)color<<16);
  if(x<0)x=0;
  if(y<0)y=0;
  if(x2>W)x2=W;
@@ -153,12 +158,19 @@ static void solid(int x,int y,int rw,int rh,uint16_t color){
  if(!pixels||x>=x2||y>=y2)return;
  for(b=y;b<y2;b++){
   volatile uint16_t *row=pixels+(unsigned)b*W;
-  /* Four halfword stores per loop branch. Keep VRAM's native access
-   * width and use scalar tail writes for short/clipped spans. */
-  for(a=x;a+3<x2;a+=4){
-   row[a]=color;row[a+1]=color;row[a+2]=color;row[a+3]=color;
+  a=x;
+  /* Align the actual pointer, not just x. Preserve the odd first
+   * and last pixels so clipped sprites never overwrite neighbors. */
+  if(((uintptr_t)(row+a)&3u)!=0u)row[a++]=color;
+  if(a+1<x2){
+   volatile UiPixelPair *words=(volatile UiPixelPair *)(row+a);
+   for(;a+7<x2;a+=8){
+    words[0]=pair;words[1]=pair;words[2]=pair;words[3]=pair;
+    words+=4;
+   }
+   for(;a+1<x2;a+=2)*words++=pair;
   }
-  for(;a<x2;a++)row[a]=color;
+  if(a<x2)row[a]=color;
  }
 }
 static void outline(int x,int y,int width,int height,uint16_t color){
