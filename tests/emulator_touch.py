@@ -1319,9 +1319,24 @@ def test_actual_game(path: Path, output: Path) -> dict:
     assert read_text(practice_result, 10, 192+181,
                      max_chars=39, ink="lemon") == "PRACTICE CLEARED! NO REWARD."
     picture(emu, output, "arcade_expert_success")
+    stylus_tap(emu, 220, 63)
+    guide = current_header("GUIDE")
+    record = read_text(guide, 10, 192+167, max_chars=39, ink="ink")
+    assert record.startswith("CLEARS 1/1 BEST ") and record.endswith(" CLEAN 1"), record
+    picture(emu, output, "arcade_expert_session_record")
+    # The Standard and Expert records are independent, even for the same
+    # cabinet. Relaxed remains empty until a run is completed.
+    press(Keys.KEY_Y)
+    guide = current_header("GUIDE")
+    assert read_text(guide, 67, 192+72, max_chars=28, ink="ink") == "Y MODE: STANDARD"
+    assert read_text(guide, 10, 192+167, max_chars=39, ink="ink").startswith("CLEARS 1/1 BEST ")
+    press(Keys.KEY_Y)
+    guide = current_header("GUIDE")
+    assert read_text(guide, 10, 192+167, max_chars=39, ink="muted") == "SESSION RECORD: NO COMPLETED RUNS"
     write_fps_report()
     return {
         "expert_practice_addition_and_subtraction": True,
+        "independent_arcade_session_records": True,
         "three_practice_modes_verified": True,
         "arcade_guides_verified": len(titles),
         "paid_practice_completed_without_reward": True,

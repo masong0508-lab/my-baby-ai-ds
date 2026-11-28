@@ -31,8 +31,26 @@ typedef struct {
  /* Beatbox three-note memory pattern and presentation phase. */
  uint8_t phase,notes[3];
  uint8_t practice; /* ARCADE_PRACTICE_* mode; sandbox only */
+ uint8_t recorded;
+ uint16_t run_ticks; /* active simulation ticks, not wall-clock seconds */
  int16_t touch_start_x,touch_start_y,touch_last_x,touch_last_y;
 } Arcade;
+/* Session-only personal records; separate for every cabinet and mode.
+ * No new persistent fields, and no practice change to the real Game. */
+typedef struct {
+ uint16_t attempts,clears,perfect,best_ticks;
+} ArcadeRecord;
+typedef struct {
+ ArcadeRecord records[MBAI_GAMES][4];
+ uint32_t practice_nonce;
+} ArcadeSession;
+void game_arcade_session_reset(ArcadeSession *session);
+int game_arcade_session_record(ArcadeSession *session,Arcade *a);
+const ArcadeRecord *game_arcade_session_best(const ArcadeSession *session,unsigned id,unsigned mode);
+int game_arcade_session_practice(ArcadeSession *session,const Game *live,
+                                Game *sandbox,Arcade *a,int id,unsigned mode);
+int game_arcade_rattle_ready(const Arcade *a);
+int game_arcade_nap_ready(const Arcade *a);
 extern const char *const game_names[MBAI_GAMES];
 void game_init(Game *s);
 const char *game_care(Game *s,Care action);

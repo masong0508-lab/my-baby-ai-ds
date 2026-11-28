@@ -148,6 +148,12 @@ Press **START** or tap the small **II** badge in a cabinet to pause and read its
 
 Baby Beatbox uses four original distinct PSG pad sounds for its visual demonstration and correct repeat inputs. Existing result cues and the global mute still take priority.
 
+### Arcade replay records and rendering
+
+Every cabinet has four independent in-session record tables (normal, Standard, Relaxed, Expert). The arcade menu shows the normal-mode record, and each guide shows the selected practice mode's completed attempts, clears, best clear in active simulation ticks, and mistake-free wins. Records reset with a new/load session; they are not part of the saved game. Cancelled attempts and paused time are excluded, completed results are recorded only once. Repeated practice runs now generate fresh puzzles using a transient training seed, without consuming the real game's RNG.
+
+Rattle Rescue lights the selected catch lane green exactly during the scoring window; Naptime uses the same predicate for its scoring and visible timing cue. Sock Market uses three pattern shapes as well as color, and CEO of Daycare displays the exact cash/morale deltas and both final thresholds. A compact sprite palette and incremental countdown fill reduce redundant rendering work. No additional framebuffer, texture allocation or save migration.
+
 ### Arcade reactions and clear feedback
 
 Successful steps, mistakes, wins and losses now have distinct short PSG cues and brief text feedback in the existing footer. Ignored taps and ordinary steering stay silent. Completed games trigger a finite baby cheer or a gentle regrouping gesture; both can blend into the next care action. Normal footer controls return after the message expires, while a failed save takes priority and remains visible until saving succeeds. The Bottle Balance green band now matches its actual scoring window. See [arcade feedback](docs/ARCADE_FEEDBACK.md) and [baby result reactions](docs/ARCADE_BABY_REACTIONS.md).

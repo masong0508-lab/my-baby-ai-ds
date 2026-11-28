@@ -540,6 +540,66 @@ static void practice_difficulty(void){
  assert(!game_arcade_practice_start_mode(&live,&sandbox,&a,0,4));
  assert(memcmp(&live,&original,sizeof(live))==0);
 }
+static void arcade_replay_records(void){
+ ArcadeSession session={0};Game live,original,sandbox;Arcade a;
+ game_init(&live);original=live;
+ for(unsigned mode=1;mode<=3u;mode++){
+  unsigned distinct=0,prior=0;
+  for(unsigned run=0;run<16;run++){
+   unsigned signature;
+   assert(game_arcade_session_practice(&session,&live,&sandbox,&a,10,mode));
+   signature=(unsigned)a.stage*100u+(unsigned)a.direction*10u+a.target;
+   if(run&&signature!=prior)distinct++;
+   prior=signature;
+   assert(!game_arcade_session_record(&session,&a));
+   for(unsigned i=0;i<6;i++){
+    for(unsigned tick=0;tick<3;tick++)game_arcade_tick(&sandbox,&a);
+    game_arcade_input(&sandbox,&a,a.target);
+   }
+   assert(a.finished==1&&a.run_ticks==18u);
+   assert(game_arcade_session_record(&session,&a));
+   assert(!game_arcade_session_record(&session,&a));
+  }
+  assert(distinct>=8u);
+  const ArcadeRecord *r=game_arcade_session_best(&session,10,mode);
+  assert(r&&r->attempts==16&&r->clears==16&&r->perfect==16&&r->best_ticks==18);
+  assert(memcmp(&live,&original,sizeof(live))==0);
+ }
+ assert(game_arcade_session_best(&session,10,0)->attempts==0);
+ assert(!game_arcade_session_best(&session,16,0));
+ assert(!game_arcade_session_best(&session,0,4));
+ /* Losing and cancelling never overwrite a successful best. */
+ assert(game_arcade_session_practice(&session,&live,&sandbox,&a,10,1));
+ for(unsigned i=0;i<3;i++)game_arcade_input(&sandbox,&a,(a.target+1)%3);
+ assert(a.finished==2&&game_arcade_session_record(&session,&a));
+ const ArcadeRecord *r=game_arcade_session_best(&session,10,1);
+ assert(r->attempts==17&&r->clears==16&&r->best_ticks==18);
+ assert(game_arcade_session_practice(&session,&live,&sandbox,&a,10,1));
+ a.active=0;assert(!game_arcade_session_record(&session,&a));
+ assert(r->attempts==17);
+ assert(!game_arcade_session_practice(&session,&live,&live,&a,10,1));
+ assert(!game_arcade_session_practice(&session,&live,&sandbox,&a,16,1));
+ assert(memcmp(&live,&original,sizeof(live))==0);
+ game_arcade_session_reset(&session);
+ assert(!session.practice_nonce&&!game_arcade_session_best(&session,10,1)->attempts);
+}
+static void timing_windows(void){
+ Game g;Arcade a;
+ game_init(&g);
+ game_arcade_start(&g,&a,7);
+ for(unsigned t=0;t<=a.hold_frames;t++){
+  a.timer=(uint16_t)t;
+  assert(game_arcade_rattle_ready(&a)==(t>=8u&&t<=a.hold_frames/3u));
+ }
+ game_arcade_start(&g,&a,6);
+ for(unsigned t=0;t<a.hold_frames;t++){
+  a.elapsed=(uint16_t)t;
+  assert(game_arcade_nap_ready(&a)==(t>=a.hold_frames*38u/100u&&t<=a.hold_frames*70u/100u));
+ }
+ a.taped=1;assert(!game_arcade_nap_ready(&a));
+ a.hold_frames=0;assert(!game_arcade_nap_ready(&a));
+ assert(!game_arcade_rattle_ready(0)&&!game_arcade_nap_ready(0));
+}
 static void arcade_counter_limits(void){
  Game g;Arcade a;
  game_init(&g);g.unlocked=UINT16_MAX;g.wins=UINT32_MAX-1u;
@@ -560,6 +620,7 @@ static void arcade_counter_limits(void){
 }
 int main(void){
  practice_all();practice_difficulty();arcade_counter_limits();
+ arcade_replay_records();timing_windows();
  bottle();diaper();diaper_gestures();tax_receipts();
  crib_kart();baby_beatbox();sock_market();naptime();rattle();
  corporate_crawl();stroller_drift();cereal_cipher();tantrum_blocks();

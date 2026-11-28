@@ -35,6 +35,7 @@
 static Game baby;
 static Arcade arc;
 static Game arcade_practice_state;
+static ArcadeSession arcade_session;
 static int arcade_guide_paused;
 static unsigned arcade_practice_mode=ARCADE_PRACTICE_STANDARD;
 static PerfTracker performance;
@@ -98,6 +99,7 @@ static void reset_care_motion(void){
  care_motion=(WorldBabyMotion){0};
 }
 static void reset_care_session(void){
+ game_arcade_session_reset(&arcade_session);
  memset(&peek,0,sizeof(peek));
  mic_input_stop();voice_mode=0;voice_match=-1;voice_slot=-1;
  voice_forget_armed=0;voice_profile_present=0;
@@ -491,7 +493,7 @@ static void arcade_beat_note(void){
  if(slot>=0)sfx_play((SfxCue)(SFX_BEAT_BOOM+arc.notes[slot]));
 }
 static void begin_arcade_run(int practice){
- if(practice)(void)game_arcade_practice_start_mode(&baby,&arcade_practice_state,&arc,selected,arcade_practice_mode);
+ if(practice)(void)game_arcade_session_practice(&arcade_session,&baby,&arcade_practice_state,&arc,selected,arcade_practice_mode);
  else game_arcade_start(&baby,&arc,selected);
  arcade_feedback_begin(&arcade_feedback,&arc);
  if(arc.active){view=2;message=arc.id==0?"STEADY THE BOTTLE.":arc.id==1?"CHANGE THAT DIAPER!":arc.id==2?"SORT BABY'S TAX BILLS!":arc.id==3?"DODGE CRIB KART CONES!":arc.id==4?"MEMORIZE THE BEAT!":arc.id==5?"MATCH THE BABY SOCKS!":arc.id==6?"TIME THE QUIET LULLABY!":arc.id==7?"CATCH SIX RATTLES!":arc.id==8?"JUMP OR DUCK AT WORK!":arc.id==9?"DRIFT THE STROLLER!":arc.id==10?"SOLVE CEREAL MATH!":arc.id==11?"STACK THOSE BLOCKS!":arc.id==12?"CHECK THE AUDIT NUMBERS!":arc.id==13?"WATER THE RIGHT FLOWER!":arc.id==14?"TRACE THE EVIDENCE!":arc.id==15?"BALANCE THE DAYCARE!":"SIX ROUNDS. THREE STRIKES.";}
@@ -518,6 +520,7 @@ static unsigned arcade_redraw_period(const Arcade *a){
  }
 }
 static void leave_game(void){
+ (void)game_arcade_session_record(&arcade_session,&arc);
  if(arc.practice){
   /* No live save write, dialogue event, currency change or observed
    * care history can escape a practice run. The feedback stays visible. */
@@ -839,6 +842,7 @@ int main(void){
     Game before_arcade=baby;
     Game *run=arc.practice?&arcade_practice_state:&baby;
     int old_beat_slot=game_arcade_beat_slot(&arc);
+    int old_timing_ready=game_arcade_rattle_ready(&arc)||game_arcade_nap_ready(&arc);
     unsigned old_round=arc.round,old_mistakes=arc.mistakes,old_phase=arc.phase;
     if(arc.id==0||arc.id==9){
      int steer=0;
@@ -960,7 +964,8 @@ int main(void){
     /* Timed questions and WATCH -> REPEAT must become visible in the
      * same tick that changes their rules. Static cabinets otherwise
      * wait up to 60 frames for their throttled timer repaint. */
-    if(arc.round!=old_round||arc.mistakes!=old_mistakes||arc.phase!=old_phase)
+    if(arc.round!=old_round||arc.mistakes!=old_mistakes||arc.phase!=old_phase||
+       old_timing_ready!=(game_arcade_rattle_ready(&arc)||game_arcade_nap_ready(&arc)))
      dirty=1;
     /* Observe once AFTER all input/timer work and BEFORE leaving a
      * finished cabinet. Footer exits are cancellations, never results. */
@@ -1296,9 +1301,11 @@ int main(void){
    repaint=1;
    /* The actual per-frame draw must receive the Room prop selection and
     * lamp/day flags. Startup UI paint is NOT the Room redraw path. */
-   if(view==15)ui_arcade_guide_draw(&baby,(unsigned)selected,arcade_guide_paused,
-                                      arcade_guide_paused?arc.practice:(int)arcade_practice_mode,storage_ok);
-   else if(view==14)ui_peek_draw(&baby,&peek,storage_ok);
+   if(view==15){
+    unsigned mode=arcade_guide_paused?arc.practice:arcade_practice_mode;
+    ui_arcade_guide_draw(&baby,(unsigned)selected,arcade_guide_paused,(int)mode,storage_ok);
+    ui_arcade_record_draw(game_arcade_session_best(&arcade_session,(unsigned)selected,mode));
+   }else if(view==14)ui_peek_draw(&baby,&peek,storage_ok);
    else if(view==13)ui_mic_draw(&baby,storage_ok,voice_word,
        voice_mode?voice_capture.state==VOICE_CALIBRATE?
          "MEASURING ROOM NOISE...":voice_capture.state==VOICE_WAIT?
@@ -1319,6 +1326,7 @@ int main(void){
                     (room_lamp?16:0)|(sfx_is_enabled()?0:32)):
            view==11?talk_selected:
            selected,last_ending,reset_step,storage_ok,message);
+   if(view==1)ui_arcade_record_draw(game_arcade_session_best(&arcade_session,(unsigned)selected,ARCADE_NORMAL));
    {
     int event=arcade_feedback_current(&arcade_feedback);
     if(view==0||view==8){

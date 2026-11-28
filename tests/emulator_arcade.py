@@ -223,8 +223,25 @@ class Player:
 
 
 def sock_answer(image):
-    target = color_at(image, 65, 86)
-    choices = [color_at(image, 42 + i * 82, 132) for i in range(3)]
+    # Sample the full first motif, not one pixel which can be white
+    # in the new checker pattern. Verify shape as well as hue.
+    def motif(x, y):
+        palette = {"lemon", "pink", "teal"}
+        cells = [[color_at(image, x + 2 * col, y + 2 * row)
+                  for col in range(3)] for row in range(3)]
+        hues = {c for row in cells for c in row if c in palette}
+        assert len(hues) == 1, cells
+        hue = hues.pop()
+        shape = tuple(tuple(c == hue for c in row) for row in cells)
+        expected = {
+            "pink": ((True, True, True), (True, True, True), (False, False, False)),
+            "teal": ((True, True, False), (True, True, False), (False, False, False)),
+            "lemon": ((True, False, True), (True, True, True), (False, True, False)),
+        }
+        assert shape == expected[hue], (hue, cells)
+        return hue
+    target = motif(63, 85)
+    choices = [motif(40 + i * 82, 131) for i in range(3)]
     assert sorted(choices) == ["lemon", "pink", "teal"], choices
     assert target in choices, (target, choices)
     return choices.index(target), {"stripe": target, "choices": choices}
