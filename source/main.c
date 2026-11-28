@@ -511,12 +511,7 @@ static void begin_game(void){begin_arcade_run(0);}
 static unsigned arcade_redraw_period(const Arcade *a){
  switch(a->id){
  case 0:case 3:case 6:case 7:case 8:case 9:case 11:return 3u;
- case 1:
-  /* Avoid repainting Diaper Dash's large 256x192 changing mat every
-   * fourth frame while idle. Native DeSmuME captured blank pink panels
-   * halfway through these unnecessary VRAM writes. Active drag/wipe
-   * still refreshes frequently; dirty steps render immediately. */
-  return a->touch_active?5u:60u;
+ case 1:return 60u; /* Diaper Dash uses its own incremental update. */
  case 4:return 4u;
  case 2:return a->touch_active?4u:60u;
  case 5:case 10:case 12:case 13:case 14:case 15:return 60u;
@@ -1329,7 +1324,7 @@ int main(void){
   }
   /* Keep bitmap VRAM writes off the hot path unless UI state changed. */
   if(dirty||previous!=view||
-     (view==2&&frame%arcade_redraw_period(&arc)==0u)){
+     (view==2&&arc.id!=1&&frame%arcade_redraw_period(&arc)==0u)){
    repaint=1;
    /* The actual per-frame draw must receive the Room prop selection and
     * lamp/day flags. Startup UI paint is NOT the Room redraw path. */
@@ -1380,7 +1375,12 @@ int main(void){
    }
    dirty=0;
   }
-  if(view==2)ui_arcade_clock(&arc);
+  if(view==2){
+   if(arc.id==1)ui_diaper_live(&arc,
+     !save_write_failed&&!learning_write_failed&&!observer_write_failed&&
+     !voice_write_failed&&arcade_feedback_current(&arcade_feedback)==ARCADE_FEEDBACK_NONE);
+   ui_arcade_clock(&arc);
+  }
   if(view==7)ui_touch_diag_update(world_vertex_count(),
                                   world_polygon_count());
   /* Every submitted frame is timed even with the optional display off.
