@@ -64,7 +64,9 @@ void ui_mic_draw(const Game *s,int can_save,const char *label,
                  unsigned examples,int forget_armed,unsigned speaker,
                  unsigned mode,unsigned phase);
 int ui_room_entry_touch(int x,int y);
-int ui_room_touch(int x,int y); /* 0 window, 1 lamp, 2 teddy, 3 crib, 4 back, 5 sound, 6 use, 7 save, 8 lullaby, 9 peekaboo */
+/* Options: four settings (0..3), BACK (4), preview gesture (5), inert -1. */
+int ui_options_touch(int x,int y);
+int ui_room_touch(int x,int y); /* 0 window, 1 lamp, 2 teddy, 3 crib, 4 back, 5 sound, 6 use, 7 save, 8 lullaby, 9 peekaboo, 10 options */
 /* Nursery timing game: action=1, back=2, blank=0. */
 int ui_peek_touch(int x,int y);
 void ui_peek_draw(const Game *s,const NurseryPeek *p,int can_save);
