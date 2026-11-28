@@ -877,6 +877,14 @@ int world_baby_attention_angle(int focus,uint32_t age){
 /* Quiet respiration stays inside the existing torso mesh: no additional
  * geometry or textures. One 128-tick inhale/exhale cycle uses the same
  * bounded integer easing as the one-shot care gestures. */
+static int idle_motion_enabled=1;
+void world_set_idle_motion(int enabled){idle_motion_enabled=enabled!=0;}
+int world_baby_idle_sway(uint32_t frame,int mood,int energy){
+ unsigned phase=frame%240u,half=phase%120u;
+ int amplitude=mood>=65&&energy>=40?3:1;
+ int eased=smooth8(half<=60u?half:120u-half,60u);
+ return (phase<120u?amplitude:-amplitude)*eased/256;
+}
 int world_baby_breath(uint32_t frame){
  uint32_t phase=frame%128u;
  return smooth8(phase<=64u?phase:128u-phase,64u);
@@ -988,7 +996,8 @@ static WorldBabyPose baby_pose_sample(const Game *s,uint32_t frame,
                    action==1?3:action==2?-3:action==3?5:
                    action==4?-3:0)*weight/256);
  if(!rag){
-  neck+=world_baby_need_fidget(s->hunger,s->chaos,frame)*(256-weight)/256;
+  if(idle_motion_enabled)
+   neck+=world_baby_need_fidget(s->hunger,s->chaos,frame)*(256-weight)/256;
   lid=lid*world_baby_drowsy_lid(s->energy)/256;
  }
  if(action==WORLD_BABY_REGROUP){
@@ -1008,6 +1017,8 @@ static WorldBabyPose baby_pose_sample(const Game *s,uint32_t frame,
  p.yaw=(int16_t)((action==WORLD_BABY_CHEER?-1:
                   action==WORLD_BABY_REGROUP?2:
                   action==2?3:action==3?-2:0)*weight/256);
+ if(!rag&&idle_motion_enabled)
+  p.yaw=(int16_t)(p.yaw+world_baby_idle_sway(frame,s->mood,s->energy)*(256-weight)/256);
  p.lid=(int16_t)lid;
  p.bounce=(int16_t)(action==WORLD_BABY_CHEER?
                     12*weight*baby_cheer_lift(age)/256:
@@ -1113,8 +1124,9 @@ static void baby_model(const Game *s,uint32_t frame,int action,
  const int weight=rag?256:(action?world_baby_care_weight(action_age):0);
  const int hostile=(action==WORLD_BABY_WINDUP||action==WORLD_BABY_LUNGE)
                     &&weight>40;
- const float breath=rag?0.f:(float)world_baby_breath(frame)/256.f;
- const float bob=((float)(beat<60u?beat:120u-beat)-30.f)*.00022f+
+ const float breath=rag||!idle_motion_enabled?0.f:(float)world_baby_breath(frame)/256.f;
+ const float bob=(rag||idle_motion_enabled?
+                  ((float)(beat<60u?beat:120u-beat)-30.f)*.00022f:0.f)+
                  (float)rig.bounce*.0022f/256.f;
  /* Primary body rotation comes from the fixed-point toy simulation. The
   * secondary shoulder/neck reactions are tiny and remain physically
@@ -1123,7 +1135,7 @@ static void baby_model(const Game *s,uint32_t frame,int action,
  const int lid=rig.lid;
  /* Keep the title and Toybox shell gaze stable. The live nursery uses
   * small horizontal eye excursions within the existing sockets. */
- const int gaze=rag?0:world_baby_gaze(frame);
+ const int gaze=rag||!idle_motion_enabled?0:world_baby_gaze(frame);
  /* Hungry and exhausted infants should look unsettled even when
   * an old positive mood score hasn't yet caught up with their needs.
   * NAP/FEED restores the same face without adding new visual states. */
