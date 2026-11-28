@@ -1056,6 +1056,9 @@ WorldBabyPose world_baby_pose(const Game *s,uint32_t frame,int action,
   * correction must never turn a shutter inside-out or open past the eye. */
  if(p.lid<0)p.lid=0;
  if(p.lid>256)p.lid=256;
+ /* The idle contribution is bounded even during an interrupted care pose. */
+ if(p.yaw< -3)p.yaw=-3;
+ if(p.yaw>3)p.yaw=3;
  return p;
 }
 void world_baby_motion_start(WorldBabyMotion *motion,WorldBabyPose from,
