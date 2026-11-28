@@ -779,6 +779,25 @@ void ui_voice_save_warning(void){
 /* First-class interactive Room mode. Cards match the actual nursery
  * landmarks seen on the TOP hardware 3D screen. All four actions are
  * available through native touch, virtual stylus and D-pad fallback. */
+static void options_screen(int state){
+ static const char *const names[4]={"SOUND","FPS DISPLAY","QUIET VISUALS","IDLE ANIMATION"};
+ static const char *const explanations[4]={"MUTE MUSIC AND SOUND CUES","SHOW MEASURED FRAME RATE",
+  "REDUCE GLITCH EFFECTS","LESS IDLE MOTION, SAME GAME"};
+ int selected=(state>>4)&3;
+ solid(0,27,256,149,LILAC);
+ fit(12,33,"TOUCH A ROW OR PRESS A TO CHANGE",PURPLE,38);
+ for(int i=0;i<4;i++){
+  int y=44+i*30,on=(state&(1<<i))!=0;
+  panel(8,y,240,25,i==selected?MINT:WHITE,i==selected?GREEN:PURPLE);
+  fit(18,y+6,names[i],INK,24);
+  fit(18,y+15,explanations[i],MUTED,32);
+  capsule(185,y+3,53,14,on?MINT:GRAY,TEAL);
+  fit(193,y+6,i==3?(on?"FULL":"LESS"):(on?"ON":"OFF"),INK,6);
+ }
+ foot(PURPLE);
+ fit(12,181,"B BACK",WHITE,7);
+ fit(136,181,"X PREVIEW MOVE",MINT,16);
+}
 static void room_screen(const Game *s,int state,const char *message){
  int selected=state&3;
  int day=(state&8)!=0,lamp=(state&16)!=0;
@@ -789,6 +808,8 @@ static void room_screen(const Game *s,int state,const char *message){
  };
  int i,x,y;
  (void)s;
+ capsule(68,5,64,16,MINT,TEAL);
+ fit(76,10,"OPTIONS",INK,7);
  solid(0,27,256,149,LILAC);
  panel(8,31,240,41,WHITE,PURPLE);
  fit(18,36,"A LITTLE ROOM WITH BIG SECRETS",PURPLE,36);
@@ -2504,7 +2525,7 @@ void ui_draw(const Game *s,const Arcade *a,int view,int selection,
  else screen_title=view==0?"CARE":view==1?"ARCADE":
          view==3?"RESET":view==4?"ENDING":view==5?"WELCOME":
          view==6?"ALBUM":view==7?"TOUCH TEST":
-         view==8?"TOYBOX":view==10?"ROOM":view==11?"TALK":"INCUBATOR";
+         view==8?"TOYBOX":view==10?"ROOM":view==11?"TALK":view==16?"OPTIONS":"INCUBATOR";
  /* Every screen paints its own content band (y=27..175), and header/foot
   * repaint the other two bands. The previous blanket 256x192 clear was
   * 49,152 redundant 16-bit VRAM writes on every animation refresh. */
@@ -2550,6 +2571,7 @@ void ui_draw(const Game *s,const Arcade *a,int view,int selection,
  case 9:egg_scene_screen(selection);break;
  case 10:room_screen(s,selection,message);break;
  case 11:conversation_screen(selection,message);break;
+ case 16:options_screen(selection);break;
  }
 }
 /* Three separated footer targets prevent accidental skip during the
@@ -2579,8 +2601,18 @@ int ui_roughhouse_touch(int x,int y){
 }
 /* Return 0..3 for the four actual prop cards, 4 for BACK, -1 for
  * whitespace. All hitboxes are visibly filled in room_screen(). */
+int ui_options_touch(int x,int y){
+ if(x<0||x>=256||y<0||y>=192)return -1;
+ if(y>=176)return x<128?4:5;
+ if(x>=8&&x<248&&y>=44&&y<164){
+  int offset=y-44;
+  if(offset%30<25)return offset/30;
+ }
+ return -1;
+}
 int ui_room_touch(int x,int y){
  if(x<0||x>=256||y<0||y>=192)return -1;
+ if(x>=68&&x<132&&y>=5&&y<21)return 10; /* OPTIONS */
  if(x>=198&&x<244&&y>=49&&y<63)return 7; /* SAVE */
  if(y>=176){
   /* Footer labels are ACTUAL touch buttons (not invisible instructions).
