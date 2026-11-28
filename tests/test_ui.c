@@ -768,6 +768,25 @@ int main(void){
  assert(!ui_room_entry_touch(220,55));
  assert(!ui_room_entry_touch(120,40));
  assert(!ui_room_entry_touch(243,40));
+ assert(ui_room_touch(96,12)==10); /* visible options entry */
+ assert(ui_room_touch(67,12)==-1&&ui_room_touch(132,12)==-1);
+ for(int row=0;row<4;row++){
+  assert(ui_options_touch(20,45+row*30)==row);
+  assert(ui_options_touch(239,67+row*30)==row);
+  assert(ui_options_touch(20,69+row*30)==-1);
+ }
+ assert(ui_options_touch(15,183)==4&&ui_options_touch(200,183)==5);
+ ui_draw(&g,&a,16,9|(2<<4),0,0,1,"OPTIONS");
+ verify_coverage();
+ verify_text(12,7,"OPTIONS",7,TEST_RGB(31,31,31),2);
+ verify_text(18,50,"SOUND",5,TEST_RGB(8,7,12),1);
+ verify_text(18,80,"FPS DISPLAY",11,TEST_RGB(8,7,12),1);
+ verify_text(18,110,"QUIET VISUALS",13,TEST_RGB(8,7,12),1);
+ verify_text(18,140,"IDLE ANIMATION",14,TEST_RGB(8,7,12),1);
+ verify_text(193,50,"ON",2,TEST_RGB(8,7,12),1);
+ verify_text(193,80,"OFF",3,TEST_RGB(8,7,12),1);
+ verify_text(193,110,"OFF",3,TEST_RGB(8,7,12),1);
+ verify_text(193,140,"FULL",4,TEST_RGB(8,7,12),1);
  assert(ui_room_touch(220,54)==7); /* explicit in-room SAVE */
  assert(ui_room_touch(198,49)==7);
  assert(ui_room_touch(243,62)==7);
