@@ -43,6 +43,26 @@ static int arcade_menu_release;
 static unsigned arcade_practice_mode=ARCADE_PRACTICE_STANDARD;
 static PerfTracker performance;
 static int perf_show;
+/* Complete bitmap redraws are composed in normal ARM9 RAM, then copied
+ * at the next VBlank. Never expose a partially painted card to the LCD.
+ * Exactly one 96 KiB scratch surface, reused by every full-screen view.
+ * Small live updates retain the existing direct-VRAM fast path. */
+static uint16_t ui_staging[256u*192u] __attribute__((aligned(32)));
+static uint16_t *ui_vram;
+static int ui_pending;
+static void ui_stage_begin(void){
+ ui_init(ui_staging);
+ ui_pending=1;
+}
+static void ui_stage_present(void){
+ if(!ui_pending)return;
+ /* DMA does not see dirty ARM9 data-cache lines. DMA3 is used only for
+  * this synchronous bitmap copy before any new geometry submission. */
+ DC_FlushRange(ui_staging,sizeof(ui_staging));
+ dmaCopyWords(3,ui_staging,ui_vram,sizeof(ui_staging));
+ ui_init(ui_vram);
+ ui_pending=0;
+}
 static int options_selected,idle_motion=1;
 static NurseryPeek peek;
 static ArcadeFeedback arcade_feedback;
@@ -582,7 +602,8 @@ int main(void){
  vramSetBankC(VRAM_C_SUB_BG);
  {
   int layer=bgInitSub(3,BgType_Bmp16,BgSize_B16_256x256,0,0);
-  ui_init(bgGetGfxPtr(layer));
+  ui_vram=(uint16_t *)bgGetGfxPtr(layer);
+  ui_init(ui_vram);
  }
  /* Always show a visible title before touching the filesystem or heavy 3D.
   * Some older emulators hang during their emulated DLDI/FAT setup. */
@@ -600,6 +621,7 @@ int main(void){
   int raw_touch,repaint=0,perf_changed;
   touchPosition touch={0};
   swiWaitForVBlank();
+  ui_stage_present();
   scanKeys();
   down=keysDown();held=keysHeld();
   /* Footer feedback changes only on events and expiry, preserving the
@@ -1326,6 +1348,7 @@ int main(void){
   if(dirty||previous!=view||
      (view==2&&arc.id!=1&&frame%arcade_redraw_period(&arc)==0u)){
    repaint=1;
+   ui_stage_begin();
    /* The actual per-frame draw must receive the Room prop selection and
     * lamp/day flags. Startup UI paint is NOT the Room redraw path. */
    if(view==15){
