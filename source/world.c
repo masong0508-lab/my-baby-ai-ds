@@ -37,6 +37,54 @@ void world_observer_status(unsigned stage,unsigned integrity,int warning){
  * submitting the same color register command twice in succession.
  * Invalidate at each scene submission, including after a frozen image. */
 static unsigned last_vertex_color=~0u;
+/* Native geometry FIFO cache. Record only the matrix-free, static nursery
+ * prefix on its first draw; subsequent frames DMA the identical fixed-point
+ * vertex/color stream. The camera, mobile and baby are always live.
+ * A single 32 KiB bounded entry avoids a framebuffer or heap allocation.
+ * The host topology shim retains the original unquantized immediate path. */
+#if defined(ARM9) && !defined(MBAI_DISABLE_ROOM_FIFO_CACHE)
+#define ROOM_FIFO_CACHE 1
+#define ROOM_FIFO_WORDS 8192u
+static uint32_t room_fifo[ROOM_FIFO_WORDS] __attribute__((aligned(32)));
+static unsigned room_fifo_used,room_fifo_group,room_fifo_slot;
+static int room_fifo_recording,room_fifo_overflow,room_fifo_valid;
+static int room_fifo_ambient,room_fifo_daylight,room_fifo_lamp;
+static unsigned room_fifo_stage,room_fifo_integrity;
+static int room_fifo_warning;
+static unsigned room_fifo_vertices,room_fifo_polygons,room_fifo_last_color;
+static void room_fifo_command(unsigned command,unsigned count,uint32_t a,uint32_t b){
+ if(!room_fifo_recording||room_fifo_overflow)return;
+ if(room_fifo_used+count+(room_fifo_slot==0u)>ROOM_FIFO_WORDS){
+  room_fifo_overflow=1;return;
+ }
+ if(!room_fifo_slot){
+  room_fifo_group=room_fifo_used++;
+  room_fifo[room_fifo_group]=0; /* unused command bytes are FIFO_NOP */
+ }
+ room_fifo[room_fifo_group]|=(uint32_t)command<<(8u*room_fifo_slot);
+ room_fifo_slot=(room_fifo_slot+1u)&3u;
+ if(count)room_fifo[room_fifo_used++]=a;
+ if(count==2u)room_fifo[room_fifo_used++]=b;
+}
+static void room_fifo_begin(int mode){
+ room_fifo_command(FIFO_BEGIN,1u,(uint32_t)mode,0);
+ glBegin(mode);
+}
+static void room_fifo_color(unsigned packed){
+ room_fifo_command(FIFO_COLOR,1u,packed,0);
+ glColor(packed);
+}
+static void room_fifo_vertex(float x,float y,float z){
+ v16 fx=floattov16(x),fy=floattov16(y),fz=floattov16(z);
+ if(room_fifo_recording)
+  room_fifo_command(FIFO_VERTEX16,2u,(uint32_t)(uint16_t)fx|
+                    ((uint32_t)(uint16_t)fy<<16),(uint32_t)(uint16_t)fz);
+ glVertex3v16(fx,fy,fz);
+}
+#define glBegin(mode) room_fifo_begin(mode)
+#define glColor(packed) room_fifo_color(packed)
+#define glVertex3f(x,y,z) room_fifo_vertex((x),(y),(z))
+#endif
 static unsigned packed_color(int r,int g,int b,int shift){
  const int delta=shift+nursery_ambient;
  return RGB15(limit(r+delta),limit(g+delta),limit(b+delta));
@@ -293,21 +341,30 @@ static void hair_cap(float x,float y,float z,float rx,float ry,float rz,
  static const float ring_z[12]={0,.5f,.866f,1,.866f,.5f,0,-.5f,-.866f,-1,-.866f,-.5f};
  static const float radius[4]={1,.86f,.55f,0};
  int a,i,j;
+ float xs[3][12],zs[3][12],lower_y[12];
+ const float top_y[3]={y+ry*.64f,y+ry*.86f,y+ry};
+ unsigned shades[2][2];
+ /* Adjacent strips share the same crown ring. Reuse coordinates and
+  * color conversions, preserving multiplication order and winding. */
+ for(a=0;a<3;a++){
+  const float sx=rx*radius[a],sz=rz*radius[a];
+  for(j=0;j<12;j++){
+   xs[a][j]=x+sx*ring_x[j];zs[a][j]=z+sz*ring_z[j];
+  }
+ }
+ for(j=0;j<12;j++)
+  lower_y[j]=y+ry*(.40f+(ring_z[j]>0?.14f*ring_z[j]:.03f*ring_z[j]));
+ shades[0][0]=packed_color(red,green,blue,2);
+ shades[0][1]=packed_color(red,green,blue,-1);
+ shades[1][0]=packed_color(red,green,blue,4);
+ shades[1][1]=packed_color(red,green,blue,1);
  for(a=0;a<3;a++){
   glBegin(GL_QUAD_STRIP);
   for(i=0;i<=12;i++){
-   float lower;
-   j=i%12;
-   /* Keep the hairline above the eyes but let it fall behind the ears. */
-   /* Short cap: keep the hairline ABOVE the eyes with no cheek-length bob. */
-   lower=.40f+(ring_z[j]>0?.14f*ring_z[j]:.03f*ring_z[j]);
-   color(red,green,blue,(j<5?2:-1)+(a==2?2:0));
-   glVertex3f(x+rx*radius[a]*ring_x[j],
-              y+ry*(a==0?lower:a==1?.64f:.86f),
-              z+rz*radius[a]*ring_z[j]);
-   glVertex3f(x+rx*radius[a+1]*ring_x[j],
-              y+ry*(a+1==1?.64f:a+1==2?.86f:1.f),
-              z+rz*radius[a+1]*ring_z[j]);
+   j=i==12?0:i;
+   submit_color(shades[a==2][j>=5]);
+   glVertex3f(xs[a][j],a==0?lower_y[j]:top_y[a-1],zs[a][j]);
+   glVertex3f(a==2?x:xs[a+1][j],top_y[a],a==2?z:zs[a+1][j]);
   }
   glEnd();
  }
@@ -512,9 +569,10 @@ static void crib_quilt(void){
  room_quad_end();
  frame_vertices+=44;frame_polygons+=11;
 }
-static void room(int mobile_tilt){
+/* This prefix has no camera, animated matrix operations or mobile tilt.
+ * Leave the primitive closed before recording/replaying its commands. */
+static void room_static(void){
  int i;
- room_quad_batch=1u;
  /* Floor/walls/skirting have real thickness and meet at the corners. */
  block(0,-1.43,0,7.0,.25,7.0,24,19,14);
  block(0,.67,-3.29,7.0,4.05,.18,29,28,25);
@@ -656,6 +714,50 @@ static void room(int mobile_tilt){
  /* Solid mobile support; floating unanchored quads removed. */
  block(2.28,.93,-1.49,.065,.75,.065,24,21,16);
  block(2.28,1.29,-1.49,.91,.07,.10,24,21,16);
+ room_quad_barrier();
+}
+static void room(int mobile_tilt){
+ int i;
+ room_quad_batch=1u;
+#if defined(ROOM_FIFO_CACHE)
+ /* All inputs that affect static geometry or its palette are part of the
+  * key, including WARDEN's live integrity bar and cinematic lighting. */
+ if(room_fifo_valid&&last_vertex_color==~0u&&
+    room_fifo_ambient==nursery_ambient&&room_fifo_daylight==tour_daylight&&
+    room_fifo_lamp==tour_lamp_on&&room_fifo_stage==observer_visual_stage&&
+    room_fifo_integrity==observer_visual_integrity&&
+    room_fifo_warning==observer_visual_warning){
+  glCallList(room_fifo);
+  /* BEGIN commands delimit primitives; END is intentionally omitted
+   * from packed lists for compatibility with the DS FIFO parser. */
+  glEnd();
+  frame_vertices+=room_fifo_vertices;
+  frame_polygons+=room_fifo_polygons;
+  last_vertex_color=room_fifo_last_color;
+ }else{
+  unsigned before_v=frame_vertices,before_p=frame_polygons;
+  room_fifo_valid=0;
+  room_fifo_used=1u;room_fifo_slot=0u;room_fifo_overflow=0;
+  room_fifo_recording=last_vertex_color==~0u;
+  room_static();
+  if(room_fifo_recording&&!room_fifo_overflow&&room_fifo_used>1u){
+   room_fifo[0]=room_fifo_used-1u;
+   room_fifo_vertices=frame_vertices-before_v;
+   room_fifo_polygons=frame_polygons-before_p;
+   room_fifo_last_color=last_vertex_color;
+   room_fifo_ambient=nursery_ambient;
+   room_fifo_daylight=tour_daylight;room_fifo_lamp=tour_lamp_on;
+   room_fifo_stage=observer_visual_stage;
+   room_fifo_integrity=observer_visual_integrity;
+   room_fifo_warning=observer_visual_warning;
+   room_fifo_valid=1;
+  }
+  /* Capacity failure leaves the complete immediate draw intact. */
+  room_fifo_recording=0;
+ }
+#else
+ room_static();
+#endif
  crib_mobile(mobile_tilt); /* strings originate at the real crib bar */
  for(i=0;i<6;i++)wall_sticker(-.27f+i*.42f,2.34f+(i&1)*.08f,
                                 -3.015f,.11,.11,27,25,19);
